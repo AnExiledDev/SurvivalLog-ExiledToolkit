@@ -227,7 +227,35 @@ var FakePart = class {
 
   getBoundingClientRect() { return this.box; }
 
-  closest(selector) { return selector === this.selector ? this : null; }
+  closest(selectors) {
+    var names = selectors.split(',').map(function (name) { return name.trim(); });
+
+    return names.indexOf(this.selector) >= 0 ? this : null;
+  }
+};
+
+var FakeEvent = class {
+  constructor(type) {
+    this.type = type;
+  }
+};
+
+// A page's own window: the page hears events sent to it, such as a resize.
+var FakePageWindow = class {
+  constructor() {
+    this.Event = FakeEvent;
+    this.listeners = {};
+  }
+
+  addEventListener(type, listener) {
+    (this.listeners[type] = this.listeners[type] || []).push(listener);
+  }
+
+  dispatchEvent(event) {
+    (this.listeners[event.type] || []).forEach(function (listener) { listener(event); });
+
+    return true;
+  }
 };
 
 var FakePageDocument = class {
@@ -254,16 +282,23 @@ function addFrame(id, src, zIndex) {
   frame.style.visibility = 'visible';
   frame.style.pointerEvents = 'auto';
   frame.contentDocument = new FakePageDocument();
+  frame.contentWindow = new FakePageWindow();
   frames.push(frame);
 
   return frame;
+}
+
+// The page reports these clickable areas whenever its window hears a resize, as the game's pages do while they keep
+// their buttons reported.
+function reportOnResize(frame, rects) {
+  frame.contentWindow.addEventListener('resize', function () { window.syncInteractiveRects(frame.id, rects, null); });
 }
 
 function setPart(frame, selector, left, top, right, bottom) {
   frame.contentDocument.parts[selector] = new FakePart(selector, left, top, right, bottom);
 }
 
-// The main HUD: the tool column (phone, bag) at the left, the action panel with the queue under it.
+// The main HUD: the tool column (phone, defense, bag) at the left, the action panel with the queue under it.
 function addHud(zIndex) {
   var hud = addFrame('CoreUI1', 'https://webui/UI/CoreUI1/CoreUI1.html?t=1', zIndex);
 
@@ -273,12 +308,14 @@ function addHud(zIndex) {
   return hud;
 }
 
-// The pointer moves onto the part with this selector; a selector the page has no part for stands for any other part.
-function pointAt(frame, selector) {
+// The pointer moves onto the part with this selector (mouseover), or on within it (mousemove); a selector the page has
+// no part for stands for any other part.
+function pointAt(frame, selector, type) {
   var doc = frame.contentDocument;
   var target = doc.parts[selector] || new FakePart(selector, 0, 0, 0, 0);
+  var eventType = type || 'mouseover';
 
-  (doc.listeners.mouseover || []).forEach(function (listener) { listener({ type: 'mouseover', target: target }); });
+  (doc.listeners[eventType] || []).forEach(function (listener) { listener({ type: eventType, target: target }); });
 }
 
 // Root.html's own function, which the game's pages call with their clickable areas.

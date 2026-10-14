@@ -16,11 +16,17 @@
   var RECT_POLL_MS = 1000;
   // While boxes are up the HUD is measured this often, so the deck follows it and steps aside for panels.
   var WATCH_MS = 250;
+  // The deck stays aside this long after the last pointer event on the HUD's buttons: the game may send nothing more
+  // once the pointer leaves for the world, so a mouseout that never comes must not keep the deck hidden.
+  var TOOLS_IDLE_MS = 4000;
+  // The HUD parts whose tips open where the deck sits: the tool column (phone, defense, bag) and the speed buttons.
+  var TIP_OWNERS = '.vertical-tools, .speed-controls';
   var POSITIONS = ['hud', 'top-right', 'top-left', 'bottom-right', 'bottom-left'];
   var KINDS = ['info', 'success', 'warning', 'error'];
 
   // The deck: every card is CARD_WIDTH wide when in front; each older one is INSET narrower on both sides and shows
-  // PEEK px past the one before it, down to MAX_PEEKS cards, so the deck keeps about one card's footprint.
+  // PEEK px past the one before it, down to MAX_PEEKS cards, so the deck keeps about one card's footprint. The C# side
+  // shows at most MAX_PEEKS + 1 toasts at once (ToastSettings.MaxMaxVisible); any more are not drawn.
   var CARD_WIDTH = 280;
   var INSET = 6;
   var PEEK = 8;
@@ -46,7 +52,8 @@
   var footprint = null;
   var isHidden = false;
   var isToolsHovered = false;
-  // The clickable areas each game page last reported, by page id.
+  var toolsSeenAt = 0;
+  // The clickable areas each game page last reported, by page id, copied into plain objects of this document.
   var pageRects = {};
 
   function send(text) {
@@ -104,8 +111,9 @@
     '  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }',
     '.etk-body { font-size: 12px; line-height: 1.35; color: rgba(255,255,255,.62); white-space: pre-line; overflow-wrap: anywhere;',
     '  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }',
-    '.etk-toast.etk-front .etk-title { white-space: normal; overflow-wrap: anywhere; }',
-    '.etk-toast.etk-front .etk-body { display: block; -webkit-line-clamp: none; }',
+    '.etk-toast.etk-front .etk-title { white-space: normal; overflow-wrap: anywhere;',
+    '  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }',
+    '.etk-toast.etk-front .etk-body { -webkit-line-clamp: 6; }',
     '.etk-count { position: absolute; top: -6px; left: -6px; min-width: 16px; height: 14px; padding: 0 4px; box-sizing: border-box;',
     '  border-radius: 7px; background: var(--etk-accent); color: #141416; font-size: 10px; font-weight: 700;',
     '  line-height: 14px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,.5); pointer-events: none; }',
@@ -219,7 +227,7 @@
   }
 
   function create(toast) {
-    var box = { id: toast.id, el: document.createElement('div'), timer: 0, holdTimer: 0, hovered: false, leaving: false, count: 1, bumpUntil: 0, restHeight: 0 };
+    var box = { id: toast.id, el: document.createElement('div'), timer: 0, holdTimer: 0, hovered: false, leaving: false, count: 1, bumpUntil: 0 };
     fill(box, toast);
 
     box.el.addEventListener('mousedown', function (event) { event.preventDefault(); });
@@ -301,8 +309,9 @@
 
   // ===== Where the deck goes =====
 
+  // The game keeps a page invisible until it says it is ready, and only then sets its visibility inline.
   function isShownFrame(frame) {
-    return frame.style.display !== 'none' && frame.style.visibility !== 'hidden';
+    return frame.style.display !== 'none' && frame.style.visibility === 'visible';
   }
 
   // The page with the tool column: the main HUD, or the prologue's when the main one is not up.
@@ -329,7 +338,8 @@
     return rect.width > 0 && rect.height > 0 ? rect : null;
   }
 
-  // Right of the tool column and above the action queue, in this page's pixels; null while the HUD cannot be read.
+  // Right of the tool column and above the action queue, in this page's pixels; null while the HUD cannot be read. The
+  // prologue's checklist bubble points out of the column to its right, so while it shows the deck goes past it.
   function measureHud() {
     try {
       var frame = hudFrame();
@@ -339,10 +349,12 @@
       watchTools(doc);
       var tools = hudPart(doc, '.vertical-tools');
       if (!tools) return null;
+      var bubble = hudPart(doc, '.checklist-bubble');
       var queue = hudPart(doc, '.action-panel');
       var origin = frame.getBoundingClientRect();
+      var columnRight = bubble ? Math.max(tools.right, bubble.right) : tools.right;
       var floor = queue ? queue.top - HUD_GAP_Y : tools.bottom;
-      return { left: origin.left + tools.right + HUD_GAP_X, bottom: (window.innerHeight || 0) - (origin.top + floor) };
+      return { left: origin.left + columnRight + HUD_GAP_X, bottom: (window.innerHeight || 0) - (origin.top + floor) };
     } catch (e) {
       return null;
     }
@@ -388,6 +400,11 @@
     return list;
   }
 
+  // The cards the deck can show, newest first; one past them would sit unseen behind the last.
+  function inDeck() {
+    return deck().slice(0, MAX_PEEKS + 1);
+  }
+
   // Lays the cards out as a deck: the newest in front at the anchor, each older one narrower, dimmer and peeking out
   // past the one before it. A hovered card comes to the front at full width with its text in full, in its own place,
   // so the others do not move under the pointer. Only layout boxes move; animations use transform and opacity, so
@@ -399,33 +416,46 @@
     var bounds = null;
 
     deck().forEach(function (box, depth) {
+      box.el.style.visibility = depth <= MAX_PEEKS ? '' : 'hidden';
+    });
+
+    inDeck().forEach(function (box, depth) {
       var el = box.el;
       var s = el.style;
-      var level = Math.min(depth, MAX_PEEKS);
-      var restInset = level * INSET;
+      var restInset = depth * INSET;
+      var restHeight = measureAtRest(box, depth, restInset);
       var inset = box.hovered ? 0 : restInset;
 
       s.width = px(CARD_WIDTH - 2 * inset);
       s.left = isLeftHung ? px(inset) : '';
       s.right = isLeftHung ? '' : px(inset);
       s.zIndex = String(box.hovered ? Z_FRONT : Z_DECK - depth);
-      s.filter = box.hovered || level === 0 ? '' : 'brightness(' + DIM[level] + ')';
+      s.filter = box.hovered || depth === 0 ? '' : 'brightness(' + DIM[depth] + ')';
       el.classList.toggle('etk-front', box.hovered);
       el.classList.toggle('etk-behind', depth > 0 && !box.hovered);
-      if (!box.hovered || !box.restHeight) box.restHeight = el.offsetHeight;
 
-      var height = box.restHeight;
-      var near = depth === 0 ? 0 : Math.max(0, edge + (depth <= MAX_PEEKS ? PEEK : 0) - height);
-      edge = near + height;
+      var near = depth === 0 ? 0 : Math.max(0, edge + PEEK - restHeight);
+      edge = near + restHeight;
       s.top = isBottomHung ? '' : px(near);
       s.bottom = isBottomHung ? px(near) : '';
 
       var x0 = isLeftHung ? restInset : restInset - CARD_WIDTH;
       var y0 = isBottomHung ? -edge : near;
-      bounds = grow(bounds, x0, y0, CARD_WIDTH - 2 * restInset, height);
+      bounds = grow(bounds, x0, y0, CARD_WIDTH - 2 * restInset, restHeight);
     });
 
     footprint = bounds;
+  }
+
+  // A card's height in its place in the deck, measured every layout, so new text from a merge or a replace counts
+  // even while the card is hovered and drawn in full.
+  function measureAtRest(box, depth, restInset) {
+    var el = box.el;
+    el.style.width = px(CARD_WIDTH - 2 * restInset);
+    el.classList.toggle('etk-front', false);
+    el.classList.toggle('etk-behind', depth > 0);
+
+    return el.offsetHeight;
   }
 
   function grow(bounds, x, y, w, h) {
@@ -435,33 +465,53 @@
 
   // ===== Staying out of the way =====
 
-  // The tool column's tips open to its right, where the deck sits, so the deck steps aside while the pointer is on it.
+  // The HUD's tips open to the right of its buttons, where the deck sits, so the deck steps aside while the pointer is
+  // on them. Watched from the start, so a pointer already there when the first toast comes is known.
+  function watchHud() {
+    try {
+      var frame = hudFrame();
+      var doc = frame && frame.contentDocument;
+      if (doc) watchTools(doc);
+    } catch (e) {
+      // The HUD can be between pages; the next heartbeat looks again.
+    }
+  }
+
   function watchTools(doc) {
     if (doc.etkToolsWatched) return;
     doc.etkToolsWatched = true;
-    doc.addEventListener('mouseover', function (event) {
-      var target = event.target;
-      setToolsHovered(!!(target && target.closest && target.closest('.vertical-tools')));
-    }, true);
+    doc.addEventListener('mouseover', notePointer, true);
+    doc.addEventListener('mousemove', notePointer, true);
     doc.addEventListener('mouseout', function (event) {
       if (!event.relatedTarget) setToolsHovered(false);
     }, true);
   }
 
-  function setToolsHovered(isOn) {
-    if (isOn === isToolsHovered) return;
-    isToolsHovered = isOn;
-    refresh();
+  function notePointer(event) {
+    var target = event.target;
+    setToolsHovered(!!(target && target.closest && target.closest(TIP_OWNERS)));
   }
 
-  // Every page tells the root where its clickable parts are; a copy of that tells the deck where open panels are.
+  function setToolsHovered(isOn) {
+    var wasOn = isOnTools();
+    isToolsHovered = isOn;
+    if (isOn) toolsSeenAt = Date.now();
+    if (isOnTools() !== wasOn) refresh();
+  }
+
+  function isOnTools() {
+    return isToolsHovered && Date.now() - toolsSeenAt < TOOLS_IDLE_MS;
+  }
+
+  // Every page tells the root where its clickable parts are; a copy of that tells the deck where open panels are. The
+  // copy holds plain numbers only, so it keeps nothing of a closed page alive.
   function watchPages() {
     var original = window.syncInteractiveRects;
     if (typeof original !== 'function' || original.etkWatched) return;
 
     var watched = function (pageId, rects) {
       try {
-        pageRects[pageId] = Array.isArray(rects) ? rects : [];
+        pageRects[String(pageId)] = copyRects(rects);
         refresh();
       } catch (e) {
         // The page's own rects must reach the game whatever happens here.
@@ -473,6 +523,43 @@
     window.syncInteractiveRects = watched;
   }
 
+  function copyRects(rects) {
+    var list = [];
+    var count = rects && rects.length > 0 ? rects.length : 0;
+
+    for (var i = 0; i < count; i++) {
+      var rect = rects[i];
+      if (rect) list.push({ x: Number(rect.x) || 0, y: Number(rect.y) || 0, w: Number(rect.w) || 0, h: Number(rect.h) || 0 });
+    }
+
+    return list;
+  }
+
+  // A page the game closed takes what it reported with it.
+  function forgetClosedPages() {
+    Object.keys(pageRects).forEach(function (pageId) {
+      if (!document.getElementById(pageId)) delete pageRects[pageId];
+    });
+  }
+
+  // A page that was up before this script reported its buttons unheard. Pages that keep their buttons reported send
+  // them again on a resize, so each panel not heard from is sent one, once per page load. A panel that never answers
+  // reports no buttons: the game hands it every click on the screen.
+  function askUnheardPanels() {
+    panelFrames().forEach(function (frame) {
+      if (pageRects[frame.id]) return;
+
+      try {
+        var view = frame.contentWindow;
+        if (!view || view.etkAsked) return;
+        view.etkAsked = true;
+        view.dispatchEvent(new view.Event('resize'));
+      } catch (e) {
+        // A page between loads is asked on a later heartbeat.
+      }
+    });
+  }
+
   function frameZ(frame) {
     return Number(frame.style.zIndex) || 0;
   }
@@ -482,7 +569,24 @@
     return isShownFrame(frame) && frame.style.pointerEvents !== 'none' && !(opacity <= 0.01);
   }
 
-  // A shown page above the HUD (any page, when there is no HUD) with a clickable part where the deck would be.
+  // Shown pages that take the pointer and are drawn above the HUD; every such page when there is no HUD. The game
+  // turns the pointer off for pages that let clicks through to the world, so those are not panels.
+  function panelFrames() {
+    var frames = document.getElementsByTagName('iframe');
+    var hud = hudFrame();
+    var hudZ = hud ? frameZ(hud) : -Infinity;
+    var list = [];
+
+    for (var i = 0; i < frames.length; i++) {
+      var frame = frames[i];
+      if (frame !== hud && isOpenFrame(frame) && frameZ(frame) > hudZ) list.push(frame);
+    }
+
+    return list;
+  }
+
+  // A panel covers the deck when it has a clickable part where the deck would be, or when it reports no clickable
+  // parts at all: the game then sends it every click on the screen, as for a full window with a dimmed backdrop.
   function isPanelOver() {
     if (!footprint) return false;
     var width = window.innerWidth || 1;
@@ -494,13 +598,10 @@
       w: (footprint.x1 - footprint.x0) / width,
       h: (footprint.y1 - footprint.y0) / height
     };
-    var hud = hudFrame();
-    var hudZ = hud ? frameZ(hud) : -Infinity;
 
-    return Object.keys(pageRects).some(function (pageId) {
-      var frame = document.getElementById(pageId);
-      if (!frame || frame === hud || !isOpenFrame(frame) || frameZ(frame) <= hudZ) return false;
-      return pageRects[pageId].some(function (rect) { return overlaps(rect, deckBox); });
+    return panelFrames().some(function (frame) {
+      var rects = pageRects[frame.id];
+      return !rects || rects.some(function (rect) { return overlaps(rect, deckBox); });
     });
   }
 
@@ -521,7 +622,7 @@
   }
 
   function refresh() {
-    setHidden((position === 'hud' && isToolsHovered) || isPanelOver());
+    setHidden((position === 'hud' && isOnTools()) || isPanelOver());
     syncRects();
   }
 
@@ -531,8 +632,8 @@
     refresh();
   }
 
-  // Tells the C# side where the cards are, as fractions of the page, so clicks on them reach this page. Measured from
-  // layout boxes, which the in, out and bump animations do not move, so an animation sends nothing.
+  // Tells the C# side where the cards it can see are, as fractions of the page, so clicks on them reach this page.
+  // Measured from layout boxes, which the in, out and bump animations do not move, so an animation sends nothing.
   function syncRects() {
     var width = window.innerWidth || 1;
     var height = window.innerHeight || 1;
@@ -540,7 +641,7 @@
     var parts = [];
 
     if (!isHidden) {
-      deck().forEach(function (box) {
+      inDeck().forEach(function (box) {
         var el = box.el;
         if (el.offsetWidth <= 0 || el.offsetHeight <= 0) return;
         parts.push([(origin.left + el.offsetLeft) / width, (origin.top + el.offsetTop) / height, el.offsetWidth / width, el.offsetHeight / height]
@@ -557,6 +658,9 @@
   // While boxes are up they are sent every second even unchanged, so the C# side can tell a live page from a lost one.
   function heartbeat() {
     watchPages();
+    watchHud();
+    forgetClosedPages();
+    askUnheardPanels();
     if (lastRects) lastRects = null;
     syncRects();
   }
@@ -582,6 +686,8 @@
   }
 
   watchPages();
+  watchHud();
+  askUnheardPanels();
   placeStack();
   window.addEventListener('resize', redraw);
   setInterval(heartbeat, RECT_POLL_MS);

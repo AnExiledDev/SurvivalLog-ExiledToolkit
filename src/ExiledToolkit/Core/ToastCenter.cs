@@ -14,7 +14,9 @@ internal sealed record ToastSettings(ToastPosition Position, double DefaultSecon
     public const double FallbackSeconds = 7;
     public const double MinSeconds = 1;
     public const double MaxSeconds = 120;
-    public const int MaxMaxVisible = 10;
+
+    /// <summary>The deck shows a front toast and three behind it (toasts.js); more would sit unseen, so they wait.</summary>
+    public const int MaxMaxVisible = 4;
 
     /// <summary>The config file can hold a number for the position; one that names no position is the default.</summary>
     public static ToastPosition KnownPosition(ToastPosition position) =>

@@ -22,6 +22,18 @@ public class StackTests
         Assert.Equal(third, next.Toast.Id);
     }
 
+    /// <summary>The deck draws a front toast and three behind it; a fifth on screen would sit there unseen.</summary>
+    [Fact]
+    public void However_many_the_setting_asks_for_no_more_than_the_deck_can_show_are_on_screen_at_once()
+    {
+        var harness = new Harness(maxVisible: 10);
+
+        foreach (var i in Enumerable.Range(0, 6)) harness.Show(Harness.Titled("toast " + i));
+        var shownAtOnce = harness.Pump().OfType<PageOp.Show>().Count();
+
+        Assert.Equal(4, shownAtOnce);
+    }
+
     [Fact]
     public void A_waiting_toast_gets_its_full_time_when_it_appears()
     {

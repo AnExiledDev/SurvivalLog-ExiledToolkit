@@ -240,6 +240,23 @@ public class PageScriptTests
         Assert.Equal(1050, box.Bottom);
     }
 
+    /// <summary>The prologue's checklist bubble opens right of the column; the deck must not cover the next task.</summary>
+    [Fact]
+    public void While_the_prologue_checklist_bubble_shows_the_deck_sits_right_of_it_and_moves_back_when_it_goes()
+    {
+        var page = new PageScript();
+        page.Run("var prologue = addFrame('CoreUI0', 'https://webui/UI/CoreUI0/CoreUI0.html', 1); setPart(prologue, '.vertical-tools', 30, 700, 102, 1050); setPart(prologue, '.checklist-bubble', 116, 900, 340, 960)");
+
+        page.Apply(new PageOp.Place(ToastPosition.Hud), new PageOp.Show(View(1, Stamina)));
+        var withBubble = Px(Assert.Single(LastRects(page).Boxes));
+        page.Run("setPart(prologue, '.checklist-bubble', 0, 0, 0, 0)");
+        page.Advance(250);
+        var withoutBubble = Px(Assert.Single(LastRects(page).Boxes));
+
+        Assert.Equal(340 + 10, withBubble.Left);
+        Assert.Equal(102 + 10, withoutBubble.Left);
+    }
+
     /// <summary>In plan mode the game hides the tool column and the queue; the deck must not jump to the fallback.</summary>
     [Fact]
     public void While_the_hud_is_hidden_the_deck_stays_put_and_it_follows_the_hud_when_it_moves()
@@ -277,6 +294,7 @@ public class PageScriptTests
 
     // ===== The deck =====
 
+    /// <summary>A card past the fourth would sit unseen behind the last, so it is not drawn and takes no clicks.</summary>
     [Fact]
     public void The_newest_toast_is_in_front_and_up_to_three_older_ones_peek_out_narrower_behind_it()
     {
@@ -287,10 +305,11 @@ public class PageScriptTests
         var boxes = LastRects(page).Boxes.Select(Px).ToList();
 
         Assert.Equal(new[] { "5", "4", "3", "2", "1" }, page.Labels());
-        Assert.Equal(new[] { 87, 93, 99, 105, 105 }, boxes.Select(box => box.Left));
-        Assert.Equal(new[] { 280, 268, 256, 244, 244 }, boxes.Select(box => box.Width));
-        Assert.Equal(new[] { 972, 964, 956, 948, 948 }, boxes.Select(box => box.Bottom));
+        Assert.Equal(new[] { 87, 93, 99, 105 }, boxes.Select(box => box.Left));
+        Assert.Equal(new[] { 280, 268, 256, 244 }, boxes.Select(box => box.Width));
+        Assert.Equal(new[] { 972, 964, 956, 948 }, boxes.Select(box => box.Bottom));
         Assert.All(boxes, box => Assert.Equal(60, box.Height));
+        Assert.Equal(",,,,hidden", page.Text("boxes().map(function (box) { return box.style.visibility; }).join(',')"));
     }
 
     [Fact]
@@ -329,14 +348,17 @@ public class PageScriptTests
 
     // ===== Staying out of the way =====
 
-    [Fact]
-    public void While_the_pointer_is_on_the_tool_column_the_deck_steps_aside_so_the_buttons_tips_can_be_read()
+    /// <summary>The tool column's tips open to its right and the speed buttons' tips open upward, both into the deck.</summary>
+    [Theory]
+    [InlineData(".vertical-tools")]
+    [InlineData(".speed-controls")]
+    public void While_the_pointer_is_on_buttons_whose_tips_open_into_the_deck_it_steps_aside_so_the_tips_can_be_read(string buttons)
     {
         var page = new PageScript();
         page.Run("var hud = addHud(1)");
         page.Apply(new PageOp.Place(ToastPosition.Hud), new PageOp.Show(View(1, Stamina)));
 
-        page.Run("pointAt(hud, '.vertical-tools')");
+        page.Run($"pointAt(hud, '{buttons}')");
         var onTools = LastRects(page);
         var isHiddenOnTools = page.Text("stack().classList.contains('etk-hidden')");
         page.Run("pointAt(hud, '.queue-container')");
@@ -345,6 +367,32 @@ public class PageScriptTests
         Assert.Equal("true", isHiddenOnTools);
         Assert.Single(LastRects(page).Boxes);
         Assert.Equal("false", page.Text("stack().classList.contains('etk-hidden')"));
+    }
+
+    /// <summary>
+    /// The HUD is watched before any toast, so a pointer already on the tools when one comes counts. A pointer that
+    /// leaves without the page hearing it (the window loses it) must not keep the deck away for good, so the deck
+    /// comes back once the pointer has been still for a few seconds; moving on the buttons keeps it aside.
+    /// </summary>
+    [Fact]
+    public void A_pointer_already_on_the_tools_when_a_toast_comes_keeps_the_deck_aside_only_while_it_keeps_moving_there()
+    {
+        var page = new PageScript();
+        page.Run("var hud = addHud(1)");
+        page.Advance(1_000);
+
+        page.Run("pointAt(hud, '.vertical-tools')");
+        page.Apply(new PageOp.Place(ToastPosition.Hud), new PageOp.Show(View(1, Stamina, milliseconds: 60_000)));
+        var atFirst = LastRects(page);
+        page.Advance(3_000);
+        page.Run("pointAt(hud, '.vertical-tools', 'mousemove')");
+        page.Advance(3_000);
+        var whileMoving = LastRects(page);
+        page.Advance(1_000);
+
+        Assert.Empty(atFirst.Boxes);
+        Assert.Empty(whileMoving.Boxes);
+        Assert.Single(LastRects(page).Boxes);
     }
 
     /// <summary>The deck hides rather than covers an open panel's buttons; only a page drawn above the HUD counts as a panel.</summary>
@@ -365,6 +413,66 @@ public class PageScriptTests
 
         Assert.Equal(isHidden ? 0 : 1, whileOpen.Boxes.Count);
         Assert.Single(LastRects(page).Boxes);
+        Assert.Equal("BattleBag,BattleBag", page.Text("syncedPages.join(',')"));
+    }
+
+    /// <summary>
+    /// Most of the game's windows never report their buttons: the game hands them every click on the screen, so the
+    /// deck under one could be seen but not clicked. Only a page shown above the HUD and taking the pointer counts.
+    /// </summary>
+    [Theory]
+    [InlineData(4, "auto", true)]
+    [InlineData(0, "auto", false)]
+    [InlineData(4, "none", false)]
+    public void A_window_above_the_hud_that_reports_no_buttons_takes_every_click_so_the_deck_hides_until_it_closes(int windowZ, string pointerEvents, bool isHidden)
+    {
+        var page = new PageScript();
+        page.Run("addHud(1)");
+        page.Apply(new PageOp.Place(ToastPosition.Hud), new PageOp.Show(View(1, Stamina)));
+
+        page.Run($"var shop = addFrame('Shop', 'https://webui/UI/Shop/Shop.html', {windowZ}); shop.style.pointerEvents = '{pointerEvents}'");
+        page.Advance(1_000);
+        var whileOpen = LastRects(page);
+        page.Run("shop.style.display = 'none'");
+        page.Advance(250);
+
+        Assert.Equal(isHidden ? 0 : 1, whileOpen.Boxes.Count);
+        Assert.Single(LastRects(page).Boxes);
+    }
+
+    /// <summary>A window that reported its buttons before the toolkit was there is asked again, once, by a resize.</summary>
+    [Fact]
+    public void A_window_not_yet_heard_from_is_asked_for_its_buttons_and_the_deck_comes_back_when_none_are_under_it()
+    {
+        var page = new PageScript();
+        page.Run("addHud(1); reportOnResize(addFrame('BattleBag', 'https://webui/UI/BattleBag/BattleBag.html', 4), [{ x: 0.60, y: 0.86, w: 0.1, h: 0.02 }])");
+        page.Apply(new PageOp.Place(ToastPosition.Hud), new PageOp.Show(View(1, Stamina)));
+
+        var beforeAsking = LastRects(page);
+        page.Advance(2_000);
+
+        Assert.Empty(beforeAsking.Boxes);
+        Assert.Single(LastRects(page).Boxes);
+        Assert.Equal("BattleBag", page.Text("syncedPages.join(',')"));
+    }
+
+    /// <summary>The game opens a window again under the same page id; what it reported last time says nothing now.</summary>
+    [Fact]
+    public void A_window_opened_again_is_judged_by_what_it_reports_now_not_by_what_it_reported_before_it_closed()
+    {
+        var page = new PageScript();
+        page.Run("addHud(1); var bag = addFrame('BattleBag', 'https://webui/UI/BattleBag/BattleBag.html', 4)");
+        page.Apply(new PageOp.Place(ToastPosition.Hud), new PageOp.Show(View(1, Stamina)));
+        page.Run("window.syncInteractiveRects('BattleBag', [{ x: 0.60, y: 0.86, w: 0.1, h: 0.02 }], null)");
+
+        var firstTime = LastRects(page);
+        page.Run("frames.splice(frames.indexOf(bag), 1)");
+        page.Advance(1_000);
+        page.Run("reportOnResize(addFrame('BattleBag', 'https://webui/UI/BattleBag/BattleBag.html', 4), [{ x: 0.05, y: 0.86, w: 0.1, h: 0.02 }])");
+        page.Advance(1_000);
+
+        Assert.Single(firstTime.Boxes);
+        Assert.Empty(LastRects(page).Boxes);
         Assert.Equal("BattleBag,BattleBag", page.Text("syncedPages.join(',')"));
     }
 
