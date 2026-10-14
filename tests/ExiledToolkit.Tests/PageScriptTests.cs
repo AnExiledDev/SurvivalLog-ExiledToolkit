@@ -1,3 +1,4 @@
+using System.Globalization;
 using ExiledToolkit.Core;
 using Xunit;
 
@@ -177,6 +178,7 @@ public class PageScriptTests
         Assert.IsType<PageCommand.Ready>(Assert.Single(page.Sent));
     }
 
+    /// <summary>With no HUD measured yet, the box sits where the HUD's tool column and queue are at 1920 x 1080.</summary>
     [Fact]
     public void While_boxes_are_up_the_page_repeats_where_they_are_every_second()
     {
@@ -188,13 +190,10 @@ public class PageScriptTests
         var beforeBeat = page.Sent.Count;
         page.Advance(1);
         var rects = Assert.IsType<PageCommand.Rects>(Assert.Single(page.Sent));
-        var box = Assert.Single(rects.Boxes);
+        var box = Px(Assert.Single(rects.Boxes));
 
         Assert.Equal(0, beforeBeat);
-        Assert.Equal(1600.0 / 1920, box.X, 4);
-        Assert.Equal(20.0 / 1080, box.Y, 4);
-        Assert.Equal(300.0 / 1920, box.W, 4);
-        Assert.Equal(80.0 / 1080, box.H, 4);
+        Assert.Equal((88, 920, 280, 60), (box.Left, box.Top, box.Width, box.Height));
     }
 
     [Fact]
@@ -212,4 +211,166 @@ public class PageScriptTests
         Assert.Empty(cleared.Boxes);
         Assert.Empty(page.Sent);
     }
+
+    // ===== Beside the HUD =====
+
+    [Fact]
+    public void Beside_the_hud_the_deck_sits_right_of_the_tool_column_and_above_the_action_panel()
+    {
+        var page = new PageScript();
+        page.Run("addHud(1)");
+
+        page.Apply(new PageOp.Place(ToastPosition.Hud), new PageOp.Show(View(1, Stamina)));
+        var box = Px(Assert.Single(LastRects(page).Boxes));
+
+        Assert.Equal(77 + 10, box.Left);
+        Assert.Equal(980 - 8, box.Bottom);
+    }
+
+    [Fact]
+    public void In_the_prologue_with_no_action_panel_the_deck_lines_up_with_the_foot_of_the_tool_column()
+    {
+        var page = new PageScript();
+        page.Run("setPart(addFrame('CoreUI0', 'https://webui/UI/CoreUI0/CoreUI0.html', 1), '.vertical-tools', 30, 700, 102, 1050)");
+
+        page.Apply(new PageOp.Place(ToastPosition.Hud), new PageOp.Show(View(1, Stamina)));
+        var box = Px(Assert.Single(LastRects(page).Boxes));
+
+        Assert.Equal(102 + 10, box.Left);
+        Assert.Equal(1050, box.Bottom);
+    }
+
+    /// <summary>In plan mode the game hides the tool column and the queue; the deck must not jump to the fallback.</summary>
+    [Fact]
+    public void While_the_hud_is_hidden_the_deck_stays_put_and_it_follows_the_hud_when_it_moves()
+    {
+        var page = new PageScript();
+        page.Run("var hud = addHud(1)");
+
+        page.Apply(new PageOp.Place(ToastPosition.Hud), new PageOp.Show(View(1, Stamina)));
+        page.Run("setPart(hud, '.vertical-tools', 0, 0, 0, 0); setPart(hud, '.action-panel', 0, 0, 0, 0)");
+        page.Advance(250);
+        var whileHidden = Px(Assert.Single(LastRects(page).Boxes));
+        page.Run("setPart(hud, '.vertical-tools', 18, 600, 120, 963); setPart(hud, '.action-panel', 18, 940, 900, 1062)");
+        page.Advance(250);
+        var moved = Px(Assert.Single(LastRects(page).Boxes));
+
+        Assert.Equal((87, 972), (whileHidden.Left, whileHidden.Bottom));
+        Assert.Equal((130, 932), (moved.Left, moved.Bottom));
+    }
+
+    [Theory]
+    [InlineData(ToastPosition.TopLeft, 16, 16)]
+    [InlineData(ToastPosition.TopRight, 1920 - 16 - 280, 16)]
+    [InlineData(ToastPosition.BottomLeft, 16, 1080 - 16 - 60)]
+    [InlineData(ToastPosition.BottomRight, 1920 - 16 - 280, 1080 - 16 - 60)]
+    public void A_corner_setting_puts_the_deck_in_that_corner_even_with_the_hud_up(ToastPosition corner, int left, int top)
+    {
+        var page = new PageScript();
+        page.Run("addHud(1)");
+
+        page.Apply(new PageOp.Place(corner), new PageOp.Show(View(1, Stamina)));
+        var box = Px(Assert.Single(LastRects(page).Boxes));
+
+        Assert.Equal((left, top), (box.Left, box.Top));
+    }
+
+    // ===== The deck =====
+
+    [Fact]
+    public void The_newest_toast_is_in_front_and_up_to_three_older_ones_peek_out_narrower_behind_it()
+    {
+        var page = new PageScript();
+        page.Run("addHud(1)");
+
+        page.Apply(new PageOp.Place(ToastPosition.Hud), new PageOp.Show(View(1, "1")), new PageOp.Show(View(2, "2")), new PageOp.Show(View(3, "3")), new PageOp.Show(View(4, "4")), new PageOp.Show(View(5, "5")));
+        var boxes = LastRects(page).Boxes.Select(Px).ToList();
+
+        Assert.Equal(new[] { "5", "4", "3", "2", "1" }, page.Labels());
+        Assert.Equal(new[] { 87, 93, 99, 105, 105 }, boxes.Select(box => box.Left));
+        Assert.Equal(new[] { 280, 268, 256, 244, 244 }, boxes.Select(box => box.Width));
+        Assert.Equal(new[] { 972, 964, 956, 948, 948 }, boxes.Select(box => box.Bottom));
+        Assert.All(boxes, box => Assert.Equal(60, box.Height));
+    }
+
+    [Fact]
+    public void Hovering_an_older_toast_brings_it_to_the_front_in_full_and_leaving_it_puts_it_back()
+    {
+        var page = new PageScript();
+        page.Run("addHud(1)");
+        page.Apply(new PageOp.Place(ToastPosition.Hud), new PageOp.Show(View(1, "1")), new PageOp.Show(View(2, "2")), new PageOp.Show(View(3, "3")));
+
+        page.Run("dispatch(boxes()[2], 'mouseenter')");
+        var hovered = Px(LastRects(page).Boxes[2]);
+        var isOnTop = page.Text("boxes()[2].classList.contains('etk-front') && Number(boxes()[2].style.zIndex) > Number(boxes()[0].style.zIndex)");
+        page.Run("dispatch(boxes()[2], 'mouseleave')");
+        var back = Px(LastRects(page).Boxes[2]);
+
+        Assert.Equal("true", isOnTop);
+        Assert.Equal((87, 280, 956, 84), (hovered.Left, hovered.Width, hovered.Bottom, hovered.Height));
+        Assert.Equal((99, 256, 956, 60), (back.Left, back.Width, back.Bottom, back.Height));
+        Assert.Equal("false", page.Text("boxes()[2].classList.contains('etk-front')"));
+    }
+
+    [Fact]
+    public void A_hovered_toast_waits_while_the_rest_run_out_and_hovering_another_lets_the_first_go()
+    {
+        var page = new PageScript();
+        page.Apply(new PageOp.Show(View(1, "1")), new PageOp.Show(View(2, "2")), new PageOp.Show(View(3, "3")));
+
+        page.Run("dispatch(boxes()[2], 'mouseenter')");
+        page.Advance(3_000);
+        page.Run("dispatch(boxes()[1], 'mouseenter')");
+        page.Advance(7_000);
+
+        Assert.Equal(new[] { TimedOut(3, 1), TimedOut(1, 1) }, GoneSent(page));
+        Assert.Equal(new[] { "2" }, page.Labels());
+    }
+
+    // ===== Staying out of the way =====
+
+    [Fact]
+    public void While_the_pointer_is_on_the_tool_column_the_deck_steps_aside_so_the_buttons_tips_can_be_read()
+    {
+        var page = new PageScript();
+        page.Run("var hud = addHud(1)");
+        page.Apply(new PageOp.Place(ToastPosition.Hud), new PageOp.Show(View(1, Stamina)));
+
+        page.Run("pointAt(hud, '.vertical-tools')");
+        var onTools = LastRects(page);
+        var isHiddenOnTools = page.Text("stack().classList.contains('etk-hidden')");
+        page.Run("pointAt(hud, '.queue-container')");
+
+        Assert.Empty(onTools.Boxes);
+        Assert.Equal("true", isHiddenOnTools);
+        Assert.Single(LastRects(page).Boxes);
+        Assert.Equal("false", page.Text("stack().classList.contains('etk-hidden')"));
+    }
+
+    /// <summary>The deck hides rather than covers an open panel's buttons; only a page drawn above the HUD counts as a panel.</summary>
+    [Theory]
+    [InlineData(4, 0.05, true)]
+    [InlineData(4, 0.60, false)]
+    [InlineData(0, 0.05, false)]
+    public void A_panel_with_buttons_under_the_deck_hides_it_until_the_buttons_go(int panelZ, double buttonX, bool isHidden)
+    {
+        var page = new PageScript();
+        page.Run("addHud(1)");
+        page.Run($"addFrame('BattleBag', 'https://webui/UI/BattleBag/BattleBag.html', {panelZ})");
+        page.Apply(new PageOp.Place(ToastPosition.Hud), new PageOp.Show(View(1, Stamina)));
+
+        page.Run($"window.syncInteractiveRects('BattleBag', [{{ x: {buttonX.ToString(CultureInfo.InvariantCulture)}, y: 0.86, w: 0.1, h: 0.02 }}], null)");
+        var whileOpen = LastRects(page);
+        page.Run("window.syncInteractiveRects('BattleBag', [], null)");
+
+        Assert.Equal(isHidden ? 0 : 1, whileOpen.Boxes.Count);
+        Assert.Single(LastRects(page).Boxes);
+        Assert.Equal("BattleBag,BattleBag", page.Text("syncedPages.join(',')"));
+    }
+
+    private static PageCommand.Rects LastRects(PageScript page) => page.Sent.OfType<PageCommand.Rects>().Last();
+
+    /// <summary>A reported box back in page pixels, rounded.</summary>
+    private static (int Left, int Top, int Width, int Height, int Bottom) Px(NormalRect box) =>
+        ((int)Math.Round(box.X * 1920), (int)Math.Round(box.Y * 1080), (int)Math.Round(box.W * 1920), (int)Math.Round(box.H * 1080), (int)Math.Round((box.Y + box.H) * 1080));
 }

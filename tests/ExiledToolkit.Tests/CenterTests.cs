@@ -219,4 +219,16 @@ public class CenterTests
     {
         Assert.Equal(7_000, new ToastSettings(ToastPosition.TopLeft, double.NaN, 4, true).Milliseconds(null));
     }
+
+    /// <summary>The stack sits beside the HUD unless the player picks a corner, and a number in the file that names no position does not lose it.</summary>
+    [Theory]
+    [InlineData(ToastPosition.BottomLeft, ToastPosition.BottomLeft)]
+    [InlineData(ToastPosition.Hud, ToastPosition.Hud)]
+    [InlineData((ToastPosition)9, ToastPosition.Hud)]
+    [InlineData((ToastPosition)(-1), ToastPosition.Hud)]
+    public void A_position_setting_is_kept_when_known_and_is_beside_the_hud_otherwise(ToastPosition setting, ToastPosition expected)
+    {
+        Assert.Equal(ToastPosition.Hud, ToastSettings.DefaultPosition);
+        Assert.Equal(expected, ToastSettings.KnownPosition(setting));
+    }
 }

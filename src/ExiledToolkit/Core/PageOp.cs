@@ -16,7 +16,7 @@ internal abstract record PageOp
     {
     }
 
-    /// <summary>Puts the stack in a corner; sent when the page script has just been installed.</summary>
+    /// <summary>Puts the stack in its place on screen; sent when the page script has just been installed.</summary>
     public sealed record Place(ToastPosition Position) : PageOp;
 
     /// <summary>A new box on top of the stack; a box the page already has with this id is updated in place.</summary>

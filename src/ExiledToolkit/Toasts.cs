@@ -6,7 +6,7 @@ using ExiledToolkit.Core;
 namespace ExiledToolkit;
 
 /// <summary>
-/// Toasts for any mod: short notices stacked in a corner of the screen. Declare a hard dependency on
+/// Toasts for any mod: short notices layered beside the game's HUD or in a screen corner. Declare a hard dependency on
 /// <c>com.dev.survivallog.exiledtoolkit</c> and call <see cref="Show"/>.
 /// </summary>
 public static class Toasts

@@ -7,11 +7,18 @@ namespace ExiledToolkit.Core;
 /// <summary>The player's toast settings, read once at start.</summary>
 internal sealed record ToastSettings(ToastPosition Position, double DefaultSeconds, int MaxVisible, bool IsEnabled)
 {
+    /// <summary>Beside the HUD, unless the player picks a corner.</summary>
+    public const ToastPosition DefaultPosition = ToastPosition.Hud;
+
     /// <summary>Used when the setting itself is not a number.</summary>
     public const double FallbackSeconds = 7;
     public const double MinSeconds = 1;
     public const double MaxSeconds = 120;
     public const int MaxMaxVisible = 10;
+
+    /// <summary>The config file can hold a number for the position; one that names no position is the default.</summary>
+    public static ToastPosition KnownPosition(ToastPosition position) =>
+        Enum.IsDefined(typeof(ToastPosition), position) ? position : DefaultPosition;
 
     /// <summary>How long a toast stays up: its own time if it gave a usable one, else the setting, kept in range.</summary>
     public int Milliseconds(double? requested)
@@ -113,7 +120,7 @@ internal sealed class ToastCenter
         lock (_gate) _board.Dismiss(id, shownCount, isClosedByPlayer, _clock.Milliseconds(), _ops);
     }
 
-    /// <summary>The page script was just installed: it gets its corner and every toast that should be on screen.</summary>
+    /// <summary>The page script was just installed: it gets its position and every toast that should be on screen.</summary>
     public void PageReady()
     {
         lock (_gate)

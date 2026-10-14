@@ -1,4 +1,4 @@
-// Exiled's Toolkit: the toast stack, run in the game's root web document above every page.
+// Exiled's Toolkit: the toast deck, run in the game's root web document above every page.
 // The C# side decides what is on screen (merges, key replacement, the waiting queue) and sends ops through
 // window.__exiledtoolkit.apply; this script only draws, times and reports. Text goes in with textContent only.
 (function () {
@@ -14,13 +14,40 @@
   var BUMP_MS = 260;
   var RECT_SETTLE_MS = 350;
   var RECT_POLL_MS = 1000;
-  var POSITIONS = ['top-right', 'top-left', 'bottom-right', 'bottom-left'];
+  // While boxes are up the HUD is measured this often, so the deck follows it and steps aside for panels.
+  var WATCH_MS = 250;
+  var POSITIONS = ['hud', 'top-right', 'top-left', 'bottom-right', 'bottom-left'];
   var KINDS = ['info', 'success', 'warning', 'error'];
+
+  // The deck: every card is CARD_WIDTH wide when in front; each older one is INSET narrower on both sides and shows
+  // PEEK px past the one before it, down to MAX_PEEKS cards, so the deck keeps about one card's footprint.
+  var CARD_WIDTH = 280;
+  var INSET = 6;
+  var PEEK = 8;
+  var MAX_PEEKS = 3;
+  var DIM = [1, 0.78, 0.62, 0.5];
+  var Z_FRONT = 2000;
+  var Z_DECK = 1000;
+  // A corner deck sits this far from the screen edges.
+  var EDGE = 16;
+  // Beside the HUD: this far right of the tool column (phone, bag) and this far above the action queue.
+  var HUD_GAP_X = 10;
+  var HUD_GAP_Y = 8;
+  // Where the HUD's tool column and queue sit at 1920 x 1080, for a deck shown before the HUD was ever measured.
+  var HUD_FALLBACK = { left: 88, bottom: 100 };
 
   var boxes = {};
   // Ids of boxes the player closed. Ids are never reused, so an entry only ever stops a late merge.
   var closedIds = {};
   var lastRects = null;
+  var position = 'hud';
+  var hudSpot = null;
+  // The deck at rest, relative to the stack's anchor; what is checked against open panels.
+  var footprint = null;
+  var isHidden = false;
+  var isToolsHovered = false;
+  // The clickable areas each game page last reported, by page id.
+  var pageRects = {};
 
   function send(text) {
     try {
@@ -40,60 +67,61 @@
   var style = document.createElement('style');
   style.id = 'etk-style';
   style.textContent = [
-    '#etk-stack { position: fixed; z-index: 2147483000; display: flex; flex-direction: column; gap: 10px;',
-    '  pointer-events: none; font-family: "Microsoft YaHei", sans-serif; }',
-    '#etk-stack.etk-top-right { top: 20px; right: 20px; align-items: flex-end; }',
-    '#etk-stack.etk-top-left { top: 20px; left: 20px; align-items: flex-start; }',
-    '#etk-stack.etk-bottom-right { bottom: 20px; right: 20px; align-items: flex-end; }',
-    '#etk-stack.etk-bottom-left { bottom: 20px; left: 20px; align-items: flex-start; }',
-    '.etk-toast { --etk-accent: #7fb3d5; --etk-glow: rgba(127,179,213,.14);',
-    '  position: relative; box-sizing: border-box; display: flex; align-items: center; gap: 14px;',
-    '  min-width: 280px; max-width: 440px; padding: 12px 36px 12px 14px; pointer-events: auto; cursor: default;',
-    '  background: linear-gradient(168deg, rgba(40,40,43,.97), rgba(20,20,22,.985));',
-    '  border: 1px solid rgba(255,255,255,.18); border-left: 4px solid var(--etk-accent); border-radius: 12px;',
-    '  box-shadow: 0 14px 44px rgba(0,0,0,.6), 0 0 22px var(--etk-glow), 0 0 1px rgba(255,255,255,.06) inset;',
-    '  color: #F2F2F2; user-select: none; -webkit-user-select: none;',
-    '  animation: etk-in .32s cubic-bezier(.22,1,.36,1) both; }',
-    '.etk-toast.etk-success { --etk-accent: #8fcf9a; --etk-glow: rgba(143,207,154,.14); }',
-    '.etk-toast.etk-warning { --etk-accent: #EBA308; --etk-glow: rgba(235,163,8,.16); }',
-    '.etk-toast.etk-error { --etk-accent: #e0614f; --etk-glow: rgba(224,97,79,.18); }',
+    '#etk-stack { position: fixed; z-index: 2147483000; width: 0; height: 0; pointer-events: none;',
+    '  font-family: "Microsoft YaHei", sans-serif; transition: opacity .15s ease; }',
+    '#etk-stack.etk-hidden { opacity: 0; }',
+    '#etk-stack.etk-hidden .etk-toast { pointer-events: none; }',
+    '.etk-toast { --etk-accent: #7fb3d5; position: absolute; box-sizing: border-box; display: flex; align-items: center; gap: 8px;',
+    '  padding: 6px 22px 6px 8px; pointer-events: auto; cursor: default;',
+    '  background: rgba(24,24,27,.9); border: 1px solid rgba(255,255,255,.08); border-left: 2px solid var(--etk-accent);',
+    '  border-radius: 6px; box-shadow: 0 4px 14px rgba(0,0,0,.45); color: #F2F2F2;',
+    '  user-select: none; -webkit-user-select: none; transition: filter .15s ease;',
+    '  animation: etk-in .24s cubic-bezier(.22,1,.36,1) both; }',
+    '.etk-toast.etk-success { --etk-accent: #8fcf9a; }',
+    '.etk-toast.etk-warning { --etk-accent: #EBA308; }',
+    '.etk-toast.etk-error { --etk-accent: #e0614f; }',
     '.etk-toast.etk-clickable { cursor: pointer; }',
-    '.etk-toast.etk-clickable:hover { border-top-color: rgba(255,255,255,.3); border-right-color: rgba(255,255,255,.3);',
-    '  border-bottom-color: rgba(255,255,255,.3); }',
+    '.etk-toast.etk-front { border-color: rgba(255,255,255,.16); border-left-color: var(--etk-accent);',
+    '  box-shadow: 0 6px 20px rgba(0,0,0,.55); }',
     '.etk-toast.etk-out { animation: etk-out .4s ease both; pointer-events: none; }',
     '.etk-toast.etk-bump { animation: etk-bump .26s ease-out both; }',
-    '#etk-stack.etk-bottom-right .etk-toast, #etk-stack.etk-bottom-left .etk-toast { animation-name: etk-in-up; }',
-    '#etk-stack.etk-bottom-right .etk-toast.etk-out, #etk-stack.etk-bottom-left .etk-toast.etk-out { animation-name: etk-out-down; }',
+    '#etk-stack.etk-hud .etk-toast, #etk-stack.etk-bottom-right .etk-toast, #etk-stack.etk-bottom-left .etk-toast { animation-name: etk-in-up; }',
+    '#etk-stack.etk-hud .etk-toast.etk-out, #etk-stack.etk-bottom-right .etk-toast.etk-out,',
+    '  #etk-stack.etk-bottom-left .etk-toast.etk-out { animation-name: etk-out-down; }',
     '#etk-stack .etk-toast.etk-bump { animation-name: etk-bump; }',
-    '@keyframes etk-in { from { opacity: 0; transform: translateY(-16px); } to { opacity: 1; transform: translateY(0); } }',
-    '@keyframes etk-out { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-8px); } }',
-    '@keyframes etk-in-up { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }',
-    '@keyframes etk-out-down { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(8px); } }',
-    '@keyframes etk-bump { 0% { transform: scale(1); } 40% { transform: scale(1.035); } 100% { transform: scale(1); } }',
-    '.etk-icon { width: 48px; height: 48px; flex: none; border-radius: 8px; overflow: hidden;',
-    '  border: 1px solid var(--etk-accent); background: linear-gradient(180deg, #131316, #1d1d20); }',
+    '@keyframes etk-in { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }',
+    '@keyframes etk-out { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-6px); } }',
+    '@keyframes etk-in-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }',
+    '@keyframes etk-out-down { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(6px); } }',
+    '@keyframes etk-bump { 0% { transform: scale(1); } 40% { transform: scale(1.03); } 100% { transform: scale(1); } }',
+    '.etk-icon { width: 26px; height: 26px; flex: none; border-radius: 4px; overflow: hidden;',
+    '  border: 1px solid rgba(255,255,255,.12); background: #131316; }',
     '.etk-icon img { width: 100%; height: 100%; object-fit: cover; object-position: top center; }',
-    '.etk-lines { display: flex; flex-direction: column; gap: 3px; min-width: 0; }',
-    '.etk-cap { display: flex; align-items: center; gap: 8px; font-size: 12px; letter-spacing: 2px;',
-    '  color: var(--etk-accent); white-space: nowrap; }',
-    '.etk-cap::after { content: ""; height: 1px; flex: 1 0 18px; background: linear-gradient(90deg, var(--etk-accent), transparent); opacity: .6; }',
-    '.etk-title { font-size: 17px; font-weight: 700; line-height: 1.3; color: #F2F2F2; overflow-wrap: anywhere; }',
-    '.etk-body { font-size: 14px; line-height: 1.35; color: rgba(255,255,255,.74); white-space: pre-line; overflow-wrap: anywhere; }',
-    '.etk-count { position: absolute; top: -9px; left: -9px; min-width: 24px; height: 22px; padding: 0 6px; box-sizing: border-box;',
-    '  border-radius: 11px; background: var(--etk-accent); color: #141416; font-size: 13px; font-weight: 700;',
-    '  line-height: 22px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,.5); }',
-    '.etk-close { position: absolute; top: 8px; right: 8px; width: 20px; height: 20px; border-radius: 4px; cursor: pointer; opacity: .55; }',
-    '.etk-close:hover { opacity: 1; background: rgba(255,255,255,.1); }',
-    '.etk-close::before, .etk-close::after { content: ""; position: absolute; left: 4px; top: 9px; width: 12px; height: 2px;',
+    '.etk-lines { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }',
+    '.etk-cap { font-size: 10px; line-height: 1.2; letter-spacing: 1px; color: var(--etk-accent);',
+    '  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }',
+    '.etk-title { font-size: 13px; font-weight: 600; line-height: 1.3; color: #F2F2F2;',
+    '  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }',
+    '.etk-body { font-size: 12px; line-height: 1.35; color: rgba(255,255,255,.62); white-space: pre-line; overflow-wrap: anywhere;',
+    '  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }',
+    '.etk-toast.etk-front .etk-title { white-space: normal; overflow-wrap: anywhere; }',
+    '.etk-toast.etk-front .etk-body { display: block; -webkit-line-clamp: none; }',
+    '.etk-count { position: absolute; top: -6px; left: -6px; min-width: 16px; height: 14px; padding: 0 4px; box-sizing: border-box;',
+    '  border-radius: 7px; background: var(--etk-accent); color: #141416; font-size: 10px; font-weight: 700;',
+    '  line-height: 14px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,.5); pointer-events: none; }',
+    '.etk-close { position: absolute; top: 4px; right: 4px; width: 14px; height: 14px; border-radius: 3px; cursor: pointer; opacity: .4; }',
+    '.etk-close:hover { opacity: .9; background: rgba(255,255,255,.1); }',
+    '.etk-close::before, .etk-close::after { content: ""; position: absolute; left: 3px; top: 6.25px; width: 8px; height: 1.5px;',
     '  background: #F2F2F2; border-radius: 1px; }',
     '.etk-close::before { transform: rotate(45deg); }',
-    '.etk-close::after { transform: rotate(-45deg); }'
+    '.etk-close::after { transform: rotate(-45deg); }',
+    '.etk-toast.etk-behind .etk-count, .etk-toast.etk-behind .etk-close { visibility: hidden; }'
   ].join('\n');
   (document.head || document.documentElement).appendChild(style);
 
   var stack = document.createElement('div');
   stack.id = 'etk-stack';
-  stack.className = 'etk-top-right';
+  stack.className = 'etk-hud';
   (document.body || document.documentElement).appendChild(stack);
 
   function child(parent, className) {
@@ -105,6 +133,10 @@
 
   function kindName(kind) {
     return KINDS.indexOf(kind) >= 0 ? kind : 'info';
+  }
+
+  function px(value) {
+    return Math.round(value) + 'px';
   }
 
   // Builds the inside of a box from one toast; used for new boxes and for boxes updated in place.
@@ -154,10 +186,27 @@
     box.timer = setTimeout(function () { leave(box); }, ms);
   }
 
-  function release(box) {
-    if (!box.hovered) return;
+  function hold(box) {
+    if (box.hovered || box.leaving) return;
+    deck().forEach(function (other) { if (other !== box) letGo(other); });
+    box.hovered = true;
+    clearTimeout(box.timer);
+    box.remaining = Math.max(0, box.deadline - Date.now());
+    box.holdTimer = setTimeout(function () { release(box); }, MAX_HOLD_MS);
+    redraw();
+  }
+
+  // Lets go of a hovered box without redrawing, for callers that redraw once after letting go of several.
+  function letGo(box) {
+    if (!box.hovered) return false;
     box.hovered = false;
+    clearTimeout(box.holdTimer);
     if (!box.leaving) arm(box, Math.max(box.remaining, MIN_RESUME_MS));
+    return true;
+  }
+
+  function release(box) {
+    if (letGo(box)) redraw();
   }
 
   function bump(box) {
@@ -170,17 +219,11 @@
   }
 
   function create(toast) {
-    var box = { id: toast.id, el: document.createElement('div'), timer: 0, holdTimer: 0, hovered: false, leaving: false, count: 1, bumpUntil: 0 };
+    var box = { id: toast.id, el: document.createElement('div'), timer: 0, holdTimer: 0, hovered: false, leaving: false, count: 1, bumpUntil: 0, restHeight: 0 };
     fill(box, toast);
 
     box.el.addEventListener('mousedown', function (event) { event.preventDefault(); });
-    box.el.addEventListener('mouseenter', function () {
-      if (box.hovered || box.leaving) return;
-      box.hovered = true;
-      clearTimeout(box.timer);
-      box.remaining = Math.max(0, box.deadline - Date.now());
-      box.holdTimer = setTimeout(function () { release(box); }, MAX_HOLD_MS);
-    });
+    box.el.addEventListener('mouseenter', function () { hold(box); });
     box.el.addEventListener('mouseleave', function () { release(box); });
     box.el.addEventListener('click', function () {
       if (box.leaving) return;
@@ -188,6 +231,7 @@
       leave(box, true);
     });
 
+    box.el.etkBox = box;
     boxes[box.id] = box;
     stack.insertBefore(box.el, stack.firstChild);
     arm(box, toast.ms);
@@ -204,11 +248,11 @@
     box.el.classList.add('etk-out');
     if (isClosedByPlayer) closedIds[box.id] = true;
     send('gone|' + box.id + '|' + box.count + '|' + (isClosedByPlayer ? 'closed' : 'timeout'));
-    syncRects();
+    redraw();
     setTimeout(function () {
       if (box.el.parentNode) box.el.parentNode.removeChild(box.el);
       if (boxes[box.id] === box) delete boxes[box.id];
-      syncRects();
+      refresh();
     }, LEAVE_MS);
   }
 
@@ -250,24 +294,260 @@
   }
 
   function place(pos) {
-    stack.className = 'etk-' + (POSITIONS.indexOf(pos) >= 0 ? pos : 'top-right');
+    position = POSITIONS.indexOf(pos) >= 0 ? pos : 'hud';
+    stack.className = 'etk-' + position + (isHidden ? ' etk-hidden' : '');
+    redraw();
   }
 
-  // Tells the C# side where the boxes are, as fractions of the page, so clicks on them reach this page. Measured from
+  // ===== Where the deck goes =====
+
+  function isShownFrame(frame) {
+    return frame.style.display !== 'none' && frame.style.visibility !== 'hidden';
+  }
+
+  // The page with the tool column: the main HUD, or the prologue's when the main one is not up.
+  function hudFrame() {
+    var frames = document.getElementsByTagName('iframe');
+    var prologue = null;
+
+    for (var i = 0; i < frames.length; i++) {
+      var frame = frames[i];
+      var src = String(frame.src || '');
+      if (!isShownFrame(frame)) continue;
+      if (/CoreUI1\.html/.test(src)) return frame;
+      if (!prologue && /CoreUI0\.html/.test(src)) prologue = frame;
+    }
+
+    return prologue;
+  }
+
+  // A part of the HUD that is laid out; one the game hid (plan mode) has an empty box and counts as missing.
+  function hudPart(doc, selector) {
+    var el = doc.querySelector(selector);
+    if (!el) return null;
+    var rect = el.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0 ? rect : null;
+  }
+
+  // Right of the tool column and above the action queue, in this page's pixels; null while the HUD cannot be read.
+  function measureHud() {
+    try {
+      var frame = hudFrame();
+      if (!frame) return null;
+      var doc = frame.contentDocument;
+      if (!doc || doc.readyState === 'loading') return null;
+      watchTools(doc);
+      var tools = hudPart(doc, '.vertical-tools');
+      if (!tools) return null;
+      var queue = hudPart(doc, '.action-panel');
+      var origin = frame.getBoundingClientRect();
+      var floor = queue ? queue.top - HUD_GAP_Y : tools.bottom;
+      return { left: origin.left + tools.right + HUD_GAP_X, bottom: (window.innerHeight || 0) - (origin.top + floor) };
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // The deck stays where the HUD last was while the HUD is hidden, so it does not jump about in plan mode.
+  function placeStack() {
+    var s = stack.style;
+    var left = '';
+    var right = '';
+    var top = '';
+    var bottom = '';
+
+    if (position === 'hud') {
+      hudSpot = measureHud() || hudSpot;
+      var spot = hudSpot || HUD_FALLBACK;
+      var width = window.innerWidth || 0;
+      var height = window.innerHeight || 0;
+      left = px(Math.max(EDGE, Math.min(spot.left, width - CARD_WIDTH - EDGE)));
+      bottom = px(Math.max(EDGE, Math.min(spot.bottom, height - EDGE)));
+    } else {
+      if (position.indexOf('left') >= 0) left = px(EDGE);
+      else right = px(EDGE);
+      if (position.indexOf('top') === 0) top = px(EDGE);
+      else bottom = px(EDGE);
+    }
+
+    if (s.left !== left) s.left = left;
+    if (s.right !== right) s.right = right;
+    if (s.top !== top) s.top = top;
+    if (s.bottom !== bottom) s.bottom = bottom;
+  }
+
+  // Live boxes, newest first.
+  function deck() {
+    var list = [];
+
+    for (var i = 0; i < stack.children.length; i++) {
+      var box = stack.children[i].etkBox;
+      if (box && !box.leaving) list.push(box);
+    }
+
+    return list;
+  }
+
+  // Lays the cards out as a deck: the newest in front at the anchor, each older one narrower, dimmer and peeking out
+  // past the one before it. A hovered card comes to the front at full width with its text in full, in its own place,
+  // so the others do not move under the pointer. Only layout boxes move; animations use transform and opacity, so
+  // the reported rects stay exact.
+  function layout() {
+    var isLeftHung = position.indexOf('right') < 0;
+    var isBottomHung = position.indexOf('top') !== 0;
+    var edge = 0;
+    var bounds = null;
+
+    deck().forEach(function (box, depth) {
+      var el = box.el;
+      var s = el.style;
+      var level = Math.min(depth, MAX_PEEKS);
+      var restInset = level * INSET;
+      var inset = box.hovered ? 0 : restInset;
+
+      s.width = px(CARD_WIDTH - 2 * inset);
+      s.left = isLeftHung ? px(inset) : '';
+      s.right = isLeftHung ? '' : px(inset);
+      s.zIndex = String(box.hovered ? Z_FRONT : Z_DECK - depth);
+      s.filter = box.hovered || level === 0 ? '' : 'brightness(' + DIM[level] + ')';
+      el.classList.toggle('etk-front', box.hovered);
+      el.classList.toggle('etk-behind', depth > 0 && !box.hovered);
+      if (!box.hovered || !box.restHeight) box.restHeight = el.offsetHeight;
+
+      var height = box.restHeight;
+      var near = depth === 0 ? 0 : Math.max(0, edge + (depth <= MAX_PEEKS ? PEEK : 0) - height);
+      edge = near + height;
+      s.top = isBottomHung ? '' : px(near);
+      s.bottom = isBottomHung ? px(near) : '';
+
+      var x0 = isLeftHung ? restInset : restInset - CARD_WIDTH;
+      var y0 = isBottomHung ? -edge : near;
+      bounds = grow(bounds, x0, y0, CARD_WIDTH - 2 * restInset, height);
+    });
+
+    footprint = bounds;
+  }
+
+  function grow(bounds, x, y, w, h) {
+    if (!bounds) return { x0: x, y0: y, x1: x + w, y1: y + h };
+    return { x0: Math.min(bounds.x0, x), y0: Math.min(bounds.y0, y), x1: Math.max(bounds.x1, x + w), y1: Math.max(bounds.y1, y + h) };
+  }
+
+  // ===== Staying out of the way =====
+
+  // The tool column's tips open to its right, where the deck sits, so the deck steps aside while the pointer is on it.
+  function watchTools(doc) {
+    if (doc.etkToolsWatched) return;
+    doc.etkToolsWatched = true;
+    doc.addEventListener('mouseover', function (event) {
+      var target = event.target;
+      setToolsHovered(!!(target && target.closest && target.closest('.vertical-tools')));
+    }, true);
+    doc.addEventListener('mouseout', function (event) {
+      if (!event.relatedTarget) setToolsHovered(false);
+    }, true);
+  }
+
+  function setToolsHovered(isOn) {
+    if (isOn === isToolsHovered) return;
+    isToolsHovered = isOn;
+    refresh();
+  }
+
+  // Every page tells the root where its clickable parts are; a copy of that tells the deck where open panels are.
+  function watchPages() {
+    var original = window.syncInteractiveRects;
+    if (typeof original !== 'function' || original.etkWatched) return;
+
+    var watched = function (pageId, rects) {
+      try {
+        pageRects[pageId] = Array.isArray(rects) ? rects : [];
+        refresh();
+      } catch (e) {
+        // The page's own rects must reach the game whatever happens here.
+      }
+      return original.apply(this, arguments);
+    };
+
+    watched.etkWatched = true;
+    window.syncInteractiveRects = watched;
+  }
+
+  function frameZ(frame) {
+    return Number(frame.style.zIndex) || 0;
+  }
+
+  function isOpenFrame(frame) {
+    var opacity = parseFloat(frame.style.opacity);
+    return isShownFrame(frame) && frame.style.pointerEvents !== 'none' && !(opacity <= 0.01);
+  }
+
+  // A shown page above the HUD (any page, when there is no HUD) with a clickable part where the deck would be.
+  function isPanelOver() {
+    if (!footprint) return false;
+    var width = window.innerWidth || 1;
+    var height = window.innerHeight || 1;
+    var origin = stack.getBoundingClientRect();
+    var deckBox = {
+      x: (origin.left + footprint.x0) / width,
+      y: (origin.top + footprint.y0) / height,
+      w: (footprint.x1 - footprint.x0) / width,
+      h: (footprint.y1 - footprint.y0) / height
+    };
+    var hud = hudFrame();
+    var hudZ = hud ? frameZ(hud) : -Infinity;
+
+    return Object.keys(pageRects).some(function (pageId) {
+      var frame = document.getElementById(pageId);
+      if (!frame || frame === hud || !isOpenFrame(frame) || frameZ(frame) <= hudZ) return false;
+      return pageRects[pageId].some(function (rect) { return overlaps(rect, deckBox); });
+    });
+  }
+
+  function overlaps(a, b) {
+    return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+  }
+
+  // A hidden deck lets go of the pointer and reports no clickable area, so what is under it takes the clicks.
+  function setHidden(isOn) {
+    if (isOn === isHidden) return;
+    isHidden = isOn;
+    stack.classList.toggle('etk-hidden', isOn);
+    if (!isOn) return;
+
+    var wasHeld = false;
+    deck().forEach(function (box) { if (letGo(box)) wasHeld = true; });
+    if (wasHeld) layout();
+  }
+
+  function refresh() {
+    setHidden((position === 'hud' && isToolsHovered) || isPanelOver());
+    syncRects();
+  }
+
+  function redraw() {
+    placeStack();
+    layout();
+    refresh();
+  }
+
+  // Tells the C# side where the cards are, as fractions of the page, so clicks on them reach this page. Measured from
   // layout boxes, which the in, out and bump animations do not move, so an animation sends nothing.
   function syncRects() {
     var width = window.innerWidth || 1;
     var height = window.innerHeight || 1;
     var origin = stack.getBoundingClientRect();
     var parts = [];
-    Object.keys(boxes).forEach(function (id) {
-      var box = boxes[id];
-      if (box.leaving) return;
-      var el = box.el;
-      if (el.offsetWidth <= 0 || el.offsetHeight <= 0) return;
-      parts.push([(origin.left + el.offsetLeft) / width, (origin.top + el.offsetTop) / height, el.offsetWidth / width, el.offsetHeight / height]
-        .map(function (n) { return n.toFixed(5); }).join(','));
-    });
+
+    if (!isHidden) {
+      deck().forEach(function (box) {
+        var el = box.el;
+        if (el.offsetWidth <= 0 || el.offsetHeight <= 0) return;
+        parts.push([(origin.left + el.offsetLeft) / width, (origin.top + el.offsetTop) / height, el.offsetWidth / width, el.offsetHeight / height]
+          .map(function (n) { return n.toFixed(5); }).join(','));
+      });
+    }
+
     var text = parts.join(';');
     if (text === lastRects) return;
     lastRects = text;
@@ -276,8 +556,13 @@
 
   // While boxes are up they are sent every second even unchanged, so the C# side can tell a live page from a lost one.
   function heartbeat() {
+    watchPages();
     if (lastRects) lastRects = null;
     syncRects();
+  }
+
+  function watch() {
+    if (deck().length > 0) redraw();
   }
 
   function apply(ops) {
@@ -292,12 +577,15 @@
         // One bad op must not stop the rest of the frame's changes.
       }
     });
-    syncRects();
-    setTimeout(function () { syncRects(); }, RECT_SETTLE_MS);
+    redraw();
+    setTimeout(redraw, RECT_SETTLE_MS);
   }
 
-  window.addEventListener('resize', function () { syncRects(); });
+  watchPages();
+  placeStack();
+  window.addEventListener('resize', redraw);
   setInterval(heartbeat, RECT_POLL_MS);
+  setInterval(watch, WATCH_MS);
 
   window.__exiledtoolkit = { apply: apply };
   sendReady();

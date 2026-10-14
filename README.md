@@ -2,13 +2,14 @@
 
 A shared library for my Survival Log mods. On its own it does nothing you can see. Install it when another mod says it needs it.
 
-Right now the Toolkit gives mods one thing: toasts. A toast is a short notice that slides into a corner of the screen, stays a few seconds, and goes away by itself. Mods that use the Toolkit show their messages this way instead of each drawing their own.
+Right now the Toolkit gives mods one thing: toasts. A toast is a short notice that appears next to the phone and bag buttons, stays a few seconds, and goes away by itself. Mods that use the Toolkit show their messages this way instead of each drawing their own.
 
 ## Features
 
-- **Toasts in a corner**: notices stack in the corner you choose, newest on top. Each one has a coloured edge that says what kind it is (info, success, warning or error).
-- **Easy to read**: bigger text and a darker box than the game's own notices, in the same style and font, and they stay a little longer (7 seconds by default).
-- **Never in the way**: toasts never take keyboard focus. Only the boxes themselves catch the mouse; the rest of the screen plays as normal.
+- **Beside the HUD**: toasts sit to the right of the phone and bag buttons, above the action queue, and follow them if the screen size changes. You can put them in a screen corner instead. Each one has a thin coloured edge that says what kind it is (info, success, warning or error).
+- **Small and tidy**: compact boxes in the game's colours and font, with long text cut to two lines. They stay 7 seconds by default.
+- **Layered**: several toasts lie on top of each other, newest in front, with the older ones peeking out behind, so they take about one toast's room. Rest the pointer on one behind to bring it to the front with its full text.
+- **Never in the way**: toasts never take keyboard focus. Only the boxes themselves catch the mouse; the rest of the screen plays as normal. They hide while the pointer is on the phone and bag buttons, so those buttons' tips can be read, and while an open panel has a button where they would be.
 - **Hover to keep one**: while the pointer rests on a toast, it stays. Move away and it leaves after a moment.
 - **Click to open**: when a mod gives a toast something to open, clicking the toast opens it. The small x closes a toast without opening anything.
 - **Repeats merge**: the same notice sent again while the first is still showing does not add another box. The first one counts up instead (x2, x3, ...) and its timer starts over.
@@ -19,7 +20,8 @@ The Toolkit adds nothing to your save and does not edit game files.
 
 ## Known issues and limits
 
-- While a toast is on screen, it covers whatever is under it. A game button under a toast cannot be clicked until the toast goes. Move the toasts to another corner with `Position` if one is in your way.
+- A toast covers whatever is under it. Next to the HUD that is empty space, and toasts hide for open panels, but a game button under a toast cannot be clicked until the toast goes. Move the toasts with `Position` if they are in your way.
+- Toasts that hide for an open panel keep counting down, so a short one can run out before the panel closes. Mods that keep a list of toasts still get it.
 - If the game does not report the pointer leaving a toast, a hovered toast still leaves on its own after about 15 seconds.
 - If something looks wrong, please tell me (see [Feedback](#feedback-and-bug-reports)).
 
@@ -46,7 +48,7 @@ Settings live in `BepInEx\config\com.dev.survivallog.exiledtoolkit.cfg`, created
 
 Tested on Survival Log 1.1.18317 with BepInEx `6.0.0-be.788`.
 
-Check `BepInEx\LogOutput.log` for `===== Exiled's Toolkit 0.1.0 started`. The line after it tells you whether toasts are shown, which corner they use, how long they stay and how many show at once. Once the game's interface is up, `toast script sent to the web UI` means toasts can appear. The same lines are in `BepInEx\exiled-toolkit.log`, which survives restarts.
+Check `BepInEx\LogOutput.log` for `===== Exiled's Toolkit 0.2.0 started`. The rest of that line tells you whether toasts are shown, where they appear, how long they stay and how many show at once. Once the game's interface is up, `toast script sent to the web UI` means toasts can appear. The same lines are in `BepInEx\exiled-toolkit.log`, which survives restarts.
 
 If no toasts appear, check that `Enabled` is `true` in the config, then look in `BepInEx\exiled-toolkit.log` for a line starting with `could not`.
 

@@ -65,13 +65,14 @@ internal static class ToastScript
         _ => "info",
     };
 
-    /// <summary>A corner this version does not know is the default one, so the stack is always placed.</summary>
+    /// <summary>A position this version does not know is the default one, beside the HUD, so the stack is always placed.</summary>
     public static string PositionName(ToastPosition position) => position switch
     {
+        ToastPosition.TopRight => "top-right",
         ToastPosition.TopLeft => "top-left",
         ToastPosition.BottomRight => "bottom-right",
         ToastPosition.BottomLeft => "bottom-left",
-        _ => "top-right",
+        _ => "hud",
     };
 
     private static string OpJson(PageOp op) => op switch

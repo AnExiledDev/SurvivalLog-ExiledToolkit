@@ -11,13 +11,17 @@ public enum ToastKind
     Error,
 }
 
-/// <summary>The screen corner the toast stack sits in.</summary>
+/// <summary>
+/// Where the toast stack sits: a screen corner, or <see cref="Hud"/>, beside the game's tool buttons (phone, bag)
+/// and above the action queue.
+/// </summary>
 public enum ToastPosition
 {
     TopRight,
     TopLeft,
     BottomRight,
     BottomLeft,
+    Hud,
 }
 
 /// <summary>Names one toast for its whole life, merges included. <see cref="None"/> is never given to a shown toast.</summary>

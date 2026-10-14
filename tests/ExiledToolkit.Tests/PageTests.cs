@@ -131,11 +131,19 @@ public class PageTests
     }
 
     [Fact]
-    public void A_corner_this_version_does_not_know_places_the_stack_top_right()
+    public void A_position_this_version_does_not_know_places_the_stack_beside_the_hud()
     {
         var script = ToastScript.Apply(new PageOp[] { new PageOp.Place((ToastPosition)7) });
 
-        Assert.Contains("{\"op\":\"place\",\"pos\":\"top-right\"}", script);
+        Assert.Contains("{\"op\":\"place\",\"pos\":\"hud\"}", script);
+    }
+
+    [Fact]
+    public void Each_corner_keeps_its_own_page_name_and_hud_has_its_own()
+    {
+        var names = Enum.GetValues<ToastPosition>().Select(ToastScript.PositionName).ToList();
+
+        Assert.Equal(new[] { "top-right", "top-left", "bottom-right", "bottom-left", "hud" }, names);
     }
 
     [Fact]
