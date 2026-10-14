@@ -27,6 +27,9 @@ internal sealed class WebPage
         _log = log;
     }
 
+    /// <summary>Whether the last script run found the web view; false until the first run.</summary>
+    public bool HasWebView { get; private set; }
+
     public void KeepInstalled(float now)
     {
         if (now < _nextCheckAt) return;
@@ -50,6 +53,7 @@ internal sealed class WebPage
     private bool Run(string javaScript)
     {
         var webView = GameSingleton.Existing<ReduxUISystem>()?.GetWebUILayer()?.canvasWebViewPrefab?.WebView;
+        HasWebView = webView != null;
 
         if (webView == null) return false;
 

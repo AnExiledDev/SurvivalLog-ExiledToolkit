@@ -28,8 +28,8 @@ internal abstract record PageCommand
     /// <summary>The player clicked a toast's body.</summary>
     public sealed record Click(ToastId Id) : PageCommand;
 
-    /// <summary>A box left the screen.</summary>
-    public sealed record Gone(ToastId Id) : PageCommand;
+    /// <summary>A box left the screen showing this count; a merge it never drew brings it back.</summary>
+    public sealed record Gone(ToastId Id, int Count) : PageCommand;
 
     /// <summary>Where the boxes are now, as fractions of the page, top-left origin.</summary>
     public sealed record Rects(IReadOnlyList<NormalRect> Boxes) : PageCommand;
@@ -50,7 +50,7 @@ internal abstract record PageCommand
             ("ready", 1) => new Ready(),
             ("noscript", 1) => new NoScript(),
             ("click", 2) when TryId(parts[1], out var id) => new Click(id),
-            ("gone", 2) when TryId(parts[1], out var id) => new Gone(id),
+            ("gone", 3) when TryId(parts[1], out var id) && TryCount(parts[2], out var count) => new Gone(id, count),
             ("rects", 2) when TryRects(parts[1], out var boxes) => new Rects(boxes),
             _ => new Unknown(message),
         };
@@ -64,6 +64,9 @@ internal abstract record PageCommand
 
         return isNumber && value > 0;
     }
+
+    private static bool TryCount(string text, out int count) =>
+        int.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out count) && count > 0;
 
     /// <summary>"x,y,w,h;x,y,w,h", or empty for no boxes.</summary>
     private static bool TryRects(string text, out IReadOnlyList<NormalRect> boxes)

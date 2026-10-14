@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 
 namespace ExiledToolkit.Core;
 
@@ -44,6 +45,9 @@ internal sealed class ToastCenter
     private readonly List<PageOp> _ops = new();
     private readonly Queue<ToastRecord> _raised = new();
     private readonly Queue<ToastId> _activations = new();
+
+    /// <summary>Touched by <see cref="Pump"/> only, on the main thread.</summary>
+    private readonly Dictionary<(MethodInfo Listener, Type Exception), int> _listenerFailures = new();
     private long _lastId;
 
     public ToastCenter(ToastSettings settings, ToastClock clock, Func<bool> isMainThread, Action<string> log)
@@ -103,10 +107,10 @@ internal sealed class ToastCenter
         return true;
     }
 
-    /// <summary>The page says the box left the screen.</summary>
-    public void Gone(ToastId id)
+    /// <summary>The page says the box left the screen showing <paramref name="shownCount"/>.</summary>
+    public void Gone(ToastId id, int shownCount)
     {
-        lock (_gate) _board.Dismiss(id, _clock.Milliseconds(), _ops);
+        lock (_gate) _board.Dismiss(id, shownCount, _clock.Milliseconds(), _ops);
     }
 
     /// <summary>The page script was just installed: it gets its corner and every toast that should be on screen.</summary>
@@ -131,7 +135,10 @@ internal sealed class ToastCenter
 
         lock (_gate)
         {
-            _board.Expire(_clock.Milliseconds(), _ops);
+            var now = _clock.Milliseconds();
+
+            _board.SendDueMerges(now, _ops);
+            _board.Expire(now, _ops);
 
             raised = _raised.ToArray();
             activations = _activations.ToArray();
@@ -169,9 +176,37 @@ internal sealed class ToastCenter
             }
             catch (Exception ex)
             {
-                _log($"a mod listening for toasts failed on \"{record.Title}\": {ex}");
+                LogListenerFailure(listener, record, ex);
             }
         }
+    }
+
+    /// <summary>
+    /// The first failure of a listener with an exception type is logged in full; repeats are counted and the count is
+    /// logged at 10, 100, 1000 and so on, so a listener that fails on every toast of a burst cannot flood the log.
+    /// </summary>
+    private void LogListenerFailure(Action<ToastRecord> listener, ToastRecord record, Exception ex)
+    {
+        var key = (listener.Method, ex.GetType());
+        var failures = _listenerFailures.TryGetValue(key, out var earlier) ? earlier + 1 : 1;
+        var name = listener.Method.DeclaringType?.FullName + "." + listener.Method.Name;
+        _listenerFailures[key] = failures;
+
+        if (failures == 1)
+        {
+            _log($"a mod listening for toasts ({name}) failed on \"{record.Title}\"; repeats are counted, not logged in full: {ex}");
+        }
+        else if (IsPowerOfTen(failures))
+        {
+            _log($"a mod listening for toasts ({name}) has now failed {failures} times with {ex.GetType().Name}");
+        }
+    }
+
+    private static bool IsPowerOfTen(int value)
+    {
+        while (value >= 10 && value % 10 == 0) value /= 10;
+
+        return value == 1;
     }
 
     /// <summary>An action asked for from another thread may have been dropped from the kept ones before this frame.</summary>

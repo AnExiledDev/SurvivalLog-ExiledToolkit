@@ -42,3 +42,26 @@ internal sealed class HitArea
         return _boxes.Any(box => box.Contains(x, y));
     }
 }
+
+/// <summary>
+/// The boxes the page last reported, trusted only while the page keeps reporting them. A page that reloaded, lost its
+/// script, or a web view that went away stops reporting, and its old boxes must not keep swallowing clicks meant for
+/// the game. The page repeats its boxes every second while it shows any.
+/// </summary>
+internal sealed class ClickArea
+{
+    public const double StaleSeconds = 3;
+
+    private HitArea _area = HitArea.Empty;
+    private double _heardAt;
+
+    public void Heard(HitArea area, double now)
+    {
+        _area = area;
+        _heardAt = now;
+    }
+
+    public void Forget() => _area = HitArea.Empty;
+
+    public HitArea At(double now) => now - _heardAt > StaleSeconds ? HitArea.Empty : _area;
+}

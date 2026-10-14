@@ -12,7 +12,7 @@ Right now the Toolkit gives mods one thing: toasts. A toast is a short notice th
 - **Hover to keep one**: while the pointer rests on a toast, it stays. Move away and it leaves after a moment.
 - **Click to open**: when a mod gives a toast something to open, clicking the toast opens it. The small x closes a toast without opening anything.
 - **Repeats merge**: the same notice sent again while the first is still showing does not add another box. The first one counts up instead (x2, x3, ...) and its timer starts over.
-- **No pile-ups**: at most 4 toasts show at once by default. The rest wait their turn and appear as earlier ones close.
+- **No pile-ups**: at most 4 toasts show at once by default. The rest wait their turn and appear as earlier ones close. If more than 30 are waiting, the oldest waiting ones are never shown, though mods that keep a list of toasts still get them.
 - **Survives reloads**: if the game's web interface reloads, the toasts on screen come back with the time they had left.
 
 The Toolkit adds nothing to your save and does not edit game files.
@@ -87,6 +87,8 @@ Toasts.Show(new ToastRequest("Storage Hub", "Put away 12 items")
 | `Key` | A toast with the same key replaces the one showing in place. Use it for progress ("Organizing 2/3"). |
 
 Text is always shown as plain text, never as HTML.
+
+At most `MaxVisible` toasts show at once and the rest wait. If more than 30 are waiting, the oldest waiting ones are dropped from the screen without ever showing. `Toasts.Raised` still fires for them, so a history keeps them.
 
 `Toasts.Show` returns a `ToastId`. A toast identical to one still showing or waiting (same source, title, body, kind and icon) merges into it: you get the earlier toast's id, the count goes up, its timer restarts, and the newest `OnClick` replaces the old one.
 

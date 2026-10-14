@@ -10,6 +10,8 @@
   // The game may stop sending pointer moves once the pointer is off every clickable area, so a missed mouseleave
   // must not hold a box forever.
   var MAX_HOLD_MS = 15000;
+  // As long as the etk-bump animation; a merge during it does not start it again.
+  var BUMP_MS = 260;
   var RECT_SETTLE_MS = 350;
   var RECT_POLL_MS = 1000;
   var POSITIONS = ['top-right', 'top-left', 'bottom-right', 'bottom-left'];
@@ -24,6 +26,13 @@
     } catch (e) {
       // The C# side keeps its own time and drops a toast it never hears about.
     }
+  }
+
+  // Without the ready message the stack is never placed and nothing is reshown, so when the bridge is not there yet
+  // it is sent once the bridge arrives.
+  function sendReady() {
+    if (window.vuplex) send('ready');
+    else window.addEventListener('vuplexready', function () { send('ready'); });
   }
 
   var style = document.createElement('style');
@@ -128,6 +137,7 @@
 
   function setCount(box, count) {
     var many = count >= 2;
+    box.count = count >= 1 ? count : 1;
     box.countEl.textContent = many ? 'x' + count : '';
     box.countEl.style.display = many ? '' : 'none';
   }
@@ -149,13 +159,16 @@
   }
 
   function bump(box) {
+    var now = Date.now();
+    if (now < box.bumpUntil) return;
+    box.bumpUntil = now + BUMP_MS;
     box.el.classList.remove('etk-bump');
     void box.el.offsetWidth;
     box.el.classList.add('etk-bump');
   }
 
   function create(toast) {
-    var box = { id: toast.id, el: document.createElement('div'), timer: 0, holdTimer: 0, hovered: false, leaving: false };
+    var box = { id: toast.id, el: document.createElement('div'), timer: 0, holdTimer: 0, hovered: false, leaving: false, count: 1, bumpUntil: 0 };
     fill(box, toast);
 
     box.el.addEventListener('mousedown', function (event) { event.preventDefault(); });
@@ -185,7 +198,8 @@
     clearTimeout(box.holdTimer);
     box.el.classList.remove('etk-bump');
     box.el.classList.add('etk-out');
-    send('gone|' + box.id);
+    // With the count it showed: a merge the C# side sent after that brings the toast back.
+    send('gone|' + box.id + '|' + box.count);
     syncRects();
     setTimeout(function () {
       if (box.el.parentNode) box.el.parentNode.removeChild(box.el);
@@ -206,10 +220,11 @@
     arm(box, toast.ms);
   }
 
-  // A merge for a box already on its way out is dropped: the C# side has been told it is gone.
+  // A merge for a box already on its way out, or one this page does not have, draws the toast afresh under the same
+  // id: the newest trigger is never lost, and the C# side keeps the toast when the gone count is behind its own.
   function merge(op) {
     var box = live(op.id);
-    if (!box) return;
+    if (!box) return create(op);
     box.click = !!op.click;
     box.el.classList.toggle('etk-clickable', box.click);
     setCount(box, op.count);
@@ -232,22 +247,31 @@
     stack.className = 'etk-' + (POSITIONS.indexOf(pos) >= 0 ? pos : 'top-right');
   }
 
-  // Tells the C# side where the boxes are, as fractions of the page, so clicks on them reach this page.
+  // Tells the C# side where the boxes are, as fractions of the page, so clicks on them reach this page. Measured from
+  // layout boxes, which the in, out and bump animations do not move, so an animation sends nothing.
   function syncRects() {
     var width = window.innerWidth || 1;
     var height = window.innerHeight || 1;
+    var origin = stack.getBoundingClientRect();
     var parts = [];
     Object.keys(boxes).forEach(function (id) {
       var box = boxes[id];
       if (box.leaving) return;
-      var r = box.el.getBoundingClientRect();
-      if (r.width <= 0 || r.height <= 0) return;
-      parts.push([r.left / width, r.top / height, r.width / width, r.height / height].map(function (n) { return n.toFixed(5); }).join(','));
+      var el = box.el;
+      if (el.offsetWidth <= 0 || el.offsetHeight <= 0) return;
+      parts.push([(origin.left + el.offsetLeft) / width, (origin.top + el.offsetTop) / height, el.offsetWidth / width, el.offsetHeight / height]
+        .map(function (n) { return n.toFixed(5); }).join(','));
     });
     var text = parts.join(';');
     if (text === lastRects) return;
     lastRects = text;
     send('rects|' + text);
+  }
+
+  // While boxes are up they are sent every second even unchanged, so the C# side can tell a live page from a lost one.
+  function heartbeat() {
+    if (lastRects) lastRects = null;
+    syncRects();
   }
 
   function apply(ops) {
@@ -263,12 +287,12 @@
       }
     });
     syncRects();
-    setTimeout(syncRects, RECT_SETTLE_MS);
+    setTimeout(function () { syncRects(); }, RECT_SETTLE_MS);
   }
 
-  window.addEventListener('resize', syncRects);
-  setInterval(syncRects, RECT_POLL_MS);
+  window.addEventListener('resize', function () { syncRects(); });
+  setInterval(heartbeat, RECT_POLL_MS);
 
   window.__exiledtoolkit = { apply: apply };
-  send('ready');
+  sendReady();
 })();

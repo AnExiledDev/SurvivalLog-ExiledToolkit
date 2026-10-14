@@ -18,6 +18,9 @@ public sealed class ToastTicker : MonoBehaviour
     internal static Action<string> Log = _ => { };
 
     private static readonly HashSet<string> ReportedFailures = new();
+
+    /// <summary>Main thread only, like the raycasts that read what it hands to <see cref="ClickRouting"/>.</summary>
+    private static readonly ClickArea Area = new();
     private static volatile int _mainThreadId;
 
     public ToastTicker(IntPtr pointer) : base(pointer)
@@ -37,11 +40,17 @@ public sealed class ToastTicker : MonoBehaviour
 
         try
         {
-            page.KeepInstalled(Time.realtimeSinceStartup);
+            var now = Time.realtimeSinceStartup;
 
-            while (PageMessages.TryTake(out var command)) Handle(command, center, page);
+            page.KeepInstalled(now);
+
+            while (PageMessages.TryTake(out var command)) Handle(command, center, page, now);
 
             page.Apply(center.Pump(Toasts.Listeners()));
+
+            if (!page.HasWebView) Area.Forget();
+
+            ClickRouting.SetArea(Area.At(now));
         }
         catch (Exception ex)
         {
@@ -49,26 +58,26 @@ public sealed class ToastTicker : MonoBehaviour
         }
     }
 
-    private static void Handle(PageCommand command, ToastCenter center, WebPage page)
+    private static void Handle(PageCommand command, ToastCenter center, WebPage page, float now)
     {
         switch (command)
         {
             case PageCommand.Ready:
-                ClickRouting.SetArea(HitArea.Empty);
+                Area.Forget();
                 center.PageReady();
                 break;
             case PageCommand.NoScript:
-                ClickRouting.SetArea(HitArea.Empty);
+                Area.Forget();
                 page.Install();
                 break;
             case PageCommand.Click click:
                 center.Activate(click.Id);
                 break;
             case PageCommand.Gone gone:
-                center.Gone(gone.Id);
+                center.Gone(gone.Id, gone.Count);
                 break;
             case PageCommand.Rects rects:
-                ClickRouting.SetArea(new HitArea(rects.Boxes));
+                Area.Heard(new HitArea(rects.Boxes), now);
                 break;
             case PageCommand.Unknown unknown:
                 Log("unknown message from the toast page: " + unknown.Text);

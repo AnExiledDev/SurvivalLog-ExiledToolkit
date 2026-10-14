@@ -56,29 +56,29 @@ internal static class ToastScript
         return literal.Append('"').ToString();
     }
 
+    /// <summary>A kind this version does not know, say from a newer mod, is drawn as info rather than lost.</summary>
     public static string KindName(ToastKind kind) => kind switch
     {
-        ToastKind.Info => "info",
         ToastKind.Success => "success",
         ToastKind.Warning => "warning",
         ToastKind.Error => "error",
-        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
+        _ => "info",
     };
 
+    /// <summary>A corner this version does not know is the default one, so the stack is always placed.</summary>
     public static string PositionName(ToastPosition position) => position switch
     {
-        ToastPosition.TopRight => "top-right",
         ToastPosition.TopLeft => "top-left",
         ToastPosition.BottomRight => "bottom-right",
         ToastPosition.BottomLeft => "bottom-left",
-        _ => throw new ArgumentOutOfRangeException(nameof(position), position, null),
+        _ => "top-right",
     };
 
     private static string OpJson(PageOp op) => op switch
     {
         PageOp.Place place => $"{{\"op\":\"place\",\"pos\":{Str(PositionName(place.Position))}}}",
         PageOp.Show show => $"{{\"op\":\"show\",{ToastFields(show.Toast)}}}",
-        PageOp.Merge merge => $"{{\"op\":\"merge\",\"id\":{Number(merge.Id.Value)},\"count\":{Number(merge.Count)},\"ms\":{Number(merge.Milliseconds)},\"click\":{Bool(merge.HasClick)}}}",
+        PageOp.Merge merge => $"{{\"op\":\"merge\",{ToastFields(merge.Toast)}}}",
         PageOp.Replace replace => $"{{\"op\":\"replace\",\"old\":{Number(replace.OldId.Value)},{ToastFields(replace.Toast)}}}",
         PageOp.Remove remove => $"{{\"op\":\"remove\",\"id\":{Number(remove.Id.Value)}}}",
         _ => throw new ArgumentOutOfRangeException(nameof(op), op, null),

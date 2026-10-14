@@ -18,11 +18,13 @@ public class MergeTests
         var second = harness.Show(Harness.Stamina());
         var third = harness.Show(Harness.Stamina());
         var ops = harness.Pump();
+        harness.Now = ToastBoard.MergeEveryMilliseconds;
+        var next = harness.Pump();
 
         Assert.Equal(first, second);
         Assert.Equal(first, third);
         Assert.Single(ops.OfType<PageOp.Show>());
-        Assert.Equal(3, Assert.Single(ops.OfType<PageOp.Merge>()).Count);
+        Assert.Equal(3, Assert.Single(next.OfType<PageOp.Merge>()).Toast.Count);
         Assert.Equal(new[] { 1, 2, 3 }, harness.Heard.Select(record => record.Count));
         Assert.Equal(new[] { false, true, true }, harness.Heard.Select(record => record.IsMerge));
         Assert.All(harness.Heard, record => Assert.Equal(first, record.Id));
@@ -38,7 +40,7 @@ public class MergeTests
         harness.Pump();
         var merged = harness.Show(Harness.Stamina());
         var whileWaiting = harness.Pump();
-        harness.Center.Gone(blocker);
+        harness.Gone(blocker);
         var shown = Assert.Single(harness.Pump().OfType<PageOp.Show>());
 
         Assert.Equal(waiting, merged);
@@ -89,7 +91,7 @@ public class MergeTests
 
         harness.Show(Harness.Stamina());
         harness.Pump();
-        harness.Center.Gone(first);
+        harness.Gone(first, shownCount: 2);
         var again = harness.Show(Harness.Stamina());
         var ops = harness.Pump();
 
@@ -112,8 +114,8 @@ public class MergeTests
         harness.Now = 7_000 + ToastBoard.LateMilliseconds + 1_000;
         var later = harness.Pump();
 
-        Assert.Equal(first, merge.Id);
-        Assert.Equal(7_000, merge.Milliseconds);
+        Assert.Equal(first, merge.Toast.Id);
+        Assert.Equal(7_000, merge.Toast.Milliseconds);
         Assert.Empty(later.OfType<PageOp.Remove>());
     }
 
@@ -125,13 +127,14 @@ public class MergeTests
         var newer = harness.Show(Harness.Titled("Put away 12 items"));
 
         harness.Pump();
+        harness.Now = 1_000;
         var merged = harness.Show(Harness.Stamina());
         var ops = harness.Pump();
 
         Assert.Equal(older, merged);
         Assert.Empty(ops.OfType<PageOp.Show>());
         Assert.Empty(ops.OfType<PageOp.Replace>());
-        Assert.Equal(older, Assert.Single(ops.OfType<PageOp.Merge>()).Id);
+        Assert.Equal(older, Assert.Single(ops.OfType<PageOp.Merge>()).Toast.Id);
         Assert.NotEqual(older, newer);
     }
 
@@ -154,10 +157,12 @@ public class MergeTests
         var harness = new Harness();
         var id = harness.Show(Harness.Stamina() with { OnClick = () => { } });
 
+        harness.Pump();
+        harness.Now = 1_000;
         harness.Show(Harness.Stamina());
         var merge = Assert.Single(harness.Pump().OfType<PageOp.Merge>());
 
-        Assert.False(merge.HasClick);
+        Assert.False(merge.Toast.HasClick);
         Assert.False(harness.Center.Activate(id));
         Assert.False(harness.Heard[^1].HasClickAction);
     }
@@ -170,10 +175,74 @@ public class MergeTests
         for (var i = 0; i < 1_000; i++) harness.Show(Harness.Stamina());
 
         var ops = harness.Pump();
+        harness.Now = ToastBoard.MergeEveryMilliseconds;
+        var next = harness.Pump();
 
-        Assert.Equal(2, ops.Count);
-        Assert.Equal(1_000, Assert.IsType<PageOp.Merge>(ops[1]).Count);
+        Assert.IsType<PageOp.Show>(Assert.Single(ops));
+        Assert.Equal(1_000, Assert.IsType<PageOp.Merge>(Assert.Single(next)).Toast.Count);
         Assert.Equal(1_000, harness.Heard.Count);
+    }
+
+    [Fact]
+    public void A_toast_fired_every_frame_updates_its_box_a_few_times_a_second_and_ends_on_the_full_count()
+    {
+        var harness = new Harness();
+        var merges = new List<PageOp.Merge>();
+
+        harness.Show(Harness.Stamina());
+        harness.Pump();
+
+        for (var frame = 1; frame <= 60; frame++)
+        {
+            harness.Now = frame * 16;
+            harness.Show(Harness.Stamina());
+            merges.AddRange(harness.Pump().OfType<PageOp.Merge>());
+        }
+
+        harness.Now = 2_000;
+        merges.AddRange(harness.Pump().OfType<PageOp.Merge>());
+
+        Assert.InRange(merges.Count, 4, 6);
+        Assert.Equal(61, merges[^1].Toast.Count);
+        Assert.All(merges.Zip(merges.Skip(1)), pair => Assert.True(pair.Second.Toast.Count > pair.First.Toast.Count));
+    }
+
+    /// <summary>The "not enough stamina" spam case: the box timed out on the page just as one more trigger came in.</summary>
+    [Fact]
+    public void A_box_that_left_before_drawing_its_latest_merge_stays_and_gets_the_merge_again()
+    {
+        var harness = new Harness();
+        var id = harness.Show(Harness.Stamina());
+
+        harness.Pump();
+        harness.Now = 7_000;
+        harness.Show(Harness.Stamina());
+        harness.Pump();
+        harness.Gone(id, shownCount: 1);
+        var ops = harness.Pump();
+
+        var merge = Assert.IsType<PageOp.Merge>(Assert.Single(ops));
+        Assert.Equal(id, merge.Toast.Id);
+        Assert.Equal(2, merge.Toast.Count);
+        Assert.Equal("Not enough stamina", merge.Toast.Content.Title);
+    }
+
+    [Fact]
+    public void A_box_that_left_showing_its_latest_count_is_gone_for_good()
+    {
+        var harness = new Harness();
+        var id = harness.Show(Harness.Stamina());
+
+        harness.Pump();
+        harness.Now = 7_000;
+        harness.Show(Harness.Stamina());
+        harness.Pump();
+        harness.Gone(id, shownCount: 2);
+        var ops = harness.Pump();
+        var again = harness.Show(Harness.Stamina());
+
+        Assert.Empty(ops);
+        Assert.NotEqual(id, again);
     }
 
     private static ToastRequest OneCharacterOff(string part) => part switch

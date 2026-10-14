@@ -22,8 +22,11 @@ internal abstract record PageOp
     /// <summary>A new box on top of the stack; a box the page already has with this id is updated in place.</summary>
     public sealed record Show(ToastView Toast) : PageOp;
 
-    /// <summary>An identical toast arrived: the box shows the new count and starts its time again, in its place.</summary>
-    public sealed record Merge(ToastId Id, int Count, int Milliseconds, bool HasClick) : PageOp;
+    /// <summary>
+    /// An identical toast arrived: the box shows the new count and starts its time again, in its place. It carries the
+    /// whole toast so the page can draw the box afresh when the old one is already leaving or gone.
+    /// </summary>
+    public sealed record Merge(ToastView Toast) : PageOp;
 
     /// <summary>A toast with the same key arrived: the box becomes the new toast, in its place.</summary>
     public sealed record Replace(ToastId OldId, ToastView Toast) : PageOp;
@@ -41,9 +44,9 @@ internal abstract record PageOp
 
         for (var i = 0; i < ops.Count; i++)
         {
-            if (ops[i] is Merge merge) lastMergeAt[merge.Id] = i;
+            if (ops[i] is Merge merge) lastMergeAt[merge.Toast.Id] = i;
         }
 
-        return ops.Where((op, i) => op is not Merge merge || lastMergeAt[merge.Id] == i).ToList();
+        return ops.Where((op, i) => op is not Merge merge || lastMergeAt[merge.Toast.Id] == i).ToList();
     }
 }

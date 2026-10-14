@@ -32,6 +32,9 @@ internal sealed class Harness
 
     public IReadOnlyList<PageOp> Pump() => Center.Pump(new Action<ToastRecord>[] { Heard.Add });
 
+    /// <summary>The page reports a box gone, showing the count it last drew.</summary>
+    public void Gone(ToastId id, int shownCount = 1) => Center.Gone(id, shownCount);
+
     public static ToastRequest Stamina() => new("Survival Log", "Not enough stamina") { Body = "Rest first", Kind = ToastKind.Warning, Icon = "icons/stamina.png" };
 
     public static ToastRequest Titled(string title) => new("Storage Hub", title);

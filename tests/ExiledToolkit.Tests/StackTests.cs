@@ -15,7 +15,7 @@ public class StackTests
         harness.Show(Harness.Titled("two"));
         var third = harness.Show(Harness.Titled("three"));
         var shownAtOnce = harness.Pump().OfType<PageOp.Show>().Count();
-        harness.Center.Gone(first);
+        harness.Gone(first);
         var next = Assert.Single(harness.Pump().OfType<PageOp.Show>());
 
         Assert.Equal(2, shownAtOnce);
@@ -31,7 +31,7 @@ public class StackTests
         harness.Show(Harness.Titled("two"));
         harness.Pump();
         harness.Now = 6_000;
-        harness.Center.Gone(first);
+        harness.Gone(first);
         var next = Assert.Single(harness.Pump().OfType<PageOp.Show>());
 
         Assert.Equal(7_000, next.Toast.Milliseconds);
@@ -45,7 +45,7 @@ public class StackTests
         var waiting = Enumerable.Range(0, ToastBoard.MaxWaiting + 5).Select(i => harness.Show(Harness.Titled("waiting " + i))).ToList();
 
         harness.Pump();
-        harness.Center.Gone(onScreen);
+        harness.Gone(onScreen);
         var next = Assert.Single(harness.Pump().OfType<PageOp.Show>());
 
         Assert.Equal(waiting[5], next.Toast.Id);
@@ -81,9 +81,9 @@ public class StackTests
         harness.Show(Harness.Titled("Organizing 1/3") with { Key = "organize" });
         var later = harness.Show(Harness.Titled("Organizing 2/3") with { Key = "organize" });
         harness.Pump();
-        harness.Center.Gone(onScreen);
+        harness.Gone(onScreen);
         var shown = harness.Pump().OfType<PageOp.Show>().ToList();
-        harness.Center.Gone(later);
+        harness.Gone(later);
 
         Assert.Equal(later, Assert.Single(shown).Toast.Id);
         Assert.Empty(harness.Pump());

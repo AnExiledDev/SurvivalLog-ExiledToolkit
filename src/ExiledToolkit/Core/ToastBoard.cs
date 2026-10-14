@@ -26,6 +26,12 @@ internal sealed class ToastBoard
     /// <summary>The shortest time a box gets when it is shown again after the page reloaded.</summary>
     public const int MinReshowMilliseconds = 1_500;
 
+    /// <summary>
+    /// The least time between two updates of one box. A toast fired every frame then costs the page a few updates a
+    /// second; the count still catches up, since every update carries the whole count.
+    /// </summary>
+    public const long MergeEveryMilliseconds = 200;
+
     private readonly int _maxVisible;
     private readonly List<Entry> _visible = new();
     private readonly List<Entry> _waiting = new();
@@ -68,14 +74,35 @@ internal sealed class ToastBoard
         return new Placed(id, 1, false);
     }
 
-    /// <summary>The page says the box left (timed out, closed, or clicked); the next waiting toast takes its room.</summary>
-    public bool Dismiss(ToastId id, long now, List<PageOp> ops)
+    /// <summary>
+    /// The page says the box left (timed out, closed, or clicked) showing <paramref name="shownCount"/>; the next
+    /// waiting toast takes its room. A box that left before drawing a merge stays: the merge is sent again and the page
+    /// draws it as a fresh box under the same id.
+    /// </summary>
+    public bool Dismiss(ToastId id, int shownCount, long now, List<PageOp> ops)
     {
+        if (_visible.Find(entry => entry.Id == id) is { } shown && shown.Count > shownCount)
+        {
+            shown.DueAt = now + shown.Milliseconds + LateMilliseconds;
+            SendMerge(shown, now, ops);
+
+            return false;
+        }
+
         var removed = _visible.RemoveAll(entry => entry.Id == id) + _waiting.RemoveAll(entry => entry.Id == id) > 0;
 
         Promote(now, ops);
 
         return removed;
+    }
+
+    /// <summary>Sends the merges held back because their box was updated too recently.</summary>
+    public void SendDueMerges(long now, List<PageOp> ops)
+    {
+        foreach (var entry in _visible)
+        {
+            if (entry.HasUnsentMerge && now - entry.LastSentAt >= MergeEveryMilliseconds) SendMerge(entry, now, ops);
+        }
     }
 
     /// <summary>Takes down boxes the page has not reported gone long after their time.</summary>
@@ -103,6 +130,7 @@ internal sealed class ToastBoard
             var milliseconds = (int)Math.Clamp(left, MinReshowMilliseconds, Math.Max(entry.Milliseconds, MinReshowMilliseconds));
             entry.DueAt = now + milliseconds + LateMilliseconds;
 
+            Sent(entry, now);
             ops.Add(new PageOp.Show(entry.View(milliseconds)));
         }
     }
@@ -116,8 +144,9 @@ internal sealed class ToastBoard
         if (_visible.Contains(entry))
         {
             entry.DueAt = now + milliseconds + LateMilliseconds;
+            entry.HasUnsentMerge = true;
 
-            ops.Add(new PageOp.Merge(entry.Id, entry.Count, milliseconds, hasClick));
+            if (now - entry.LastSentAt >= MergeEveryMilliseconds) SendMerge(entry, now, ops);
         }
 
         return new Placed(entry.Id, entry.Count, true);
@@ -136,6 +165,7 @@ internal sealed class ToastBoard
         {
             entry.DueAt = now + milliseconds + LateMilliseconds;
 
+            Sent(entry, now);
             ops.Add(new PageOp.Replace(oldId, entry.View(milliseconds)));
         }
 
@@ -158,7 +188,21 @@ internal sealed class ToastBoard
         entry.DueAt = now + entry.Milliseconds + LateMilliseconds;
 
         _visible.Add(entry);
+        Sent(entry, now);
         ops.Add(new PageOp.Show(entry.View(entry.Milliseconds)));
+    }
+
+    private static void SendMerge(Entry entry, long now, List<PageOp> ops)
+    {
+        Sent(entry, now);
+        ops.Add(new PageOp.Merge(entry.View(entry.Milliseconds)));
+    }
+
+    /// <summary>Every op for a box carries its whole state, so after one the box has no merge left to send.</summary>
+    private static void Sent(Entry entry, long now)
+    {
+        entry.LastSentAt = now;
+        entry.HasUnsentMerge = false;
     }
 
     private Entry? Find(Func<Entry, bool> matches) => _visible.FirstOrDefault(matches) ?? _waiting.FirstOrDefault(matches);
@@ -188,6 +232,12 @@ internal sealed class ToastBoard
         public bool HasClick { get; set; }
 
         public long DueAt { get; set; } = long.MaxValue;
+
+        /// <summary>When the page was last sent this box, on the board's clock.</summary>
+        public long LastSentAt { get; set; }
+
+        /// <summary>A merge the page has not been sent yet, held back by <see cref="MergeEveryMilliseconds"/>.</summary>
+        public bool HasUnsentMerge { get; set; }
 
         public ToastView View(int milliseconds) => new(Id, Content, Count, milliseconds, HasClick);
     }

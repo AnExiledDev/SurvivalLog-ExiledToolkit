@@ -8,7 +8,7 @@ Settings live in `BepInEx\config\com.dev.survivallog.exiledtoolkit.cfg`, created
 | --- | --- | --- |
 | `Position` | `TopRight` | The corner toasts appear in: `TopRight`, `TopLeft`, `BottomRight` or `BottomLeft`. |
 | `Seconds` | `7` | How long a toast stays on screen, from 1 to 120 seconds. A mod can pick its own time for its toasts. |
-| `MaxVisible` | `4` | The most toasts on screen at once, from 1 to 10. Further toasts wait and appear as earlier ones close. |
+| `MaxVisible` | `4` | The most toasts on screen at once, from 1 to 10. Further toasts wait and appear as earlier ones close. If more than 30 are waiting, the oldest waiting ones are never shown, though mods that keep a list of toasts still get them. |
 | `Enabled` | `true` | Show toasts on screen. When `false`, nothing is drawn, but mods that keep a list of toasts (such as a notification history) still get every one. |
 
 A toast stays while the pointer rests on it, for up to about 15 seconds, then leaves as normal.

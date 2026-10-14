@@ -15,7 +15,7 @@ public class PageTests
         Assert.IsType<PageCommand.Ready>(PageCommand.Parse("slmod|toolkit|ready"));
         Assert.IsType<PageCommand.NoScript>(PageCommand.Parse("slmod|toolkit|noscript"));
         Assert.Equal(new ToastId(12), Assert.IsType<PageCommand.Click>(PageCommand.Parse("slmod|toolkit|click|12")).Id);
-        Assert.Equal(new ToastId(7), Assert.IsType<PageCommand.Gone>(PageCommand.Parse("slmod|toolkit|gone|7")).Id);
+        Assert.Equal(new PageCommand.Gone(new ToastId(7), 3), PageCommand.Parse("slmod|toolkit|gone|7|3"));
     }
 
     [Theory]
@@ -23,7 +23,9 @@ public class PageTests
     [InlineData("slmod|toolkit|click|-3")]
     [InlineData("slmod|toolkit|click|abc")]
     [InlineData("slmod|toolkit|click")]
-    [InlineData("slmod|toolkit|gone|1|2")]
+    [InlineData("slmod|toolkit|gone|1")]
+    [InlineData("slmod|toolkit|gone|1|0")]
+    [InlineData("slmod|toolkit|gone|1|two")]
     [InlineData("slmod|toolkit|rects|0.1,0.2,0.3")]
     [InlineData("slmod|toolkit|rects|0.1,0.2,-0.3,0.4")]
     [InlineData("slmod|toolkit|rects|0.1,0.2,NaN,0.4")]
@@ -81,13 +83,13 @@ public class PageTests
     {
         var toast = new ToastView(new ToastId(4), new ToastContent("Mod", "A <b>", null, ToastKind.Error, null), 2, 7_000, true);
 
-        var script = ToastScript.Apply(new PageOp[] { new PageOp.Place(ToastPosition.BottomLeft), new PageOp.Show(toast), new PageOp.Merge(new ToastId(4), 3, 7_000, false), new PageOp.Remove(new ToastId(4)) });
+        var script = ToastScript.Apply(new PageOp[] { new PageOp.Place(ToastPosition.BottomLeft), new PageOp.Show(toast), new PageOp.Merge(toast with { Count = 3, HasClick = false }), new PageOp.Remove(new ToastId(4)) });
 
         Assert.StartsWith("window.__exiledtoolkit?window.__exiledtoolkit.apply([", script);
         Assert.EndsWith("]):window.vuplex&&window.vuplex.postMessage('slmod|toolkit|noscript')", script);
         Assert.Contains("{\"op\":\"place\",\"pos\":\"bottom-left\"}", script);
         Assert.Contains("{\"op\":\"show\",\"id\":4,\"source\":\"Mod\",\"title\":\"A " + Backslash + "u003cb>\",\"body\":\"\",\"kind\":\"error\",\"icon\":\"\",\"count\":2,\"ms\":7000,\"click\":true}", script);
-        Assert.Contains("{\"op\":\"merge\",\"id\":4,\"count\":3,\"ms\":7000,\"click\":false}", script);
+        Assert.Contains("{\"op\":\"merge\",\"id\":4,\"source\":\"Mod\",\"title\":\"A " + Backslash + "u003cb>\",\"body\":\"\",\"kind\":\"error\",\"icon\":\"\",\"count\":3,\"ms\":7000,\"click\":false}", script);
         Assert.Contains("{\"op\":\"remove\",\"id\":4}", script);
     }
 
@@ -97,11 +99,11 @@ public class PageTests
         var a = new ToastId(1);
         var b = new ToastId(2);
         var shown = new PageOp.Show(new ToastView(b, new ToastContent("Mod", "B", null, ToastKind.Info, null), 1, 7_000, false));
-        var ops = new PageOp[] { new PageOp.Merge(a, 2, 7_000, false), shown, new PageOp.Merge(a, 3, 7_000, true), new PageOp.Merge(b, 2, 7_000, false), new PageOp.Remove(a) };
+        var ops = new PageOp[] { Merge(a, 2, false), shown, Merge(a, 3, true), Merge(b, 2, false), new PageOp.Remove(a) };
 
         var coalesced = PageOp.Coalesce(ops);
 
-        Assert.Equal(new PageOp[] { shown, new PageOp.Merge(a, 3, 7_000, true), new PageOp.Merge(b, 2, 7_000, false), new PageOp.Remove(a) }, coalesced);
+        Assert.Equal(new PageOp[] { shown, Merge(a, 3, true), Merge(b, 2, false), new PageOp.Remove(a) }, coalesced);
     }
 
     [Fact]
@@ -109,6 +111,50 @@ public class PageTests
     {
         Assert.All(Enum.GetValues<ToastKind>(), kind => Assert.NotEmpty(ToastScript.KindName(kind)));
         Assert.All(Enum.GetValues<ToastPosition>(), position => Assert.NotEmpty(ToastScript.PositionName(position)));
+    }
+
+    /// <summary>A kind from a newer mod must not cost the rest of the frame's toasts.</summary>
+    [Fact]
+    public void A_toast_of_a_kind_this_version_does_not_know_is_drawn_as_info_and_the_frame_goes_on()
+    {
+        var odd = new ToastView(new ToastId(1), new ToastContent("Newer mod", "Odd", null, (ToastKind)99, null), 1, 7_000, false);
+        var normal = new ToastView(new ToastId(2), new ToastContent("Mod", "Normal", null, ToastKind.Success, null), 1, 7_000, false);
+
+        var script = ToastScript.Apply(new PageOp[] { new PageOp.Show(odd), new PageOp.Show(normal) });
+
+        Assert.Contains("{\"op\":\"show\",\"id\":1,\"source\":\"Newer mod\",\"title\":\"Odd\",\"body\":\"\",\"kind\":\"info\"", script);
+        Assert.Contains("{\"op\":\"show\",\"id\":2,\"source\":\"Mod\",\"title\":\"Normal\",\"body\":\"\",\"kind\":\"success\"", script);
+    }
+
+    [Fact]
+    public void A_corner_this_version_does_not_know_places_the_stack_top_right()
+    {
+        var script = ToastScript.Apply(new PageOp[] { new PageOp.Place((ToastPosition)7) });
+
+        Assert.Contains("{\"op\":\"place\",\"pos\":\"top-right\"}", script);
+    }
+
+    [Fact]
+    public void Reported_boxes_take_clicks_only_while_the_page_keeps_reporting_them()
+    {
+        var area = new ClickArea();
+        var boxes = new HitArea(new[] { new NormalRect(0, 0, 0.5, 0.5) });
+
+        area.Heard(boxes, 10);
+
+        Assert.Same(boxes, area.At(10 + ClickArea.StaleSeconds));
+        Assert.True(area.At(10 + ClickArea.StaleSeconds + 0.1).IsEmpty);
+    }
+
+    [Fact]
+    public void Reported_boxes_are_forgotten_when_the_page_reloads_or_the_web_view_goes()
+    {
+        var area = new ClickArea();
+
+        area.Heard(new HitArea(new[] { new NormalRect(0, 0, 0.5, 0.5) }), 10);
+        area.Forget();
+
+        Assert.True(area.At(10).IsEmpty);
     }
 
     [Theory]
@@ -142,4 +188,7 @@ public class PageTests
         Assert.False(HitArea.Empty.ContainsLocalPoint(0, 0, 1920, 1080, 0.5, 0.5));
         Assert.False(new HitArea(new[] { new NormalRect(0, 0, 1, 1) }).ContainsLocalPoint(0, 0, 0, 1080, 0.5, 0.5));
     }
+
+    private static PageOp.Merge Merge(ToastId id, int count, bool hasClick) =>
+        new(new ToastView(id, new ToastContent("Mod", "Same", null, ToastKind.Info, null), count, 7_000, hasClick));
 }

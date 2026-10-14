@@ -46,6 +46,51 @@ public class CenterTests
     }
 
     [Fact]
+    public void A_listener_that_throws_on_every_toast_is_logged_in_full_once_then_only_counted()
+    {
+        var harness = new Harness();
+        var listeners = new Action<ToastRecord>[] { _ => throw new InvalidOperationException("boom") };
+
+        for (var i = 0; i < 25; i++)
+        {
+            harness.Show(Harness.Titled("burst " + i));
+            harness.Center.Pump(listeners);
+        }
+
+        Assert.Equal(2, harness.Logs.Count);
+        Assert.Contains("boom", harness.Logs[0]);
+        Assert.Contains("10 times", harness.Logs[1]);
+        Assert.DoesNotContain("boom", harness.Logs[1]);
+    }
+
+    [Fact]
+    public void A_listener_failing_in_a_new_way_is_logged_in_full_again()
+    {
+        var harness = new Harness();
+        var calls = 0;
+        var listeners = new Action<ToastRecord>[]
+        {
+            _ =>
+            {
+                calls++;
+
+                if (calls == 1) throw new InvalidOperationException("first kind");
+
+                throw new ArgumentException("second kind");
+            },
+        };
+
+        harness.Show(Harness.Titled("one"));
+        harness.Center.Pump(listeners);
+        harness.Show(Harness.Titled("two"));
+        harness.Center.Pump(listeners);
+
+        Assert.Equal(2, harness.Logs.Count);
+        Assert.Contains("first kind", harness.Logs[0]);
+        Assert.Contains("second kind", harness.Logs[1]);
+    }
+
+    [Fact]
     public void A_click_action_that_throws_is_logged_and_the_game_carries_on()
     {
         var harness = new Harness();
@@ -75,7 +120,7 @@ public class CenterTests
         var id = harness.Show(Harness.Stamina() with { OnClick = () => opened++ });
 
         harness.Pump();
-        harness.Center.Gone(id);
+        harness.Gone(id);
 
         Assert.True(harness.Center.Activate(id));
         Assert.Equal(1, opened);
