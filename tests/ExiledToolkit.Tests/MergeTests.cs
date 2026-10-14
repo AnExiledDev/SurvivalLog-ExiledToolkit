@@ -209,7 +209,7 @@ public class MergeTests
 
     /// <summary>The "not enough stamina" spam case: the box timed out on the page just as one more trigger came in.</summary>
     [Fact]
-    public void A_box_that_left_before_drawing_its_latest_merge_stays_and_gets_the_merge_again()
+    public void A_box_that_timed_out_before_drawing_its_latest_merge_stays_and_gets_the_merge_again()
     {
         var harness = new Harness();
         var id = harness.Show(Harness.Stamina());
@@ -243,6 +243,47 @@ public class MergeTests
 
         Assert.Empty(ops);
         Assert.NotEqual(id, again);
+    }
+
+    /// <summary>The player's close wins over a merge still held back by the update throttle.</summary>
+    [Fact]
+    public void A_toast_the_player_closed_does_not_come_back_for_a_held_merge()
+    {
+        var harness = new Harness();
+        var id = harness.Show(Harness.Stamina());
+
+        harness.Pump();
+        harness.Now = 100;
+        harness.Show(Harness.Stamina());
+        var held = harness.Pump();
+        harness.Gone(id, shownCount: 1, isClosedByPlayer: true);
+        var afterClose = harness.Pump();
+        harness.Now = 1_000;
+        var later = harness.Pump();
+        var again = harness.Show(Harness.Stamina());
+        var fresh = harness.Pump();
+
+        Assert.Empty(held);
+        Assert.Empty(afterClose);
+        Assert.Empty(later);
+        Assert.NotEqual(id, again);
+        Assert.Equal(1, Assert.IsType<PageOp.Show>(Assert.Single(fresh)).Toast.Count);
+        Assert.False(harness.Heard[^1].IsMerge);
+    }
+
+    [Fact]
+    public void A_toast_the_player_closed_while_a_merge_was_on_its_way_stays_gone()
+    {
+        var harness = new Harness();
+        var id = harness.Show(Harness.Stamina());
+
+        harness.Pump();
+        harness.Now = 7_000;
+        harness.Show(Harness.Stamina());
+        harness.Pump();
+        harness.Gone(id, shownCount: 1, isClosedByPlayer: true);
+
+        Assert.Empty(harness.Pump());
     }
 
     private static ToastRequest OneCharacterOff(string part) => part switch

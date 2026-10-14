@@ -15,7 +15,8 @@ public class PageTests
         Assert.IsType<PageCommand.Ready>(PageCommand.Parse("slmod|toolkit|ready"));
         Assert.IsType<PageCommand.NoScript>(PageCommand.Parse("slmod|toolkit|noscript"));
         Assert.Equal(new ToastId(12), Assert.IsType<PageCommand.Click>(PageCommand.Parse("slmod|toolkit|click|12")).Id);
-        Assert.Equal(new PageCommand.Gone(new ToastId(7), 3), PageCommand.Parse("slmod|toolkit|gone|7|3"));
+        Assert.Equal(new PageCommand.Gone(new ToastId(7), 3, false), PageCommand.Parse("slmod|toolkit|gone|7|3|timeout"));
+        Assert.Equal(new PageCommand.Gone(new ToastId(7), 3, true), PageCommand.Parse("slmod|toolkit|gone|7|3|closed"));
     }
 
     [Theory]
@@ -24,8 +25,11 @@ public class PageTests
     [InlineData("slmod|toolkit|click|abc")]
     [InlineData("slmod|toolkit|click")]
     [InlineData("slmod|toolkit|gone|1")]
-    [InlineData("slmod|toolkit|gone|1|0")]
-    [InlineData("slmod|toolkit|gone|1|two")]
+    [InlineData("slmod|toolkit|gone|1|2")]
+    [InlineData("slmod|toolkit|gone|1|0|timeout")]
+    [InlineData("slmod|toolkit|gone|1|two|timeout")]
+    [InlineData("slmod|toolkit|gone|1|2|Closed")]
+    [InlineData("slmod|toolkit|gone|1|2|bored")]
     [InlineData("slmod|toolkit|rects|0.1,0.2,0.3")]
     [InlineData("slmod|toolkit|rects|0.1,0.2,-0.3,0.4")]
     [InlineData("slmod|toolkit|rects|0.1,0.2,NaN,0.4")]

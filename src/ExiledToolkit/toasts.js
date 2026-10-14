@@ -18,6 +18,8 @@
   var KINDS = ['info', 'success', 'warning', 'error'];
 
   var boxes = {};
+  // Ids of boxes the player closed. Ids are never reused, so an entry only ever stops a late merge.
+  var closedIds = {};
   var lastRects = null;
 
   function send(text) {
@@ -131,7 +133,7 @@
     var close = child(box.el, 'etk-close');
     close.addEventListener('click', function (event) {
       event.stopPropagation();
-      leave(box);
+      leave(box, true);
     });
   }
 
@@ -183,7 +185,7 @@
     box.el.addEventListener('click', function () {
       if (box.leaving) return;
       if (box.click) send('click|' + box.id);
-      leave(box);
+      leave(box, true);
     });
 
     boxes[box.id] = box;
@@ -191,15 +193,17 @@
     arm(box, toast.ms);
   }
 
-  function leave(box) {
+  // A box the player closed (x or a click) stays gone; one whose time ran out comes back for a merge it never drew,
+  // so the message carries the count it showed and how it left.
+  function leave(box, isClosedByPlayer) {
     if (box.leaving) return;
     box.leaving = true;
     clearTimeout(box.timer);
     clearTimeout(box.holdTimer);
     box.el.classList.remove('etk-bump');
     box.el.classList.add('etk-out');
-    // With the count it showed: a merge the C# side sent after that brings the toast back.
-    send('gone|' + box.id + '|' + box.count);
+    if (isClosedByPlayer) closedIds[box.id] = true;
+    send('gone|' + box.id + '|' + box.count + '|' + (isClosedByPlayer ? 'closed' : 'timeout'));
     syncRects();
     setTimeout(function () {
       if (box.el.parentNode) box.el.parentNode.removeChild(box.el);
@@ -221,8 +225,10 @@
   }
 
   // A merge for a box already on its way out, or one this page does not have, draws the toast afresh under the same
-  // id: the newest trigger is never lost, and the C# side keeps the toast when the gone count is behind its own.
+  // id: the newest trigger is never lost, and the C# side keeps the toast when the gone count is behind its own. A
+  // merge sent before the C# side heard the player closed the box is dropped.
   function merge(op) {
+    if (closedIds[op.id]) return;
     var box = live(op.id);
     if (!box) return create(op);
     box.click = !!op.click;

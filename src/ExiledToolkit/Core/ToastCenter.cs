@@ -108,9 +108,9 @@ internal sealed class ToastCenter
     }
 
     /// <summary>The page says the box left the screen showing <paramref name="shownCount"/>.</summary>
-    public void Gone(ToastId id, int shownCount)
+    public void Gone(ToastId id, int shownCount, bool isClosedByPlayer)
     {
-        lock (_gate) _board.Dismiss(id, shownCount, _clock.Milliseconds(), _ops);
+        lock (_gate) _board.Dismiss(id, shownCount, isClosedByPlayer, _clock.Milliseconds(), _ops);
     }
 
     /// <summary>The page script was just installed: it gets its corner and every toast that should be on screen.</summary>

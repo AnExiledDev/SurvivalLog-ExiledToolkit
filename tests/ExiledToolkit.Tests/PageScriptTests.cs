@@ -11,7 +11,9 @@ public class PageScriptTests
     private static ToastView View(long id, string title, int count = 1, int milliseconds = 7_000, bool hasClick = false) =>
         new(new ToastId(id), new ToastContent("Survival Log", title, null, ToastKind.Warning, null), count, milliseconds, hasClick);
 
-    private static PageCommand.Gone Gone(long id, int count) => new(new ToastId(id), count);
+    private static PageCommand.Gone TimedOut(long id, int count) => new(new ToastId(id), count, false);
+
+    private static PageCommand.Gone Closed(long id, int count) => new(new ToastId(id), count, true);
 
     private static List<PageCommand.Gone> GoneSent(PageScript page) => page.Sent.OfType<PageCommand.Gone>().ToList();
 
@@ -41,7 +43,7 @@ public class PageScriptTests
 
         Assert.Equal(new[] { "Unrelated", "Organizing 2/3" }, labels);
         Assert.Contains(new PageCommand.Click(new ToastId(3)), page.Sent);
-        Assert.Equal(new[] { Gone(3, 1) }, GoneSent(page));
+        Assert.Equal(new[] { Closed(3, 1) }, GoneSent(page));
     }
 
     [Fact]
@@ -54,7 +56,7 @@ public class PageScriptTests
         var leaving = page.BoxCount();
         page.Advance(450);
 
-        Assert.Equal(new[] { Gone(1, 1) }, GoneSent(page));
+        Assert.Equal(new[] { TimedOut(1, 1) }, GoneSent(page));
         Assert.Empty(page.Labels());
         Assert.Equal(1, leaving);
         Assert.Equal(0, page.BoxCount());
@@ -69,7 +71,23 @@ public class PageScriptTests
         page.Click(0, "etk-close");
 
         Assert.Empty(page.Sent.OfType<PageCommand.Click>());
-        Assert.Equal(new[] { Gone(1, 1) }, GoneSent(page));
+        Assert.Equal(new[] { Closed(1, 1) }, GoneSent(page));
+    }
+
+    /// <summary>A merge the plugin sent before it heard of the close must not bring the box back.</summary>
+    [Fact]
+    public void A_merge_for_a_box_the_player_closed_is_not_drawn_again()
+    {
+        var page = new PageScript();
+
+        page.Apply(new PageOp.Show(View(1, Stamina)));
+        page.Click(0, "etk-close");
+        page.Apply(new PageOp.Merge(View(1, Stamina, count: 2)));
+        page.Advance(450);
+
+        Assert.Empty(page.Labels());
+        Assert.Equal(0, page.BoxCount());
+        Assert.Equal(new[] { Closed(1, 1) }, GoneSent(page));
     }
 
     // ===== Time =====
@@ -87,7 +105,7 @@ public class PageScriptTests
         page.Advance(1);
 
         Assert.Empty(early);
-        Assert.Equal(new[] { Gone(1, 4) }, GoneSent(page));
+        Assert.Equal(new[] { TimedOut(1, 4) }, GoneSent(page));
     }
 
     /// <summary>The "not enough stamina" spam case: one more trigger lands just as the box times out.</summary>
@@ -106,7 +124,7 @@ public class PageScriptTests
 
         Assert.Equal(new[] { Stamina + " x2" }, labels);
         Assert.Equal(1, count);
-        Assert.Equal(new[] { Gone(1, 1), Gone(1, 2) }, GoneSent(page));
+        Assert.Equal(new[] { TimedOut(1, 1), TimedOut(1, 2) }, GoneSent(page));
     }
 
     [Fact]

@@ -74,7 +74,7 @@ public sealed class ToastTicker : MonoBehaviour
                 center.Activate(click.Id);
                 break;
             case PageCommand.Gone gone:
-                center.Gone(gone.Id, gone.Count);
+                center.Gone(gone.Id, gone.Count, gone.IsClosedByPlayer);
                 break;
             case PageCommand.Rects rects:
                 Area.Heard(new HitArea(rects.Boxes), now);

@@ -28,8 +28,11 @@ internal abstract record PageCommand
     /// <summary>The player clicked a toast's body.</summary>
     public sealed record Click(ToastId Id) : PageCommand;
 
-    /// <summary>A box left the screen showing this count; a merge it never drew brings it back.</summary>
-    public sealed record Gone(ToastId Id, int Count) : PageCommand;
+    /// <summary>
+    /// A box left the screen showing this count, closed by the player (x or a click) or not (its time ran out, or the
+    /// plugin took it down). Only a box that was not closed comes back for a merge it never drew.
+    /// </summary>
+    public sealed record Gone(ToastId Id, int Count, bool IsClosedByPlayer) : PageCommand;
 
     /// <summary>Where the boxes are now, as fractions of the page, top-left origin.</summary>
     public sealed record Rects(IReadOnlyList<NormalRect> Boxes) : PageCommand;
@@ -50,7 +53,7 @@ internal abstract record PageCommand
             ("ready", 1) => new Ready(),
             ("noscript", 1) => new NoScript(),
             ("click", 2) when TryId(parts[1], out var id) => new Click(id),
-            ("gone", 3) when TryId(parts[1], out var id) && TryCount(parts[2], out var count) => new Gone(id, count),
+            ("gone", 4) when TryId(parts[1], out var id) && TryCount(parts[2], out var count) && TryHowGone(parts[3], out var isClosed) => new Gone(id, count, isClosed),
             ("rects", 2) when TryRects(parts[1], out var boxes) => new Rects(boxes),
             _ => new Unknown(message),
         };
@@ -67,6 +70,14 @@ internal abstract record PageCommand
 
     private static bool TryCount(string text, out int count) =>
         int.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out count) && count > 0;
+
+    /// <summary>"closed" when the player closed the box, "timeout" for any other way it left.</summary>
+    private static bool TryHowGone(string text, out bool isClosedByPlayer)
+    {
+        isClosedByPlayer = text == "closed";
+
+        return isClosedByPlayer || text == "timeout";
+    }
 
     /// <summary>"x,y,w,h;x,y,w,h", or empty for no boxes.</summary>
     private static bool TryRects(string text, out IReadOnlyList<NormalRect> boxes)

@@ -75,13 +75,13 @@ internal sealed class ToastBoard
     }
 
     /// <summary>
-    /// The page says the box left (timed out, closed, or clicked) showing <paramref name="shownCount"/>; the next
-    /// waiting toast takes its room. A box that left before drawing a merge stays: the merge is sent again and the page
-    /// draws it as a fresh box under the same id.
+    /// The page says the box left showing <paramref name="shownCount"/>; the next waiting toast takes its room. A box
+    /// that timed out before drawing a merge stays: the merge is sent again and the page draws it as a fresh box under
+    /// the same id. One the player closed or clicked stays gone, whatever it had not drawn yet.
     /// </summary>
-    public bool Dismiss(ToastId id, int shownCount, long now, List<PageOp> ops)
+    public bool Dismiss(ToastId id, int shownCount, bool isClosedByPlayer, long now, List<PageOp> ops)
     {
-        if (_visible.Find(entry => entry.Id == id) is { } shown && shown.Count > shownCount)
+        if (!isClosedByPlayer && _visible.Find(entry => entry.Id == id) is { } shown && shown.Count > shownCount)
         {
             shown.DueAt = now + shown.Milliseconds + LateMilliseconds;
             SendMerge(shown, now, ops);
