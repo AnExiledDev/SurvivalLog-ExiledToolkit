@@ -1,0 +1,106 @@
+Name: Exiled's Toolkit
+Summary: A shared library for my Survival Log mods. It shows their short notices (toasts) beside the HUD. On its own it does nothing you can see; install it when another mod says it needs it. 我的 Survival Log 模组共用的库，负责在 HUD 旁显示它们的简短通知。单独安装时没有任何可见效果；当其他模组说需要它时再安装。
+
+Description (BBCode):
+Exiled's Toolkit is the shared part of my Survival Log mods. Right now it gives them one thing: toasts. A toast is a short notice that appears next to the phone, defense and other tool buttons, stays a few seconds, and goes away by itself. Mods that use the Toolkit show their messages this way instead of each drawing their own.
+
+[size=5]Main features[/size]
+[list]
+[*][b]Beside the HUD[/b]: toasts sit to the right of the tool buttons, above the action queue. You can put them in a screen corner instead.[/*]
+[*][b]Small and tidy[/b]: compact boxes in the game's colours and font, with a thin coloured edge for info, success, warning or error.[/*]
+[*][b]Layered[/b]: several toasts lie on top of each other, newest in front. Rest the pointer on one behind to bring it to the front with more of its text.[/*]
+[*][b]Never in the way[/b]: toasts never take keyboard focus, and they hide while the pointer is on the tool buttons or a full-screen window is open.[/*]
+[*][b]Hover to keep one, click to open[/b]: a toast stays while the pointer rests on it. When a mod gives a toast something to open, clicking it opens that; the small x just closes it.[/*]
+[*][b]Repeats merge[/b]: the same notice sent again counts up (x2, x3, ...) instead of adding another box.[/*]
+[*][b]No pile-ups[/b]: at most 4 toasts show at once by default; the rest wait their turn.[/*]
+[/list]
+
+The Toolkit adds nothing to your save and does not edit game files.
+
+Works in English and Chinese.
+
+[size=5]Known issues[/size]
+[list]
+[*]A toast covers whatever is under it. A game button under a toast cannot be clicked until the toast goes. Move the toasts with the Position setting if they are in your way.[/*]
+[*]Toasts that hide for an open panel keep counting down, so a short one can run out before the panel closes.[/*]
+[*]If the game does not report the pointer leaving a toast, a hovered toast still leaves on its own after about 15 seconds.[/*]
+[/list]
+If you run into anything strange, please tell me (see Feedback below).
+
+[size=5]Requirements[/size]
+[list]
+[*]Survival Log 1.1.18902. A game update can break it until the mod is updated.[/*]
+[*][url=https://www.nexusmods.com/survivallog/mods/12]BepInEx for Survival Log[/url]. Install it first.[/*]
+[/list]
+
+[size=5]Installation[/size]
+[list=1]
+[*]Install [url=https://www.nexusmods.com/survivallog/mods/12]BepInEx[/url] [i](if no other mods were installed before, start the game once so BepInEx finishes setup, then quit)[/i].[/*]
+[*]Put [font=Courier New]ExiledToolkit.dll[/font] in the BepInEx&#92;plugins folder inside the game folder. Full path example:
+[code]C:&#92;Program Files (x86)&#92;Steam&#92;steamapps&#92;common&#92;Survival Log&#92;BepInEx&#92;plugins&#92;ExiledToolkit.dll[/code][/*]
+[/list]
+
+[size=5]Uninstall[/size]
+Remove every mod that needs the Toolkit first; they will not load without it. Then delete [font=Courier New]ExiledToolkit.dll[/font] from the [font=Courier New]BepInEx&#92;plugins[/font] folder.
+
+[size=5]Configuration[/size]
+To move the toasts, change how long they stay or how many show, or turn them off, edit [font=Courier New]BepInEx&#92;config&#92;com.dev.survivallog.exiledtoolkit.cfg[/font] while the game is closed (see [url=https://github.com/AnExiledDev/SurvivalLog-ExiledToolkit/blob/main/CONFIG.md]CONFIG.md[/url]; the cfg file explains each setting in English and Chinese). Changes apply at the next game start.
+
+[size=5]Feedback[/size]
+Found a bug or have an idea? Come say hi on the [url=https://discord.gg/trTsyxUFqg]Core Directive Discord[/url], or leave a comment here. For bugs, please include [font=Courier New]BepInEx&#92;LogOutput.log[/font] and [font=Courier New]BepInEx&#92;exiled-toolkit.log[/font].
+
+[size=5]Source and license[/size]
+Open source under MIT: [url=https://github.com/AnExiledDev/SurvivalLog-ExiledToolkit]github.com/AnExiledDev/SurvivalLog-ExiledToolkit[/url]
+
+[line]
+[size=5]简体中文[/size]
+
+Exiled's Toolkit 是我的 Survival Log 模组共用的部分。目前它为这些模组提供一样东西：通知。通知是一条简短的提示，出现在手机、防御和其他工具按钮旁边，停留几秒后自动消失。使用 Toolkit 的模组都用这种方式显示消息，而不是各自绘制。
+
+[size=5]主要功能[/size]
+[list]
+[*][b]位于 HUD 旁边[/b]：通知位于工具按钮的右侧、行动队列的上方。也可以改到屏幕的某个角落。[/*]
+[*][b]小巧整洁[/b]：紧凑的方框，使用游戏的配色和字体，边缘的细色条表示信息、成功、警告或错误。[/*]
+[*][b]层叠显示[/b]：多条通知叠放在一起，最新的在最前面。把鼠标停在后面的通知上，它会移到最前面并显示更多文字。[/*]
+[*][b]不碍事[/b]：通知不会抢走键盘焦点；鼠标停在工具按钮上或打开全屏窗口时，通知会隐藏。[/*]
+[*][b]悬停保留，点击打开[/b]：鼠标停在通知上时，通知不会消失。如果模组为通知设置了可打开的内容，点击通知就会打开它；小 x 只关闭通知。[/*]
+[*][b]重复合并[/b]：再次发送相同的通知时，会计数（x2、x3 等），而不会新增一个方框。[/*]
+[*][b]不会堆积[/b]：默认最多同时显示 4 条通知，其余的排队等候。[/*]
+[/list]
+
+Toolkit 不会往存档里写入任何内容，也不会修改游戏文件。
+
+支持英文和中文。
+
+[size=5]已知问题[/size]
+[list]
+[*]通知会挡住下面的内容。通知下方的游戏按钮要等通知消失后才能点击。如果通知挡路，可以用 Position 设置移动它们。[/*]
+[*]因面板打开而隐藏的通知仍在倒计时，所以时间短的通知可能在面板关闭前就已结束。[/*]
+[*]如果游戏没有报告鼠标离开通知，悬停的通知也会在大约 15 秒后自行消失。[/*]
+[/list]
+如果遇到任何奇怪的情况，请告诉我（见下方反馈）。
+
+[size=5]前置要求[/size]
+[list]
+[*]Survival Log 1.1.18902。游戏更新后模组可能暂时失效，直到模组更新为止。[/*]
+[*][url=https://www.nexusmods.com/survivallog/mods/12]BepInEx for Survival Log[/url]，请先安装。[/*]
+[/list]
+
+[size=5]安装[/size]
+[list=1]
+[*]安装 [url=https://www.nexusmods.com/survivallog/mods/12]BepInEx[/url] [i]（如果之前没有装过其他模组，先启动一次游戏，让 BepInEx 完成初始化，然后退出）[/i]。[/*]
+[*]把 [font=Courier New]ExiledToolkit.dll[/font] 放进游戏目录下的 BepInEx&#92;plugins 文件夹。完整路径示例：
+[code]C:&#92;Program Files (x86)&#92;Steam&#92;steamapps&#92;common&#92;Survival Log&#92;BepInEx&#92;plugins&#92;ExiledToolkit.dll[/code][/*]
+[/list]
+
+[size=5]卸载[/size]
+从 [font=Courier New]BepInEx&#92;plugins[/font] 文件夹中删除 [font=Courier New]ExiledToolkit.dll[/font]。删除前，请先移除所有需要 Toolkit 的模组，否则它们无法加载。
+
+[size=5]配置[/size]
+如需移动通知、修改停留时间或显示数量，或关闭通知，请在游戏关闭时编辑 [font=Courier New]BepInEx&#92;config&#92;com.dev.survivallog.exiledtoolkit.cfg[/font]。配置文件中每项设置都有中文说明，完整说明见 [url=https://github.com/AnExiledDev/SurvivalLog-ExiledToolkit/blob/main/CONFIG.md]CONFIG.md[/url]（英文）。修改会在下次启动游戏时生效。
+
+[size=5]反馈[/size]
+发现 bug 或有好点子？欢迎来 [url=https://discord.gg/trTsyxUFqg]Core Directive Discord[/url] 打个招呼，或在这里留言。报告 bug 时，请附上 [font=Courier New]BepInEx&#92;LogOutput.log[/font] 和 [font=Courier New]BepInEx&#92;exiled-toolkit.log[/font]。
+
+[size=5]源代码与许可[/size]
+基于 MIT 许可开源：[url=https://github.com/AnExiledDev/SurvivalLog-ExiledToolkit]github.com/AnExiledDev/SurvivalLog-ExiledToolkit[/url]
