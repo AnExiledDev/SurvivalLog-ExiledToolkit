@@ -36,18 +36,18 @@ If you run into anything strange, please tell me (see Feedback below).
 [size=5]Installation[/size]
 [list=1]
 [*]Install [url=https://www.nexusmods.com/survivallog/mods/12]BepInEx[/url] [i](if no other mods were installed before, start the game once so BepInEx finishes setup, then quit)[/i].[/*]
-[*]Put [font=Courier New]ExiledToolkit.dll[/font] in the BepInEx&#92;plugins folder inside the game folder. Full path example:
-[code]C:&#92;Program Files (x86)&#92;Steam&#92;steamapps&#92;common&#92;Survival Log&#92;BepInEx&#92;plugins&#92;ExiledToolkit.dll[/code][/*]
+[*]Put [font=Courier New]ExiledToolkit.dll[/font] in the BepInEx\plugins folder inside the game folder. Full path example:
+[code]C:\Program Files (x86)\Steam\steamapps\common\Survival Log\BepInEx\plugins\ExiledToolkit.dll[/code][/*]
 [/list]
 
 [size=5]Uninstall[/size]
-Remove every mod that needs the Toolkit first; they will not load without it. Then delete [font=Courier New]ExiledToolkit.dll[/font] from the [font=Courier New]BepInEx&#92;plugins[/font] folder.
+Remove every mod that needs the Toolkit first; they will not load without it. Then delete [font=Courier New]ExiledToolkit.dll[/font] from the [font=Courier New]BepInEx\plugins[/font] folder.
 
 [size=5]Configuration[/size]
-To move the toasts, change how long they stay or how many show, or turn them off, edit [font=Courier New]BepInEx&#92;config&#92;com.dev.survivallog.exiledtoolkit.cfg[/font] while the game is closed (see [url=https://github.com/AnExiledDev/SurvivalLog-ExiledToolkit/blob/main/CONFIG.md]CONFIG.md[/url]; the cfg file explains each setting in English and Chinese). Changes apply at the next game start.
+To move the toasts, change how long they stay or how many show, or turn them off, edit [font=Courier New]BepInEx\config\com.dev.survivallog.exiledtoolkit.cfg[/font] while the game is closed (see [url=https://github.com/AnExiledDev/SurvivalLog-ExiledToolkit/blob/main/CONFIG.md]CONFIG.md[/url]; the cfg file explains each setting in English and Chinese). Changes apply at the next game start.
 
 [size=5]Feedback[/size]
-Found a bug or have an idea? Come say hi on the [url=https://discord.gg/trTsyxUFqg]Core Directive Discord[/url], or leave a comment here. For bugs, please include [font=Courier New]BepInEx&#92;LogOutput.log[/font] and [font=Courier New]BepInEx&#92;exiled-toolkit.log[/font].
+Found a bug or have an idea? Come say hi on the [url=https://discord.gg/trTsyxUFqg]Core Directive Discord[/url], or leave a comment here. For bugs, please include [font=Courier New]BepInEx\LogOutput.log[/font] and [font=Courier New]BepInEx\exiled-toolkit.log[/font].
 
 [size=5]Source and license[/size]
 Open source under MIT: [url=https://github.com/AnExiledDev/SurvivalLog-ExiledToolkit]github.com/AnExiledDev/SurvivalLog-ExiledToolkit[/url]
@@ -89,18 +89,18 @@ Toolkit 不会往存档里写入任何内容，也不会修改游戏文件。
 [size=5]安装[/size]
 [list=1]
 [*]安装 [url=https://www.nexusmods.com/survivallog/mods/12]BepInEx[/url] [i]（如果之前没有装过其他模组，先启动一次游戏，让 BepInEx 完成初始化，然后退出）[/i]。[/*]
-[*]把 [font=Courier New]ExiledToolkit.dll[/font] 放进游戏目录下的 BepInEx&#92;plugins 文件夹。完整路径示例：
-[code]C:&#92;Program Files (x86)&#92;Steam&#92;steamapps&#92;common&#92;Survival Log&#92;BepInEx&#92;plugins&#92;ExiledToolkit.dll[/code][/*]
+[*]把 [font=Courier New]ExiledToolkit.dll[/font] 放进游戏目录下的 BepInEx\plugins 文件夹。完整路径示例：
+[code]C:\Program Files (x86)\Steam\steamapps\common\Survival Log\BepInEx\plugins\ExiledToolkit.dll[/code][/*]
 [/list]
 
 [size=5]卸载[/size]
-从 [font=Courier New]BepInEx&#92;plugins[/font] 文件夹中删除 [font=Courier New]ExiledToolkit.dll[/font]。删除前，请先移除所有需要 Toolkit 的模组，否则它们无法加载。
+从 [font=Courier New]BepInEx\plugins[/font] 文件夹中删除 [font=Courier New]ExiledToolkit.dll[/font]。删除前，请先移除所有需要 Toolkit 的模组，否则它们无法加载。
 
 [size=5]配置[/size]
-如需移动通知、修改停留时间或显示数量，或关闭通知，请在游戏关闭时编辑 [font=Courier New]BepInEx&#92;config&#92;com.dev.survivallog.exiledtoolkit.cfg[/font]。配置文件中每项设置都有中文说明，完整说明见 [url=https://github.com/AnExiledDev/SurvivalLog-ExiledToolkit/blob/main/CONFIG.md]CONFIG.md[/url]（英文）。修改会在下次启动游戏时生效。
+如需移动通知、修改停留时间或显示数量，或关闭通知，请在游戏关闭时编辑 [font=Courier New]BepInEx\config\com.dev.survivallog.exiledtoolkit.cfg[/font]。配置文件中每项设置都有中文说明，完整说明见 [url=https://github.com/AnExiledDev/SurvivalLog-ExiledToolkit/blob/main/CONFIG.md]CONFIG.md[/url]（英文）。修改会在下次启动游戏时生效。
 
 [size=5]反馈[/size]
-发现 bug 或有好点子？欢迎来 [url=https://discord.gg/trTsyxUFqg]Core Directive Discord[/url] 打个招呼，或在这里留言。报告 bug 时，请附上 [font=Courier New]BepInEx&#92;LogOutput.log[/font] 和 [font=Courier New]BepInEx&#92;exiled-toolkit.log[/font]。
+发现 bug 或有好点子？欢迎来 [url=https://discord.gg/trTsyxUFqg]Core Directive Discord[/url] 打个招呼，或在这里留言。报告 bug 时，请附上 [font=Courier New]BepInEx\LogOutput.log[/font] 和 [font=Courier New]BepInEx\exiled-toolkit.log[/font]。
 
 [size=5]源代码与许可[/size]
 基于 MIT 许可开源：[url=https://github.com/AnExiledDev/SurvivalLog-ExiledToolkit]github.com/AnExiledDev/SurvivalLog-ExiledToolkit[/url]
