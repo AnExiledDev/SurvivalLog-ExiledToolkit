@@ -23,9 +23,7 @@ Works in English and Chinese.
 [list]
 [*]A toast covers whatever is under it. A game button under a toast cannot be clicked until the toast goes. Move the toasts with the Position setting if they are in your way.[/*]
 [*]Toasts that hide for an open panel keep counting down, so a short one can run out before the panel closes.[/*]
-[*]If the game does not report the pointer leaving a toast, a hovered toast still leaves on its own after about 15 seconds.[/*]
 [/list]
-If you run into anything strange, please tell me (see Feedback below).
 
 [size=5]Requirements[/size]
 [list]
@@ -77,9 +75,7 @@ Toolkit 不会往存档里写入任何内容，也不会修改游戏文件。
 [list]
 [*]通知会挡住下面的内容。通知下方的游戏按钮要等通知消失后才能点击。如果通知挡路，可以用 Position 设置移动它们。[/*]
 [*]因面板打开而隐藏的通知仍在倒计时，所以时间短的通知可能在面板关闭前就已结束。[/*]
-[*]如果游戏没有报告鼠标离开通知，悬停的通知也会在大约 15 秒后自行消失。[/*]
 [/list]
-如果遇到任何奇怪的情况，请告诉我（见下方反馈）。
 
 [size=5]前置要求[/size]
 [list]

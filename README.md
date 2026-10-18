@@ -22,8 +22,6 @@ The Toolkit adds nothing to your save and does not edit game files.
 
 - A toast covers whatever is under it. Next to the HUD that is empty space, and toasts hide for open panels, but a game button under a toast cannot be clicked until the toast goes. Move the toasts with `Position` if they are in your way.
 - Toasts that hide for an open panel keep counting down, so a short one can run out before the panel closes. Mods that keep a list of toasts still get it.
-- If the game does not report the pointer leaving a toast, a hovered toast still leaves on its own after about 15 seconds.
-- If something looks wrong, please tell me (see [Feedback](#feedback-and-bug-reports)).
 
 ## Requirements
 
