@@ -3,6 +3,7 @@
 ## 0.4.0
 
 - For mod authors: `LiveSettings.Watch` applies a mod's settings while the game runs, once per frame on the main thread, and tells the Mod Manager the setting needs no restart. The Mod Manager 0.4.0 needs this version.
+- For mod authors: `ItemValues` reads and writes the item list and item amount strings behind the Mod Manager's item pickers.
 
 ## 0.3.0
 

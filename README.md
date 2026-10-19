@@ -120,6 +120,26 @@ LiveSettings.Watch(() => Panel.Resize(width.Value, height.Value), width, height)
 
 Without the Toolkit, a setting can say how it applies with a tag the Mod Manager reads; see the Mod Manager's README, "For mod authors".
 
+### Item settings
+
+The Mod Manager draws item pickers for string settings tagged `ModManager.Control=ItemList` (`"1203,7"`) or `ModManager.Control=ItemCounts` (`"1203:5,7:2"`). `ItemValues` reads and writes those strings:
+
+```csharp
+using ExiledToolkit;
+
+var blocked = Config.Bind("Loot", "Blocked", "", new ConfigDescription("...", null, "ModManager.Control=ItemList"));
+var kit = Config.Bind("Start", "Kit", "1203:5,7:2", new ConfigDescription("...", null, "ModManager.Control=ItemCounts"));
+
+LiveSettings.Watch(blocked, value => Loot.Blocked = ItemValues.ParseList(value).ToHashSet());
+LiveSettings.Watch(kit, value => Start.Kit = ItemValues.ParseCounts(value));   // ItemCount(Id, Count) each
+
+kit.Value = ItemValues.FormatCounts(new[] { new ItemCount(1203, 10) });
+```
+
+- `ParseList` gives the ids in order, each once. `ParseCounts` gives each item with its amount; an item listed twice keeps its first amount.
+- Parsing never throws. An entry that is not a whole number of 0 or more, or an amount under 1, is skipped, so a .cfg edited by hand cannot break your mod.
+- `FormatList` and `FormatCounts` write the plain form the Mod Manager saves, leaving out negative ids, amounts under 1 and repeats.
+
 ## Build
 
 This is a BepInEx 6 IL2CPP plugin. It compiles against BepInEx and the game's IL2CPP interop assemblies, so a game install with BepInEx set up and started once is required. Those assemblies come from the game and are not part of this repo. The .NET 8 SDK is required.
