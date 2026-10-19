@@ -43,7 +43,7 @@ Works in English and Chinese.
 Remove every mod that needs the Toolkit first; they will not load without it. Then delete [font=Courier New]ExiledToolkit.dll[/font] from the [font=Courier New]BepInEx\plugins[/font] folder.
 
 [size=5]Configuration[/size]
-To move the toasts, change how long they stay or how many show, or turn them off, edit [font=Courier New]BepInEx\config\com.dev.survivallog.exiledtoolkit.cfg[/font] while the game is closed (see [url=https://github.com/AnExiledDev/SurvivalLog-ExiledToolkit/blob/main/CONFIG.md]CONFIG.md[/url]; the cfg file explains each setting in English and Chinese). Changes apply at the next game start.
+To move the toasts, change how long they stay or how many show, or turn them off, use the Mod Manager's Mods screen in game, where changes take effect at once, or edit [font=Courier New]BepInEx\config\com.dev.survivallog.exiledtoolkit.cfg[/font] while the game is closed (see [url=https://github.com/AnExiledDev/SurvivalLog-ExiledToolkit/blob/main/CONFIG.md]CONFIG.md[/url]; the cfg file explains each setting in English and Chinese).
 
 [size=5]Feedback[/size]
 Found a bug or have an idea? Come say hi on the [url=https://discord.gg/trTsyxUFqg]Core Directive Discord[/url], or leave a comment here. For bugs, please include [font=Courier New]BepInEx\LogOutput.log[/font] and [font=Courier New]BepInEx\exiled-toolkit.log[/font].
@@ -95,7 +95,7 @@ Toolkit 不会往存档里写入任何内容，也不会修改游戏文件。
 从 [font=Courier New]BepInEx\plugins[/font] 文件夹中删除 [font=Courier New]ExiledToolkit.dll[/font]。删除前，请先移除所有需要 Toolkit 的模组，否则它们无法加载。
 
 [size=5]配置[/size]
-如需移动通知、修改停留时间或显示数量，或关闭通知，请在游戏关闭时编辑 [font=Courier New]BepInEx\config\com.dev.survivallog.exiledtoolkit.cfg[/font]。配置文件中每项设置都有中文说明，完整说明见 [url=https://github.com/AnExiledDev/SurvivalLog-ExiledToolkit/blob/main/CONFIG.md]CONFIG.md[/url]（英文）。修改会在下次启动游戏时生效。
+如需移动通知、修改停留时间或显示数量，或关闭通知，可以在游戏内 Mod Manager 的「模组」界面修改，改动立即生效；也可以在游戏关闭时编辑 [font=Courier New]BepInEx\config\com.dev.survivallog.exiledtoolkit.cfg[/font]。配置文件中每项设置都有中文说明，完整说明见 [url=https://github.com/AnExiledDev/SurvivalLog-ExiledToolkit/blob/main/CONFIG.md]CONFIG.md[/url]（英文）。
 
 [size=5]反馈[/size]
 发现 bug 或有好点子？欢迎来 [url=https://discord.gg/trTsyxUFqg]Core Directive Discord[/url] 打个招呼，或在这里留言。报告 bug 时，请附上 [font=Courier New]BepInEx\LogOutput.log[/font] 和 [font=Courier New]BepInEx\exiled-toolkit.log[/font]。

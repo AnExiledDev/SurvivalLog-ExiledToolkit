@@ -4,7 +4,7 @@ using System.Reflection;
 
 namespace ExiledToolkit.Core;
 
-/// <summary>The player's toast settings, read once at start.</summary>
+/// <summary>The player's toast settings, read at start and again whenever one of them changes.</summary>
 internal sealed record ToastSettings(ToastPosition Position, double DefaultSeconds, int MaxVisible, bool IsEnabled)
 {
     /// <summary>Beside the HUD, unless the player picks a corner.</summary>
@@ -45,7 +45,7 @@ internal sealed record ToastClock(Func<long> Milliseconds, Func<DateTime> UtcNow
 internal sealed class ToastCenter
 {
     private readonly object _gate = new();
-    private readonly ToastSettings _settings;
+    private ToastSettings _settings;
     private readonly ToastClock _clock;
     private readonly Func<bool> _isMainThread;
     private readonly Action<string> _log;
@@ -66,6 +66,21 @@ internal sealed class ToastCenter
         _isMainThread = isMainThread;
         _log = log;
         _board = new ToastBoard(Math.Clamp(settings.MaxVisible, 1, ToastSettings.MaxMaxVisible));
+    }
+
+    /// <summary>
+    /// Takes changed settings while the game runs. A new position moves the stack at the next frame; a new on-screen
+    /// limit shows waiting toasts at once or lets extra ones run out; the time and the off switch count from the next toast.
+    /// </summary>
+    public void Configure(ToastSettings settings)
+    {
+        lock (_gate)
+        {
+            if (settings.Position != _settings.Position) _ops.Add(new PageOp.Place(settings.Position));
+
+            _settings = settings;
+            _board.Resize(Math.Clamp(settings.MaxVisible, 1, ToastSettings.MaxMaxVisible), _clock.Milliseconds(), _ops);
+        }
     }
 
     public ToastId Show(ToastRequest? request)

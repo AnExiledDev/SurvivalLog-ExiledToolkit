@@ -32,13 +32,21 @@ internal sealed class ToastBoard
     /// </summary>
     public const long MergeEveryMilliseconds = 200;
 
-    private readonly int _maxVisible;
+    private int _maxVisible;
     private readonly List<Entry> _visible = new();
     private readonly List<Entry> _waiting = new();
 
     public ToastBoard(int maxVisible)
     {
         _maxVisible = Math.Max(1, maxVisible);
+    }
+
+    /// <summary>A new limit from the player's settings: a higher one shows waiting toasts now, a lower one lets the boxes on screen run out.</summary>
+    public void Resize(int maxVisible, long now, List<PageOp> ops)
+    {
+        _maxVisible = Math.Max(1, maxVisible);
+
+        Promote(now, ops);
     }
 
     public IReadOnlyList<ToastId> VisibleIds => _visible.Select(entry => entry.Id).ToList();
