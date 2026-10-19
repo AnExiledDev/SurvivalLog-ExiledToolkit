@@ -2,8 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using ExiledToolkit.Core;
-using GameCore.HotUpdate.ReduxUI;
-using Vuplex.WebView;
 
 namespace ExiledToolkit.Adapters;
 
@@ -52,25 +50,14 @@ internal sealed class WebPage
 
     private bool Run(string javaScript)
     {
-        var webView = GameSingleton.Existing<ReduxUISystem>()?.GetWebUILayer()?.canvasWebViewPrefab?.WebView;
-        HasWebView = webView != null;
+        var hasRun = WebUi.TryRun(javaScript, out var failure);
+        HasWebView = hasRun || failure != null;
 
-        if (webView == null) return false;
+        if (failure != null && !_hasReportedRunFailure) _log("could not run script in the web UI (reported once): " + failure.Message);
 
-        try
-        {
-            webView.ExecuteJavaScript(javaScript, null);
+        _hasReportedRunFailure |= failure != null;
 
-            return true;
-        }
-        catch (Exception ex)
-        {
-            if (!_hasReportedRunFailure) _log("could not run script in the web UI (reported once): " + ex.Message);
-
-            _hasReportedRunFailure = true;
-
-            return false;
-        }
+        return hasRun;
     }
 
     private string Script()
