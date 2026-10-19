@@ -2,7 +2,7 @@
 
 A shared library for my Survival Log mods. On its own it does nothing you can see. Install it when another mod says it needs it.
 
-Right now the Toolkit gives mods one thing: toasts. A toast is a short notice that appears next to the phone, defense and other tool buttons, stays a few seconds, and goes away by itself. Mods that use the Toolkit show their messages this way instead of each drawing their own.
+Right now the Toolkit gives mods two things. The first is toasts. A toast is a short notice that appears next to the phone, defense and other tool buttons, stays a few seconds, and goes away by itself. Mods that use the Toolkit show their messages this way instead of each drawing their own. The second is live settings: mods can apply a changed setting while you play, so a change in the Mod Manager works without restarting the game.
 
 ## Features
 
@@ -96,6 +96,29 @@ At most `MaxVisible` toasts show at once and the rest wait. If more than 30 are 
 `Toasts.Raised` fires on the main thread for every call, shown or not (even with `Enabled` off), with a `ToastRecord`: id, source, title, body, kind, icon, time (UTC), whether it has a click action, the count, and `IsMerge`. Use it to keep a history.
 
 `Toasts.Activate(id)` runs a toast's click action as if it was clicked, also after it has left the screen. The Toolkit keeps the actions of the 500 most recent toasts that have one; for older toasts it returns `false`.
+
+### Live settings
+
+`LiveSettings` applies your settings while the game runs, so a change in the Mod Manager (or anything else that sets the value) takes effect at once instead of at the next start. Watching a setting also tells the Mod Manager that it applies live, so it does not show a restart warning for it.
+
+```csharp
+using ExiledToolkit;
+
+var speed = Config.Bind("General", "Speed", 1.5f, "...");
+LiveSettings.Watch(speed, value => Mover.Speed = value);
+
+var width = Config.Bind("Panel", "Width", 400, "...");
+var height = Config.Bind("Panel", "Height", 300, "...");
+LiveSettings.Watch(() => Panel.Resize(width.Value, height.Value), width, height);
+```
+
+- The apply runs once at once, on the thread that calls `Watch` (usually from `Load`), so it can replace your first read of the value. If it touches game objects that do not exist yet, check for them in the apply.
+- After that it runs on the game's main thread, at the next frame after a change, from whatever thread the change came. Several changes in one frame make one call, so "Reset all" costs one apply. With the second form, read every entry inside the apply.
+- An apply that throws is logged to `BepInEx\exiled-toolkit.log` and does not stop other mods.
+- `Watch` returns an `IDisposable`; dispose it to stop watching. Most mods watch for the life of the game and never dispose it.
+- An apply that sets one of its own watched settings runs again at the next frame, not in a loop inside one frame.
+
+Without the Toolkit, a setting can say how it applies with a tag the Mod Manager reads; see the Mod Manager's README, "For mod authors".
 
 ## Build
 

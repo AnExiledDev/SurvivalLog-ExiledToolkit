@@ -2,7 +2,7 @@ Name: Exiled's Toolkit
 Summary: A shared library for my Survival Log mods. It shows their short notices (toasts) beside the HUD. On its own it does nothing you can see; install it when another mod says it needs it. 我的 Survival Log 模组共用的库，负责在 HUD 旁显示它们的简短通知。单独安装时没有任何可见效果；当其他模组说需要它时再安装。
 
 Description (BBCode):
-Exiled's Toolkit is the shared part of my Survival Log mods. Right now it gives them one thing: toasts. A toast is a short notice that appears next to the phone, defense and other tool buttons, stays a few seconds, and goes away by itself. Mods that use the Toolkit show their messages this way instead of each drawing their own.
+Exiled's Toolkit is the shared part of my Survival Log mods. Right now it gives them two things. The first is toasts. A toast is a short notice that appears next to the phone, defense and other tool buttons, stays a few seconds, and goes away by itself. Mods that use the Toolkit show their messages this way instead of each drawing their own. The second is live settings: mods can apply a changed setting while you play, so a change in the Mod Manager works without restarting the game. Mod authors: see [url=https://github.com/AnExiledDev/SurvivalLog-ExiledToolkit#for-mod-authors]For mod authors[/url] in the README.
 
 [size=5]Main features[/size]
 [list]
@@ -54,7 +54,7 @@ Open source under MIT: [url=https://github.com/AnExiledDev/SurvivalLog-ExiledToo
 [line]
 [size=5]简体中文[/size]
 
-Exiled's Toolkit 是我的 Survival Log 模组共用的部分。目前它为这些模组提供一样东西：通知。通知是一条简短的提示，出现在手机、防御和其他工具按钮旁边，停留几秒后自动消失。使用 Toolkit 的模组都用这种方式显示消息，而不是各自绘制。
+Exiled's Toolkit 是我的 Survival Log 模组共用的部分。目前它为这些模组提供两样东西。第一样是通知。通知是一条简短的提示，出现在手机、防御和其他工具按钮旁边，停留几秒后自动消失。使用 Toolkit 的模组都用这种方式显示消息，而不是各自绘制。第二样是即时设置：模组可以在游戏进行中应用改动过的设置，因此在 Mod Manager 里改设置无需重启游戏。模组作者请看 README 中的 [url=https://github.com/AnExiledDev/SurvivalLog-ExiledToolkit#for-mod-authors]For mod authors[/url] 一节（英文）。
 
 [size=5]主要功能[/size]
 [list]

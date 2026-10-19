@@ -7,7 +7,7 @@ namespace ExiledToolkit.Adapters;
 
 /// <summary>
 /// The Unity object that hands frames to the toasts: keeps the page script installed, acts on the page's messages, and
-/// sends the frame's toast changes in one script call. Each distinct failure is logged once and none is rethrown into
+/// sends the frame's toast changes in one script call. It also runs the frame's live setting changes. Each distinct failure is logged once and none is rethrown into
 /// the game; one that repeats every frame would otherwise flood the log.
 /// </summary>
 public sealed class ToastTicker : MonoBehaviour
@@ -35,6 +35,9 @@ public sealed class ToastTicker : MonoBehaviour
         var center = Toasts.Center;
         var page = Page;
         _mainThreadId = Environment.CurrentManagedThreadId;
+
+        // Before the toast checks: live settings apply even when the toasts cannot run.
+        LiveSettings.Run(Log);
 
         if (center == null || page == null) return;
 
