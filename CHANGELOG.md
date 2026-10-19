@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0
+
+- New: the inventory's "Mods" dropdown. Mods that need it, such as Loot All Pre-Disaster, add their entries to it through the Toolkit. It shares the one button with Storage Hub's and Unpack All's own entries.
+- For mod authors: `ModsMenu.Add` puts an entry in the dropdown, with English and Chinese text, an icon, and a rule for when it shows.
+
 ## 0.4.0
 
 - For mod authors: `LiveSettings.Watch` applies a mod's settings while the game runs, once per frame on the main thread, and tells the Mod Manager the setting needs no restart. The Mod Manager 0.4.0 needs this version.

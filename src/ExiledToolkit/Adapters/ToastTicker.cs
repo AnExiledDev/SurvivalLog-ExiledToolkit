@@ -15,6 +15,7 @@ public sealed class ToastTicker : MonoBehaviour
     private const int MaxReportedFailures = 20;
 
     internal static WebPage? Page;
+    internal static MenuRunner? Menu;
     internal static Action<string> Log = _ => { };
 
     private static readonly HashSet<string> ReportedFailures = new();
@@ -39,6 +40,9 @@ public sealed class ToastTicker : MonoBehaviour
         // Before the toast checks: live settings apply even when the toasts cannot run.
         LiveSettings.Run(Log);
 
+        // Before the toast checks too: the Mods menu does not need the toasts.
+        RunMenu();
+
         if (center == null || page == null) return;
 
         try
@@ -54,6 +58,18 @@ public sealed class ToastTicker : MonoBehaviour
             if (!page.HasWebView) Area.Forget();
 
             ClickRouting.SetArea(Area.At(now));
+        }
+        catch (Exception ex)
+        {
+            ReportOnce(ex);
+        }
+    }
+
+    private static void RunMenu()
+    {
+        try
+        {
+            Menu?.Tick(Time.realtimeSinceStartup);
         }
         catch (Exception ex)
         {

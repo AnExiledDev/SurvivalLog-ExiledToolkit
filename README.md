@@ -2,7 +2,7 @@
 
 A shared library for my Survival Log mods. On its own it does nothing you can see. Install it when another mod says it needs it.
 
-Right now the Toolkit gives mods two things. The first is toasts. A toast is a short notice that appears next to the phone, defense and other tool buttons, stays a few seconds, and goes away by itself. Mods that use the Toolkit show their messages this way instead of each drawing their own. The second is live settings: mods can apply a changed setting while you play, so a change in the Mod Manager works without restarting the game.
+Right now the Toolkit gives mods three things. The first is toasts. A toast is a short notice that appears next to the phone, defense and other tool buttons, stays a few seconds, and goes away by itself. Mods that use the Toolkit show their messages this way instead of each drawing their own. The second is live settings: mods can apply a changed setting while you play, so a change in the Mod Manager works without restarting the game. The third is the inventory's "Mods" dropdown, one button in the inventory toolbar that holds the actions mods add there.
 
 ## Features
 
@@ -139,6 +139,31 @@ kit.Value = ItemValues.FormatCounts(new[] { new ItemCount(1203, 10) });
 - `ParseList` gives the ids in order, each once. `ParseCounts` gives each item with its amount; an item listed twice keeps its first amount.
 - Parsing never throws. An entry that is not a whole number of 0 or more, or an amount under 1, is skipped, so a .cfg edited by hand cannot break your mod.
 - `FormatList` and `FormatCounts` write the plain form the Mod Manager saves, leaving out negative ids, amounts under 1 and repeats.
+
+### Mods menu
+
+`ModsMenu` puts an entry in the inventory toolbar's "Mods" dropdown, between the game's discard and sort buttons. Every mod's entries share the one button, and the button only shows while at least one entry wants to be listed.
+
+```csharp
+using ExiledToolkit;
+
+ModsMenu.Add(new ModsMenuEntry("mymod.sortall", "Sort all", SortAll)
+{
+    ChineseLabel = "全部整理",
+    Title = "Sort every item in your bag",
+    ChineseTitle = "整理背包里的所有物品",
+    Icon = "M4 6h16v2H4zM4 11h12v2H4zM4 16h8v2H4z",
+    Order = 300,
+    IsShown = () => IsBeforeDisaster(),
+});
+```
+
+- The id is unique across mods: 1 to 64 letters, digits, `.`, `_` or `-`. Adding an entry with an id already in use replaces it; `ModsMenu.Remove(id)` takes it out.
+- The label and tooltip show in the game's language; empty Chinese text shows the English. `Icon` is the `d` of an SVG path on a 24-unit grid.
+- Rows sort by `Order`, then id. Storage Hub uses the 100s and Unpack All 200.
+- `IsShown` is asked on the main thread a few times a second; leave it out to always list the entry. One that throws counts as hidden and is logged once. The dropdown itself shows only on the inventory's item tab.
+- The click action runs on the main thread after the menu has closed. One that throws is logged to `BepInEx\exiled-toolkit.log`.
+- While the menu is open the game's hotkeys are held back, and Esc closes the menu.
 
 ## Build
 

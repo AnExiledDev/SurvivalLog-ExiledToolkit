@@ -6,23 +6,28 @@ using ExiledToolkit.Core;
 namespace ExiledToolkit.Adapters;
 
 /// <summary>
-/// The toast stack's half that lives in the game's web UI: toasts.js, run in the root document the game's own pages sit
-/// in, above all of them. The web view can reload at any time and lose the script, so it is checked for every couple
-/// of seconds and put back when the page says it is missing.
+/// A Toolkit script that lives in the game's web UI (toasts.js, menu.js), run in the root document the game's own
+/// pages sit in, above all of them. The web view can reload at any time and lose the script, so it is checked for
+/// every couple of seconds and put back when the page says it is missing.
 /// </summary>
 internal sealed class WebPage
 {
     private const float CheckSeconds = 2f;
-    private const string ScriptResource = "ExiledToolkit.toasts.js";
-
     private readonly Action<string> _log;
+    private readonly string _resource;
+    private readonly string _probe;
+    private readonly string _name;
     private string? _script;
     private float _nextCheckAt;
     private bool _hasReportedRunFailure;
 
-    public WebPage(Action<string> log)
+    /// <param name="probe">Script that is silent while the page script is installed and reports "noscript" when it is not.</param>
+    public WebPage(Action<string> log, string resource, string probe, string name)
     {
         _log = log;
+        _resource = resource;
+        _probe = probe;
+        _name = name;
     }
 
     /// <summary>Whether the last script run found the web view; false until the first run.</summary>
@@ -33,12 +38,12 @@ internal sealed class WebPage
         if (now < _nextCheckAt) return;
 
         _nextCheckAt = now + CheckSeconds;
-        Run(ToastScript.Probe);
+        Run(_probe);
     }
 
     public void Install()
     {
-        if (Run(Script())) _log("toast script sent to the web UI");
+        if (Run(Script())) _log(_name + " script sent to the web UI");
     }
 
     public void Apply(IReadOnlyList<PageOp> ops)
@@ -48,12 +53,15 @@ internal sealed class WebPage
         Run(ToastScript.Apply(ops));
     }
 
+    /// <summary>False when the web view is missing or the script failed.</summary>
+    public bool Send(string javaScript) => Run(javaScript);
+
     private bool Run(string javaScript)
     {
         var hasRun = WebUi.TryRun(javaScript, out var failure);
         HasWebView = hasRun || failure != null;
 
-        if (failure != null && !_hasReportedRunFailure) _log("could not run script in the web UI (reported once): " + failure.Message);
+        if (failure != null && !_hasReportedRunFailure) _log($"could not run the {_name} script in the web UI (reported once): " + failure.Message);
 
         _hasReportedRunFailure |= failure != null;
 
@@ -64,7 +72,7 @@ internal sealed class WebPage
     {
         if (_script != null) return _script;
 
-        using var stream = typeof(WebPage).Assembly.GetManifestResourceStream(ScriptResource) ?? throw new InvalidOperationException(ScriptResource + " is not embedded");
+        using var stream = typeof(WebPage).Assembly.GetManifestResourceStream(_resource) ?? throw new InvalidOperationException(_resource + " is not embedded");
         using var reader = new StreamReader(stream);
 
         return _script = reader.ReadToEnd();
