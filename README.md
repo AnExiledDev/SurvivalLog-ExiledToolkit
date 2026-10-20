@@ -2,7 +2,7 @@
 
 A shared library for my Survival Log mods. On its own it does nothing you can see. Install it when another mod says it needs it.
 
-Right now the Toolkit gives mods three things. The first is toasts. A toast is a short notice that appears next to the phone, defense and other tool buttons, stays a few seconds, and goes away by itself. Mods that use the Toolkit show their messages this way instead of each drawing their own. The second is live settings: mods can apply a changed setting while you play, so a change in the Mod Manager works without restarting the game. The third is the inventory's "Mods" dropdown, one button in the inventory toolbar that holds the actions mods add there.
+Right now the Toolkit gives mods four things. The first is toasts. A toast is a short notice that appears next to the phone, defense and other tool buttons, stays a few seconds, and goes away by itself. Mods that use the Toolkit show their messages this way instead of each drawing their own. The second is live settings: mods can apply a changed setting while you play, so a change in the Mod Manager works without restarting the game. The third is the inventory's "Mods" dropdown, one button in the inventory toolbar that holds the actions mods add there. The fourth keeps the HUD's tool buttons tidy: once mods have added enough buttons that the column would run past four, they are laid out in columns of four instead.
 
 ## Features
 
@@ -14,6 +14,7 @@ Right now the Toolkit gives mods three things. The first is toasts. A toast is a
 - **Click to open**: when a mod gives a toast something to open, clicking the toast opens it. The small x closes a toast without opening anything.
 - **Repeats merge**: the same notice sent again while the first is still showing does not add another box. The first one counts up instead (x2, x3, ...) and its timer starts over.
 - **No pile-ups**: at most 4 toasts show at once by default. The rest wait their turn and appear as earlier ones close. If more than 30 are waiting, the oldest waiting ones are never shown, though mods that keep a list of toasts still get them.
+- **Tidy tool buttons**: the column of buttons on the left of the HUD (the phone, the bag and the buttons mods add there) never gets taller than four buttons. The rest go into a second column to its right, top to bottom, and a third after that. The phone and bag stay where they always are, and toasts move right to clear the extra column.
 - **Survives reloads**: if the game's web interface reloads, the toasts on screen come back with the time they had left.
 
 The Toolkit adds nothing to your save and does not edit game files.
@@ -47,7 +48,7 @@ Settings live in `BepInEx\config\com.dev.survivallog.exiledtoolkit.cfg`, created
 
 Tested on Survival Log 1.1.18902 with BepInEx `6.0.0-be.788`.
 
-Check `BepInEx\LogOutput.log` for `===== Exiled's Toolkit 0.5.0 started`. A few lines below it, `toasts shown ...` tells you whether toasts are shown, where they appear, how long they stay and how many show at once; it is written again whenever one of those settings changes. Once the game's interface is up, `toast script sent to the web UI` means toasts can appear. The same lines are in `BepInEx\exiled-toolkit.log`, which survives restarts.
+Check `BepInEx\LogOutput.log` for `===== Exiled's Toolkit 0.6.0 started`. A few lines below it, `toasts shown ...` tells you whether toasts are shown, where they appear, how long they stay and how many show at once; it is written again whenever one of those settings changes. Once the game's interface is up, `toast script sent to the web UI` means toasts can appear. The same lines are in `BepInEx\exiled-toolkit.log`, which survives restarts.
 
 If no toasts appear, check that `Enabled` is `true` in the config, then look in `BepInEx\exiled-toolkit.log` for a line starting with `could not`.
 
@@ -168,6 +169,12 @@ ModsMenu.Add(new ModsMenuEntry("mymod.sortall", "Sort all", SortAll)
 - `IsShown` is asked on the main thread a few times a second; leave it out to always list the entry. One that throws counts as hidden and is logged once. The dropdown itself shows only on the inventory's item tab.
 - The click action runs on the main thread after the menu has closed. One that throws is logged to `BepInEx\exiled-toolkit.log`.
 - While the menu is open the game's hotkeys are held back, and Esc closes the menu.
+
+### HUD buttons
+
+A mod that adds a button to the HUD's tool column (`.vertical-tools` in CoreUI1 or CoreUI0) marks it with `data-etk-dock="<order>"`. Past four shown buttons the Toolkit lays the column out four high: the last four stay in the first column, and the rest fill columns to the right, top to bottom. Marked buttons come first, lowest order first, then the game's own buttons and unmarked ones in page order. Trap Hub uses 10, Package Bank 20, Farm Hub 30 and Defense Manager 40.
+
+Nothing else is needed, and the mark does nothing without the Toolkit, so a mod can keep the Toolkit optional.
 
 ## Build
 

@@ -15,6 +15,9 @@ public sealed class ToastTicker : MonoBehaviour
     private const int MaxReportedFailures = 20;
 
     internal static WebPage? Page;
+
+    /// <summary>The HUD dock lives in the same root document as the toasts, so it is put back whenever they are.</summary>
+    internal static WebPage? Dock;
     internal static MenuRunner? Menu;
     internal static Action<string> Log = _ => { };
 
@@ -88,6 +91,7 @@ public sealed class ToastTicker : MonoBehaviour
             case PageCommand.NoScript:
                 Area.Forget();
                 page.Install();
+                Dock?.Install();
                 break;
             case PageCommand.Click click:
                 center.Activate(click.Id);

@@ -16,7 +16,9 @@
   <!-- The page script, as the plugin ships it, run in Jint against a fake root document. -->
   <ItemGroup>
     <EmbeddedResource Include="..\..\src\ExiledToolkit\toasts.js" LogicalName="ExiledToolkit.toasts.js" Link="toasts.js" />
+    <EmbeddedResource Include="..\..\src\ExiledToolkit\dock.js" LogicalName="ExiledToolkit.dock.js" Link="dock.js" />
     <EmbeddedResource Include="FakePage.js" LogicalName="ExiledToolkit.Tests.FakePage.js" />
+    <EmbeddedResource Include="DockFake.js" LogicalName="ExiledToolkit.Tests.DockFake.js" />
   </ItemGroup>
 
   <ItemGroup>
