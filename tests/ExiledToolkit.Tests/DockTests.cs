@@ -88,6 +88,15 @@ public class DockTests
     }
 
     [Fact]
+    public void The_dock_style_never_overrides_the_inline_display_none_that_hides_the_column_in_plan_mode()
+    {
+        AddModButtons();
+
+        Assert.True(IsDocked());
+        Assert.DoesNotContain("!important", _engine.Evaluate("hud.getElementById('etk-dock-style').textContent").AsString());
+    }
+
+    [Fact]
     public void Loading_the_script_twice_keeps_one_dock()
     {
         _engine.Execute(Resource("ExiledToolkit.dock.js"));

@@ -17,8 +17,10 @@
   var ORDER_ATTR = 'data-etk-dock';
   var HUD_PAGES = /CoreUI[01]\.html/;
   // The grid keeps the column's own gap between rows and columns. A hovered button rises above its neighbours, so its
-  // tip, which opens to the right, is not drawn under the next column's buttons.
-  var CSS = '.vertical-tools.' + DOCK_CLASS + '{display:grid !important;grid-auto-columns:max-content;align-items:center;justify-items:center}' +
+  // tip, which opens to the right, is not drawn under the next column's buttons. The display rule stays without
+  // !important: two classes already beat the game's flex rule, and the game hides the column in plan mode with an
+  // inline display:none that an !important rule would override.
+  var CSS = '.vertical-tools.' + DOCK_CLASS + '{display:grid;grid-auto-columns:max-content;align-items:center;justify-items:center}' +
     '.vertical-tools.' + DOCK_CLASS + '>*:hover{z-index:30}';
 
   // Where each of count buttons goes, in the order they are given: { row, column }, both from 1. The last
