@@ -28,7 +28,7 @@ internal static class PageInbox
         }
         catch (Exception ex)
         {
-            log("could not listen for page messages, so toasts will not show and mod windows will not answer clicks (mods are still told about toasts): " + ex.Message);
+            log("could not hook page messages, so toasts will not show and mod windows will not answer clicks (mods are still told about toasts): " + ex.Message);
         }
     }
 

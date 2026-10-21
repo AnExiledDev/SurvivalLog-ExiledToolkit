@@ -5,6 +5,8 @@
 - New: the HUD's tool buttons stay four high. When mods add enough buttons that the column on the left would grow past four, the rest go into a second column to its right, filled top to bottom. The phone and bag stay in place, and toasts move right to clear the wider column.
 - For mod authors: mark a HUD button with `data-etk-dock="<order>"` to set its place in the layout.
 
+- After a game update, a hook that can no longer be placed is logged as an error, so the Mod Manager can mark the mod as maybe needing an update.
+
 ## 0.5.0
 
 - New: the inventory's "Mods" dropdown. Mods that need it, such as Loot All Pre-Disaster, add their entries to it through the Toolkit. It shares the one button with Storage Hub's and Unpack All's own entries.

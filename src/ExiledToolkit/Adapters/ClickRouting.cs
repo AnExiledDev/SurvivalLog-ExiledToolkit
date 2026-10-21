@@ -32,7 +32,7 @@ internal static class ClickRouting
         }
         catch (Exception ex)
         {
-            log("could not route clicks to toasts, so clicking one does nothing and the click goes to the game: " + ex.Message);
+            log("could not hook clicks for toasts, so clicking one does nothing and the click goes to the game: " + ex.Message);
         }
     }
 
