@@ -1,5 +1,5 @@
 Name: Exiled's Toolkit
-Summary: A shared library for my Survival Log mods. It shows their short notices (toasts) beside the HUD. On its own it does nothing you can see; install it when another mod says it needs it. 我的 Survival Log 模组共用的库，负责在 HUD 旁显示它们的简短通知。单独安装时没有任何可见效果；当其他模组说需要它时再安装。
+Summary: The shared library my Survival Log mods use. With it, settings changed on the Mod Manager's Mods screen apply without a restart, mods show their short notices as small toasts beside the HUD, the HUD's tool buttons stay in tidy columns of four, and mods share one Mods menu in the inventory. On its own it does nothing you can see.
 
 Description (BBCode):
 Exiled's Toolkit is the shared part of my Survival Log mods. Right now it gives them four things. The first is toasts. A toast is a short notice that appears next to the phone, defense and other tool buttons, stays a few seconds, and goes away by itself. Mods that use the Toolkit show their messages this way instead of each drawing their own. The second is live settings: mods can apply a changed setting while you play, so a change in the Mod Manager works without restarting the game. The third is the inventory's Mods dropdown: mods add their own entries to it, all under one button. The fourth keeps the HUD's tool buttons tidy, in columns of four. Mod authors: see [url=https://github.com/AnExiledDev/SurvivalLog-ExiledToolkit#for-mod-authors]For mod authors[/url] in the README.
@@ -28,7 +28,7 @@ Works in English and Chinese.
 
 [size=5]Requirements[/size]
 [list]
-[*]Survival Log 1.1.18902. A game update can break it until the mod is updated.[/*]
+[*]Survival Log 1.1.19131. A game update can break it until the mod is updated.[/*]
 [*][url=https://www.nexusmods.com/survivallog/mods/12]BepInEx for Survival Log[/url]. Install it first.[/*]
 [/list]
 
@@ -83,7 +83,7 @@ Toolkit 不会往存档里写入任何内容，也不会修改游戏文件。
 
 [size=5]前置要求[/size]
 [list]
-[*]Survival Log 1.1.18902。游戏更新后模组可能暂时失效，直到模组更新为止。[/*]
+[*]Survival Log 1.1.19131。游戏更新后模组可能暂时失效，直到模组更新为止。[/*]
 [*][url=https://www.nexusmods.com/survivallog/mods/12]BepInEx for Survival Log[/url]，请先安装。[/*]
 [/list]
 
