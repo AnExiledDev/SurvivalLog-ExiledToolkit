@@ -1,8 +1,8 @@
 Name: Exiled's Toolkit
-Summary: The shared library my Survival Log mods use. With it, settings changed on the Mod Manager's Mods screen apply without a restart, mods show their short notices as small toasts beside the HUD, the HUD's tool buttons stay in tidy columns of four, and mods share one Mods menu in the inventory. On its own it does nothing you can see.
+Summary: The shared library my Survival Log mods use. With it, settings changed on the Mod Manager's Mods screen apply without a restart, mods show their short notices as small toasts beside the HUD, tool buttons and phone apps stay in tidy groups of four, and mods share one Mods menu in the inventory. On its own it does nothing you can see.
 
 Description (BBCode):
-Exiled's Toolkit is the shared part of my Survival Log mods. Right now it gives them four things. The first is toasts. A toast is a short notice that appears next to the phone, defense and other tool buttons, stays a few seconds, and goes away by itself. Mods that use the Toolkit show their messages this way instead of each drawing their own. The second is live settings: mods can apply a changed setting while you play, so a change in the Mod Manager works without restarting the game. The third is the inventory's Mods dropdown: mods add their own entries to it, all under one button. The fourth keeps the HUD's tool buttons tidy, in columns of four. Mod authors: see [url=https://github.com/AnExiledDev/SurvivalLog-ExiledToolkit#for-mod-authors]For mod authors[/url] in the README.
+Exiled's Toolkit is the shared part of my Survival Log mods. Right now it gives them five things. The first is toasts. A toast is a short notice that appears next to the phone, defense and other tool buttons, stays a few seconds, and goes away by itself. Mods that use the Toolkit show their messages this way instead of each drawing their own. The second is live settings: mods can apply a changed setting while you play, so a change in the Mod Manager works without restarting the game. The third is the inventory's Mods dropdown: mods add their own entries to it, all under one button. The fourth keeps the HUD's tool buttons tidy, in columns of four. The fifth puts the apps mods add to the phone into its dock, in rows of four. Mod authors: see [url=https://github.com/AnExiledDev/SurvivalLog-ExiledToolkit#for-mod-authors]For mod authors[/url] in the README.
 
 [size=5]Main features[/size]
 [list]
@@ -14,6 +14,7 @@ Exiled's Toolkit is the shared part of my Survival Log mods. Right now it gives 
 [*][b]Repeats merge[/b]: the same notice sent again counts up (x2, x3, ...) instead of adding another box.[/*]
 [*][b]No pile-ups[/b]: at most 4 toasts show at once by default; the rest wait their turn.[/*]
 [*][b]Tidy tool buttons[/b]: the column of buttons on the left of the HUD never gets taller than four. The rest go into a column to its right, top to bottom; the phone and bag stay where they are.[/*]
+[*][b]Tidy phone apps[/b]: apps that mods add to the phone go into the dock at the bottom, after the game's own, in rows of four.[/*]
 [/list]
 
 The Toolkit adds nothing to your save and does not edit game files.
@@ -57,7 +58,7 @@ Open source under MIT: [url=https://github.com/AnExiledDev/SurvivalLog-ExiledToo
 [line]
 [size=5]简体中文[/size]
 
-Exiled's Toolkit 是我的 Survival Log 模组共用的部分。目前它为这些模组提供四样东西。第一样是通知。通知是一条简短的提示，出现在手机、防御和其他工具按钮旁边，停留几秒后自动消失。使用 Toolkit 的模组都用这种方式显示消息，而不是各自绘制。第二样是即时设置：模组可以在游戏进行中应用改动过的设置，因此在 Mod Manager 里改设置无需重启游戏。第三样是背包的「Mods」下拉菜单：各个模组把自己的条目加到这一个按钮下。第四样是让 HUD 的工具按钮保持整齐，每列最多四个。模组作者请看 README 中的 [url=https://github.com/AnExiledDev/SurvivalLog-ExiledToolkit#for-mod-authors]For mod authors[/url] 一节（英文）。
+Exiled's Toolkit 是我的 Survival Log 模组共用的部分。目前它为这些模组提供五样东西。第一样是通知。通知是一条简短的提示，出现在手机、防御和其他工具按钮旁边，停留几秒后自动消失。使用 Toolkit 的模组都用这种方式显示消息，而不是各自绘制。第二样是即时设置：模组可以在游戏进行中应用改动过的设置，因此在 Mod Manager 里改设置无需重启游戏。第三样是背包的「Mods」下拉菜单：各个模组把自己的条目加到这一个按钮下。第四样是让 HUD 的工具按钮保持整齐，每列最多四个。第五样是把模组加到手机上的应用放进底部的程序栏，每行四个。模组作者请看 README 中的 [url=https://github.com/AnExiledDev/SurvivalLog-ExiledToolkit#for-mod-authors]For mod authors[/url] 一节（英文）。
 
 [size=5]主要功能[/size]
 [list]
@@ -69,6 +70,7 @@ Exiled's Toolkit 是我的 Survival Log 模组共用的部分。目前它为这�
 [*][b]重复合并[/b]：再次发送相同的通知时，会计数（x2、x3 等），而不会新增一个方框。[/*]
 [*][b]不会堆积[/b]：默认最多同时显示 4 条通知，其余的排队等候。[/*]
 [*][b]工具按钮整齐排列[/b]：HUD 左侧的按钮列最多四个高，其余的按从上到下的顺序排到右边的新列；手机和背包保持原位。[/*]
+[*][b]手机应用整齐排列[/b]：模组加到手机上的应用放进底部的程序栏，排在游戏自带应用之后，每行四个。[/*]
 [/list]
 
 Toolkit 不会往存档里写入任何内容，也不会修改游戏文件。

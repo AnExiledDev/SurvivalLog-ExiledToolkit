@@ -18,6 +18,9 @@ public sealed class ToastTicker : MonoBehaviour
 
     /// <summary>The HUD dock lives in the same root document as the toasts, so it is put back whenever they are.</summary>
     internal static WebPage? Dock;
+
+    /// <summary>The phone app layout also runs in the root document, so it is put back with the toasts too.</summary>
+    internal static WebPage? Phone;
     internal static MenuRunner? Menu;
     internal static Action<string> Log = _ => { };
 
@@ -92,6 +95,7 @@ public sealed class ToastTicker : MonoBehaviour
                 Area.Forget();
                 page.Install();
                 Dock?.Install();
+                Phone?.Install();
                 break;
             case PageCommand.Click click:
                 center.Activate(click.Id);

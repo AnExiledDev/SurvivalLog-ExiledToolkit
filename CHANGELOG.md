@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.0
+
+- New: mod apps on the phone go into the dock at the bottom, after the game's own apps, instead of stacking in the middle of the home screen over the notifications. Past four apps the dock shows rows of four.
+- For mod authors: mark a phone app with `data-etk-phone="<order>"` to have it placed in the dock.
+- Made for Survival Log 1.1.19131.
+
 ## 0.7.0
 
 - New look for every mod's toasts, in the gold style of the newer mod windows: warm brown cards, a coloured edge for the kind of notice, a gold count badge, and a thin bar along the bottom that shows how long the toast has left. The bar stops while the pointer rests on the toast.
