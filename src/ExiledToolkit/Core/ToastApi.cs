@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace ExiledToolkit;
 
@@ -57,6 +58,23 @@ public sealed record ToastRequest(string Source, string Title)
     /// Use it for a status that changes, such as a progress line. Null never replaces.
     /// </summary>
     public string? Key { get; init; }
+
+    /// <summary>
+    /// Items the toast is about, shown as small chips (picture, name, amount) while the player hovers it. Null or empty
+    /// shows none; the first <see cref="ToastItem.Max"/> are shown.
+    /// </summary>
+    public IReadOnlyList<ToastItem>? Items { get; init; }
+}
+
+/// <summary>One item chip on a toast. Label is required; Icon is a picture URL the web UI can load; Count of 0 or less shows none.</summary>
+public sealed record ToastItem(string Label)
+{
+    /// <summary>How many chips one toast shows at most.</summary>
+    public const int Max = 12;
+
+    public string? Icon { get; init; }
+
+    public int Count { get; init; }
 }
 
 /// <summary>

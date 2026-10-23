@@ -297,4 +297,21 @@ public class MergeTests
         "icon" => Harness.Stamina() with { Icon = "icons/stamina.jpg" },
         _ => throw new ArgumentOutOfRangeException(nameof(part), part, null),
     };
+
+    [Fact]
+    public void Toasts_with_the_same_item_chips_merge_and_different_chips_stay_apart()
+    {
+        var harness = new Harness();
+        ToastRequest Loot(params ToastItem[] items) => Harness.Titled("Loot") with { Items = items };
+
+        var first = harness.Show(Loot(new ToastItem("Wood") { Count = 3, Icon = "wood.png" }));
+        var same = harness.Show(Loot(new ToastItem("Wood") { Count = 3, Icon = "wood.png" }));
+        var more = harness.Show(Loot(new ToastItem("Wood") { Count = 4, Icon = "wood.png" }));
+        var none = harness.Show(Harness.Titled("Loot"));
+
+        Assert.Equal(first, same);
+        Assert.NotEqual(first, more);
+        Assert.NotEqual(first, none);
+        Assert.NotEqual(more, none);
+    }
 }

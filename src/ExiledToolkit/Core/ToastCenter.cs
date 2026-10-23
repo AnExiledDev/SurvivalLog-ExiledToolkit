@@ -92,7 +92,10 @@ internal sealed class ToastCenter
             return ToastId.None;
         }
 
-        var content = new ToastContent(request.Source ?? "", request.Title ?? "", Optional(request.Body), request.Kind, Optional(request.Icon));
+        var content = new ToastContent(request.Source ?? "", request.Title ?? "", Optional(request.Body), request.Kind, Optional(request.Icon))
+        {
+            Items = ToastItems.From(request.Items),
+        };
         var raisedAt = _clock.UtcNow();
 
         lock (_gate)

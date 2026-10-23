@@ -481,4 +481,49 @@ public class PageScriptTests
     /// <summary>A reported box back in page pixels, rounded.</summary>
     private static (int Left, int Top, int Width, int Height, int Bottom) Px(NormalRect box) =>
         ((int)Math.Round(box.X * 1920), (int)Math.Round(box.Y * 1080), (int)Math.Round(box.W * 1920), (int)Math.Round(box.H * 1080), (int)Math.Round((box.Y + box.H) * 1080));
+
+    // ===== Item chips and the time bar =====
+
+    private static ToastView WithItems(long id, params ToastItem[] items) =>
+        View(id, "Wish granted") with { Content = new ToastContent("Notifications", "Wish granted", null, ToastKind.Success, null) { Items = ToastItems.From(items) } };
+
+    [Fact]
+    public void Item_chips_show_each_label_and_amount_and_a_toast_without_items_has_no_chip_row()
+    {
+        var page = new PageScript();
+
+        page.Apply(
+            new PageOp.Show(WithItems(1, new ToastItem("Iron Ore") { Count = 6, Icon = "Res/Item/ore.png" }, new ToastItem("<b>Cloth</b>"))),
+            new PageOp.Show(View(2, Stamina)));
+
+        Assert.Equal("Iron Ore x6|<b>Cloth</b>", page.Text("part(boxes()[1], 'etk-items').children.map(function (c) { return c.textContent; }).join('|')"));
+        Assert.Equal("Res/Item/ore.png", page.Text("part(boxes()[1], 'etk-items').children[0].children[0].src"));
+        Assert.Equal("null", page.Text("part(boxes()[0], 'etk-items')"));
+    }
+
+    [Fact]
+    public void Items_without_a_label_are_dropped_and_no_more_than_the_max_are_sent()
+    {
+        var items = Enumerable.Range(1, ToastItem.Max + 3).Select(n => new ToastItem("Item " + n)).Prepend(new ToastItem("")).ToArray();
+
+        var kept = ToastItems.From(items).List;
+        var script = ToastScript.Apply(new PageOp[] { new PageOp.Show(View(1, Stamina)) });
+
+        Assert.Equal(ToastItem.Max, kept.Count);
+        Assert.Equal("Item 1", kept[0].Label);
+        Assert.DoesNotContain("\"items\"", script);
+    }
+
+    [Fact]
+    public void The_time_bar_stands_still_while_the_toast_is_hovered()
+    {
+        var page = new PageScript();
+
+        page.Apply(new PageOp.Show(View(1, Stamina, milliseconds: 8_000)));
+        page.Advance(2_000);
+        page.Run("dispatch(boxes()[0], 'mouseenter')");
+
+        Assert.Equal("75%", page.Text("part(boxes()[0], 'etk-bar').children[0].style.width"));
+        Assert.Equal("none", page.Text("part(boxes()[0], 'etk-bar').children[0].style.transition"));
+    }
 }

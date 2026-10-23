@@ -1,10 +1,52 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace ExiledToolkit.Core;
 
 /// <summary>What makes two toasts the same toast: every visible part, compared exactly.</summary>
-internal sealed record ToastContent(string Source, string Title, string? Body, ToastKind Kind, string? Icon);
+internal sealed record ToastContent(string Source, string Title, string? Body, ToastKind Kind, string? Icon)
+{
+    public ToastItems Items { get; init; } = ToastItems.None;
+}
+
+/// <summary>A toast's item chips, cleaned up, compared by what they show so two toasts with the same items still merge.</summary>
+internal sealed class ToastItems : IEquatable<ToastItems>
+{
+    public static readonly ToastItems None = new(new List<ToastItem>());
+
+    private ToastItems(IReadOnlyList<ToastItem> list)
+    {
+        List = list;
+    }
+
+    public IReadOnlyList<ToastItem> List { get; }
+
+    /// <summary>Drops items without a label, keeps the first <see cref="ToastItem.Max"/>, and makes an empty icon none.</summary>
+    public static ToastItems From(IReadOnlyList<ToastItem>? items)
+    {
+        if (items == null || items.Count == 0) return None;
+
+        var kept = items
+            .Where(item => item != null && !string.IsNullOrEmpty(item.Label))
+            .Take(ToastItem.Max)
+            .Select(item => item with { Icon = string.IsNullOrEmpty(item.Icon) ? null : item.Icon, Count = Math.Max(0, item.Count) })
+            .ToList();
+
+        return kept.Count == 0 ? None : new ToastItems(kept);
+    }
+
+    public bool Equals(ToastItems? other) => other != null && List.SequenceEqual(other.List);
+
+    public override bool Equals(object? obj) => Equals(obj as ToastItems);
+
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+        foreach (var item in List) hash.Add(item);
+        return hash.ToHashCode();
+    }
+}
 
 /// <summary>One toast as the page draws it. Milliseconds is how long it stays up from the moment the page gets it.</summary>
 internal sealed record ToastView(ToastId Id, ToastContent Content, int Count, int Milliseconds, bool HasClick);

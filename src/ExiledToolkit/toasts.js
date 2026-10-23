@@ -75,21 +75,23 @@
   style.id = 'etk-style';
   style.textContent = [
     '#etk-stack { position: fixed; z-index: 2147483000; width: 0; height: 0; pointer-events: none;',
-    '  font-family: "Microsoft YaHei", sans-serif; transition: opacity .15s ease; }',
+    '  font-family: "Segoe UI", "Microsoft YaHei", sans-serif; transition: opacity .15s ease; }',
     '#etk-stack.etk-hidden { opacity: 0; }',
     '#etk-stack.etk-hidden .etk-toast { pointer-events: none; }',
-    '.etk-toast { --etk-accent: #7fb3d5; position: absolute; box-sizing: border-box; display: flex; align-items: center; gap: 8px;',
-    '  padding: 6px 22px 6px 8px; pointer-events: auto; cursor: default;',
-    '  background: rgba(24,24,27,.9); border: 1px solid rgba(255,255,255,.08); border-left: 2px solid var(--etk-accent);',
-    '  border-radius: 6px; box-shadow: 0 4px 14px rgba(0,0,0,.45); color: #F2F2F2;',
+    '.etk-toast { --etk-accent: #d9bf8a; --etk-tint: rgba(217,191,138,.2); --etk-edge: rgba(217,191,138,.45);',
+    '  position: absolute; box-sizing: border-box; display: flex; align-items: center; gap: 10px;',
+    '  padding: 8px 26px 8px 10px; pointer-events: auto; cursor: default;',
+    '  background: linear-gradient(180deg, rgba(66,54,42,.96), rgba(42,34,26,.96));',
+    '  border: 1px solid rgba(220,188,120,.24); border-left: 3px solid var(--etk-accent); border-radius: 5px;',
+    '  box-shadow: 0 6px 18px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,230,180,.07); color: #f0e8d8; text-shadow: 0 1px 2px rgba(0,0,0,.5);',
     '  user-select: none; -webkit-user-select: none; transition: filter .15s ease;',
     '  animation: etk-in .24s cubic-bezier(.22,1,.36,1) both; }',
-    '.etk-toast.etk-success { --etk-accent: #8fcf9a; }',
-    '.etk-toast.etk-warning { --etk-accent: #EBA308; }',
-    '.etk-toast.etk-error { --etk-accent: #e0614f; }',
+    '.etk-toast.etk-success { --etk-accent: #8cc56a; --etk-tint: rgba(140,197,106,.2); --etk-edge: rgba(140,197,106,.45); }',
+    '.etk-toast.etk-warning { --etk-accent: #FFC83A; --etk-tint: rgba(255,200,58,.2); --etk-edge: rgba(255,200,58,.45); }',
+    '.etk-toast.etk-error { --etk-accent: #e0614f; --etk-tint: rgba(224,97,79,.2); --etk-edge: rgba(224,97,79,.45); }',
     '.etk-toast.etk-clickable { cursor: pointer; }',
-    '.etk-toast.etk-front { border-color: rgba(255,255,255,.16); border-left-color: var(--etk-accent);',
-    '  box-shadow: 0 6px 20px rgba(0,0,0,.55); }',
+    '.etk-toast.etk-front { border-color: rgba(255,200,58,.45); border-left-color: var(--etk-accent);',
+    '  box-shadow: 0 8px 22px rgba(0,0,0,.6), 0 0 10px rgba(255,200,58,.18), inset 0 1px 0 rgba(255,230,180,.09); }',
     '.etk-toast.etk-out { animation: etk-out .4s ease both; pointer-events: none; }',
     '.etk-toast.etk-bump { animation: etk-bump .26s ease-out both; }',
     '#etk-stack.etk-hud .etk-toast, #etk-stack.etk-bottom-right .etk-toast, #etk-stack.etk-bottom-left .etk-toast { animation-name: etk-in-up; }',
@@ -101,29 +103,41 @@
     '@keyframes etk-in-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }',
     '@keyframes etk-out-down { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(6px); } }',
     '@keyframes etk-bump { 0% { transform: scale(1); } 40% { transform: scale(1.03); } 100% { transform: scale(1); } }',
-    '.etk-icon { width: 26px; height: 26px; flex: none; border-radius: 4px; overflow: hidden;',
-    '  border: 1px solid rgba(255,255,255,.12); background: #131316; }',
-    '.etk-icon img { width: 100%; height: 100%; object-fit: cover; object-position: top center; }',
+    '.etk-icon { width: 30px; height: 30px; flex: none; box-sizing: border-box; border-radius: 6px; overflow: hidden;',
+    '  display: flex; align-items: center; justify-content: center;',
+    '  border: 1px solid var(--etk-edge); background: linear-gradient(135deg, var(--etk-tint), rgba(0,0,0,.12));',
+    '  box-shadow: inset 0 1px 2px rgba(0,0,0,.4); }',
+    '.etk-icon img { width: 26px; height: 26px; object-fit: contain; filter: drop-shadow(0 1px 2px rgba(0,0,0,.5)); }',
     '.etk-lines { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }',
-    '.etk-cap { font-size: 10px; line-height: 1.2; letter-spacing: 1px; color: var(--etk-accent);',
+    '.etk-cap { font-size: 9.5px; line-height: 1.2; letter-spacing: 1.4px; text-transform: uppercase; font-weight: 700;',
+    '  color: var(--etk-accent); opacity: .9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }',
+    '.etk-title { font-size: 13px; font-weight: 600; line-height: 1.3; color: #fff;',
     '  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }',
-    '.etk-title { font-size: 13px; font-weight: 600; line-height: 1.3; color: #F2F2F2;',
-    '  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }',
-    '.etk-body { font-size: 12px; line-height: 1.35; color: rgba(255,255,255,.62); white-space: pre-line; overflow-wrap: anywhere;',
+    '.etk-body { font-size: 11.5px; line-height: 1.35; color: #a89a82; white-space: pre-line; overflow-wrap: anywhere;',
     '  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }',
     '.etk-toast.etk-front .etk-title { white-space: normal; overflow-wrap: anywhere;',
     '  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }',
-    '.etk-toast.etk-front .etk-body { -webkit-line-clamp: 6; }',
-    '.etk-count { position: absolute; top: -6px; left: -6px; min-width: 16px; height: 14px; padding: 0 4px; box-sizing: border-box;',
-    '  border-radius: 7px; background: var(--etk-accent); color: #141416; font-size: 10px; font-weight: 700;',
-    '  line-height: 14px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,.5); pointer-events: none; }',
-    '.etk-close { position: absolute; top: 4px; right: 4px; width: 14px; height: 14px; border-radius: 3px; cursor: pointer; opacity: .4; }',
-    '.etk-close:hover { opacity: .9; background: rgba(255,255,255,.1); }',
+    '.etk-toast.etk-front .etk-body { -webkit-line-clamp: 6; color: #cbbfa8; }',
+    '.etk-items { display: none; flex-wrap: wrap; gap: 4px; margin-top: 4px; }',
+    '.etk-toast.etk-front .etk-items { display: flex; }',
+    '.etk-chip { display: inline-flex; align-items: center; gap: 3px; padding: 1px 6px 1px 2px; border-radius: 4px;',
+    '  background: rgba(20,14,8,.45); border: 1px solid rgba(220,188,120,.11); font-size: 10.5px; line-height: 17px; color: #cbbfa8; }',
+    '.etk-chip.etk-noimg { padding-left: 6px; }',
+    '.etk-chip img { width: 15px; height: 15px; object-fit: contain; }',
+    '.etk-chip b { color: #f0e8d8; font-weight: 600; }',
+    '.etk-count { position: absolute; top: -7px; left: -7px; min-width: 18px; height: 15px; padding: 0 5px; box-sizing: border-box;',
+    '  border-radius: 8px; background: #FFC83A; color: #2a1f10; font-size: 10px; font-weight: 700; text-shadow: none;',
+    '  line-height: 15px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,.5); pointer-events: none; }',
+    '.etk-close { position: absolute; top: 5px; right: 5px; width: 14px; height: 14px; border-radius: 3px; cursor: pointer; opacity: .45; }',
+    '.etk-close:hover { opacity: .95; background: rgba(255,200,58,.15); }',
     '.etk-close::before, .etk-close::after { content: ""; position: absolute; left: 3px; top: 6.25px; width: 8px; height: 1.5px;',
-    '  background: #F2F2F2; border-radius: 1px; }',
+    '  background: #cbbfa8; border-radius: 1px; }',
     '.etk-close::before { transform: rotate(45deg); }',
     '.etk-close::after { transform: rotate(-45deg); }',
-    '.etk-toast.etk-behind .etk-count, .etk-toast.etk-behind .etk-close { visibility: hidden; }'
+    '.etk-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; overflow: hidden; border-radius: 0 0 4px 0;',
+    '  background: rgba(255,240,210,.06); pointer-events: none; }',
+    '.etk-bar i { display: block; height: 100%; width: 100%; background: var(--etk-accent); opacity: .7; }',
+    '.etk-toast.etk-behind .etk-count, .etk-toast.etk-behind .etk-close, .etk-toast.etk-behind .etk-bar { visibility: hidden; }'
   ].join('\n');
   (document.head || document.documentElement).appendChild(style);
 
@@ -166,15 +180,66 @@
     child(lines, 'etk-cap').textContent = toast.source || '';
     child(lines, 'etk-title').textContent = toast.title || '';
     if (toast.body) child(lines, 'etk-body').textContent = toast.body;
+    fillItems(lines, toast.items);
 
     box.countEl = child(box.el, 'etk-count');
     setCount(box, toast.count);
+
+    box.barEl = document.createElement('i');
+    child(box.el, 'etk-bar').appendChild(box.barEl);
 
     var close = child(box.el, 'etk-close');
     close.addEventListener('click', function (event) {
       event.stopPropagation();
       leave(box, true);
     });
+  }
+
+  // Item chips: a picture when it loads, the name, and the amount. Text goes in with textContent only.
+  function fillItems(parent, items) {
+    if (!items || !items.length) return;
+    var row = child(parent, 'etk-items');
+
+    items.forEach(function (item) {
+      var chip = child(row, 'etk-chip');
+      if (item.icon) {
+        var img = document.createElement('img');
+        img.alt = '';
+        img.onerror = function () { img.style.display = 'none'; chip.classList.add('etk-noimg'); };
+        img.src = item.icon;
+        chip.appendChild(img);
+      } else {
+        chip.classList.add('etk-noimg');
+      }
+      var name = document.createElement('span');
+      name.textContent = item.label || '';
+      chip.appendChild(name);
+      if (item.count > 0) {
+        var amount = document.createElement('b');
+        amount.textContent = ' x' + item.count;
+        chip.appendChild(amount);
+      }
+    });
+  }
+
+  // The thin bar along the bottom shows the time left: it runs down over the box's time and stands still while held.
+  function runBar(box, ms) {
+    var bar = box.barEl;
+    if (!bar) return;
+    var part = box.total > 0 ? Math.min(1, ms / box.total) : 1;
+    bar.style.transition = 'none';
+    bar.style.width = (part * 100) + '%';
+    void bar.offsetWidth;
+    bar.style.transition = 'width ' + ms + 'ms linear';
+    bar.style.width = '0%';
+  }
+
+  function stopBar(box) {
+    var bar = box.barEl;
+    if (!bar) return;
+    var part = box.total > 0 ? Math.max(0, Math.min(1, box.remaining / box.total)) : 1;
+    bar.style.transition = 'none';
+    bar.style.width = (part * 100) + '%';
   }
 
   function setCount(box, count) {
@@ -185,13 +250,19 @@
   }
 
   // Starts the box's time again. While the pointer rests on it the clock is held, and resumes when it leaves.
-  function arm(box, ms) {
+  // A resume keeps the box's full time, so the bar picks up where it stood.
+  function arm(box, ms, isResume) {
     clearTimeout(box.timer);
+    if (!isResume) box.total = ms;
     box.remaining = ms;
     box.deadline = Date.now() + ms;
-    if (box.hovered) return;
+    if (box.hovered) {
+      stopBar(box);
+      return;
+    }
     clearTimeout(box.holdTimer);
     box.timer = setTimeout(function () { leave(box); }, ms);
+    runBar(box, ms);
   }
 
   function hold(box) {
@@ -200,6 +271,7 @@
     box.hovered = true;
     clearTimeout(box.timer);
     box.remaining = Math.max(0, box.deadline - Date.now());
+    stopBar(box);
     box.holdTimer = setTimeout(function () { release(box); }, MAX_HOLD_MS);
     redraw();
   }
@@ -209,7 +281,7 @@
     if (!box.hovered) return false;
     box.hovered = false;
     clearTimeout(box.holdTimer);
-    if (!box.leaving) arm(box, Math.max(box.remaining, MIN_RESUME_MS));
+    if (!box.leaving) arm(box, Math.max(box.remaining, MIN_RESUME_MS), true);
     return true;
   }
 
@@ -227,7 +299,7 @@
   }
 
   function create(toast) {
-    var box = { id: toast.id, el: document.createElement('div'), timer: 0, holdTimer: 0, hovered: false, leaving: false, count: 1, bumpUntil: 0 };
+    var box = { id: toast.id, el: document.createElement('div'), timer: 0, holdTimer: 0, hovered: false, leaving: false, count: 1, bumpUntil: 0, total: 0, barEl: null };
     fill(box, toast);
 
     box.el.addEventListener('mousedown', function (event) { event.preventDefault(); });

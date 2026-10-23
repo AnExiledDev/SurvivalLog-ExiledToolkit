@@ -90,8 +90,16 @@ internal static class ToastScript
         var content = toast.Content;
 
         return $"\"id\":{Number(toast.Id.Value)},\"source\":{Str(content.Source)},\"title\":{Str(content.Title)},\"body\":{Str(content.Body)}," +
-            $"\"kind\":{Str(KindName(content.Kind))},\"icon\":{Str(content.Icon)},\"count\":{Number(toast.Count)},\"ms\":{Number(toast.Milliseconds)},\"click\":{Bool(toast.HasClick)}";
+            $"\"kind\":{Str(KindName(content.Kind))},\"icon\":{Str(content.Icon)},\"count\":{Number(toast.Count)},\"ms\":{Number(toast.Milliseconds)},\"click\":{Bool(toast.HasClick)}" +
+            ItemsField(content.Items);
     }
+
+    // Left out when there are none, so a toast without items reads exactly as it did before items existed.
+    private static string ItemsField(ToastItems items) =>
+        items.List.Count == 0
+            ? ""
+            : ",\"items\":[" + string.Join(",", items.List.Select(item =>
+                $"{{\"label\":{Str(item.Label)},\"icon\":{Str(item.Icon)},\"count\":{Number(item.Count)}}}")) + "]";
 
     private static string Number(long value) => value.ToString(CultureInfo.InvariantCulture);
 

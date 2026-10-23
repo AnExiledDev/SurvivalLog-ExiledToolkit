@@ -48,7 +48,7 @@ Settings live in `BepInEx\config\com.dev.survivallog.exiledtoolkit.cfg`, created
 
 Tested on Survival Log 1.1.19131 with BepInEx `6.0.0-be.788`.
 
-Check `BepInEx\LogOutput.log` for `===== Exiled's Toolkit 0.6.0 started`. A few lines below it, `toasts shown ...` tells you whether toasts are shown, where they appear, how long they stay and how many show at once; it is written again whenever one of those settings changes. Once the game's interface is up, `toast script sent to the web UI` means toasts can appear. The same lines are in `BepInEx\exiled-toolkit.log`, which survives restarts.
+Check `BepInEx\LogOutput.log` for `===== Exiled's Toolkit 0.7.0 started`. A few lines below it, `toasts shown ...` tells you whether toasts are shown, where they appear, how long they stay and how many show at once; it is written again whenever one of those settings changes. Once the game's interface is up, `toast script sent to the web UI` means toasts can appear. The same lines are in `BepInEx\exiled-toolkit.log`, which survives restarts.
 
 If no toasts appear, check that `Enabled` is `true` in the config, then look in `BepInEx\exiled-toolkit.log` for a line starting with `could not`.
 
@@ -91,12 +91,13 @@ Toasts.Show(new ToastRequest("Storage Hub", "Put away 12 items")
 | `OnClick` | Runs on the game's main thread when the player clicks the toast. The toast then closes. An exception is caught and logged. |
 | `Seconds` | This toast's time on screen, 1 to 120. Default: the player's `Seconds` setting. |
 | `Key` | A toast with the same key replaces the one showing in place. Use it for progress ("Organizing 2/3"). |
+| `Items` | Optional list of `ToastItem(Label) { Icon, Count }`, shown as small chips (picture, name, amount) while the player hovers the toast. At most 12 show; items without a label are skipped. |
 
 Text is always shown as plain text, never as HTML.
 
 At most `MaxVisible` toasts show at once and the rest wait. If more than 30 are waiting, the oldest waiting ones are dropped from the screen without ever showing. `Toasts.Raised` still fires for them, so a history keeps them.
 
-`Toasts.Show` returns a `ToastId`. A toast identical to one still showing or waiting (same source, title, body, kind and icon) merges into it: you get the earlier toast's id, the count goes up, its timer restarts, and the newest `OnClick` replaces the old one.
+`Toasts.Show` returns a `ToastId`. A toast identical to one still showing or waiting (same source, title, body, kind, icon and items) merges into it: you get the earlier toast's id, the count goes up, its timer restarts, and the newest `OnClick` replaces the old one.
 
 `Toasts.Raised` fires on the main thread for every call, shown or not (even with `Enabled` off), with a `ToastRecord`: id, source, title, body, kind, icon, time (UTC), whether it has a click action, the count, and `IsMerge`. Use it to keep a history.
 

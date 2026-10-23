@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.0
+
+- New look for every mod's toasts, in the gold style of the newer mod windows: warm brown cards, a coloured edge for the kind of notice, a gold count badge, and a thin bar along the bottom that shows how long the toast has left. The bar stops while the pointer rests on the toast.
+- For mod authors: `ToastRequest.Items` lists the items a toast is about. They show as small chips with picture, name and amount on the toast the pointer rests on. Two toasts merge only when their items match too.
+- Made for Survival Log 1.1.19131.
+
 ## 0.6.0
 
 - New: the HUD's tool buttons stay four high. When mods add enough buttons that the column on the left would grow past four, the rest go into a second column to its right, filled top to bottom. The phone and bag stay in place, and toasts move right to clear the wider column.
