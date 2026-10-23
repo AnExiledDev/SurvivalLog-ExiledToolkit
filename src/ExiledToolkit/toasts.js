@@ -120,6 +120,8 @@
     '.etk-toast.etk-front .etk-body { -webkit-line-clamp: 6; color: #cbbfa8; }',
     '.etk-items { display: none; flex-wrap: wrap; gap: 4px; margin-top: 4px; }',
     '.etk-toast.etk-front .etk-items { display: flex; }',
+    '.etk-itemline { font-size: 11.5px; line-height: 1.35; color: #a89a82; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }',
+    '.etk-toast.etk-front .etk-itemline { display: none; }',
     '.etk-chip { display: inline-flex; align-items: center; gap: 3px; padding: 1px 6px 1px 2px; border-radius: 4px;',
     '  background: rgba(20,14,8,.45); border: 1px solid rgba(220,188,120,.11); font-size: 10.5px; line-height: 17px; color: #cbbfa8; }',
     '.etk-chip.etk-noimg { padding-left: 6px; }',
@@ -195,9 +197,13 @@
     });
   }
 
-  // Item chips: a picture when it loads, the name, and the amount. Text goes in with textContent only.
+  // Item chips: a picture when it loads, the name, and the amount. Text goes in with textContent only. A card that is
+  // not in front has no room for chips, so it lists the items on one line instead.
   function fillItems(parent, items) {
     if (!items || !items.length) return;
+    child(parent, 'etk-itemline').textContent = items.map(function (item) {
+      return (item.label || '') + (item.count > 0 ? ' x' + item.count : '');
+    }).join(', ');
     var row = child(parent, 'etk-items');
 
     items.forEach(function (item) {

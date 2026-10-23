@@ -502,6 +502,16 @@ public class PageScriptTests
     }
 
     [Fact]
+    public void A_card_behind_the_front_one_lists_its_items_on_one_line()
+    {
+        var page = new PageScript();
+
+        page.Apply(new PageOp.Show(WithItems(1, new ToastItem("Iron Ore") { Count = 6 }, new ToastItem("Cloth"))));
+
+        Assert.Equal("Iron Ore x6, Cloth", page.Text("part(boxes()[0], 'etk-itemline').textContent"));
+    }
+
+    [Fact]
     public void Items_without_a_label_are_dropped_and_no_more_than_the_max_are_sent()
     {
         var items = Enumerable.Range(1, ToastItem.Max + 3).Select(n => new ToastItem("Item " + n)).Prepend(new ToastItem("")).ToArray();
