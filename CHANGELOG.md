@@ -4,7 +4,7 @@
 
 - New: mod apps on the phone go into the dock at the bottom, after the game's own apps, instead of stacking in the middle of the home screen over the notifications. Past four apps the dock shows rows of four.
 - For mod authors: mark a phone app with `data-etk-phone="<order>"` to have it placed in the dock.
-- Made for Survival Log 1.1.19131.
+- Made for Survival Log 1.1.19131; works on 1.1.19611.
 
 ## 0.7.0
 

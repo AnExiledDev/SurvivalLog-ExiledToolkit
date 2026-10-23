@@ -2,7 +2,7 @@
 
 A shared library for my Survival Log mods. On its own it does nothing you can see. Install it when another mod says it needs it.
 
-Right now the Toolkit gives mods four things. The first is toasts. A toast is a short notice that appears next to the phone, defense and other tool buttons, stays a few seconds, and goes away by itself. Mods that use the Toolkit show their messages this way instead of each drawing their own. The second is live settings: mods can apply a changed setting while you play, so a change in the Mod Manager works without restarting the game. The third is the inventory's "Mods" dropdown, one button in the inventory toolbar that holds the actions mods add there. The fourth keeps the HUD's tool buttons tidy: once mods have added enough buttons that the column would run past four, they are laid out in columns of four instead.
+Right now the Toolkit gives mods five things. The first is toasts. A toast is a short notice that appears next to the phone, defense and other tool buttons, stays a few seconds, and goes away by itself. Mods that use the Toolkit show their messages this way instead of each drawing their own. The second is live settings: mods can apply a changed setting while you play, so a change in the Mod Manager works without restarting the game. The third is the inventory's "Mods" dropdown, one button in the inventory toolbar that holds the actions mods add there. The fourth keeps the HUD's tool buttons tidy: once mods have added enough buttons that the column would run past four, they are laid out in columns of four instead. The fifth tidies the phone: apps that mods add go into the dock at the bottom, after the game's own apps.
 
 ## Features
 
