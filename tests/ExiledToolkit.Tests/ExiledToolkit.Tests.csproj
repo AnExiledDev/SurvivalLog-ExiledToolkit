@@ -19,6 +19,8 @@
     <EmbeddedResource Include="..\..\src\ExiledToolkit\dock.js" LogicalName="ExiledToolkit.dock.js" Link="dock.js" />
     <EmbeddedResource Include="FakePage.js" LogicalName="ExiledToolkit.Tests.FakePage.js" />
     <EmbeddedResource Include="DockFake.js" LogicalName="ExiledToolkit.Tests.DockFake.js" />
+    <EmbeddedResource Include="..\..\src\ExiledToolkit\phone.js" LogicalName="ExiledToolkit.phone.js" Link="phone.js" />
+    <EmbeddedResource Include="PhoneFake.js" LogicalName="ExiledToolkit.Tests.PhoneFake.js" />
     <EmbeddedResource Include="..\..\src\ExiledToolkit\menu.js" LogicalName="ExiledToolkit.menu.js" Link="menu.js" />
     <EmbeddedResource Include="MenuFake.js" LogicalName="ExiledToolkit.Tests.MenuFake.js" />
     <EmbeddedResource Include="MenuV1.js" LogicalName="ExiledToolkit.Tests.MenuV1.js" />

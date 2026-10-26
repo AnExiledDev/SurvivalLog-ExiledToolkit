@@ -11,6 +11,7 @@
 
   var COLUMNS = 4;
   var POLL_MS = 250;
+  var CHASE_FRAMES = 120;
   var DOCK_CLASS = 'etk-phone-dock';
   var STYLE_ID = 'etk-phone-style';
   var ORDER_ATTR = 'data-etk-phone';
@@ -88,33 +89,105 @@
     } catch (e) {}
   }
 
-  // Lays the dock out again the moment the game shows or hides one of its apps (it adds two of them later in a run).
-  function watch(doc, dock) {
-    if (dock.etkPhoneWatched || typeof MutationObserver === 'undefined') return;
+  // Lays the dock out for one phone page, if it has its dock yet.
+  function patch(doc) {
+    var dock = doc.querySelector('.app-dock');
 
-    dock.etkPhoneWatched = true;
-    new MutationObserver(function () { layoutSafely(doc, dock); }).observe(dock, { childList: true });
+    if (!dock) return;
+
+    addStyle(doc);
+    layoutSafely(doc, dock);
   }
 
+  // The game builds a new phone page every time the phone opens and shows it two frames after the page starts,
+  // long before the next poll. So the page is watched from the moment it is built: the observer runs before the next
+  // paint whenever the game or a mod changes the page, and only writes when an app is out of place.
+  function watchPhone(frame) {
+    try {
+      var doc = frame.contentDocument;
+      var win = doc && doc.defaultView;
+
+      if (!doc || !win || !PHONE_PAGE.test(String(win.location.href))) return false;
+
+      if (!doc.etkPhoneWatched && typeof win.MutationObserver !== 'undefined') {
+        doc.etkPhoneWatched = true;
+        new win.MutationObserver(function () {
+          try {
+            patch(doc);
+          } catch (e) {}
+        }).observe(doc, { childList: true, subtree: true });
+      }
+
+      patch(doc);
+
+      return true;
+    } catch (e) {
+      // A page from another origin, or one being torn down: the poll tries again.
+      return true;
+    }
+  }
+
+  // A new frame first holds an empty document; the phone page replaces it a moment later. Look each frame until it is
+  // there, for about two seconds at most.
+  function chase(frame, framesLeft) {
+    if (watchPhone(frame) || framesLeft <= 0 || typeof requestAnimationFrame === 'undefined') return;
+
+    requestAnimationFrame(function () { chase(frame, framesLeft - 1); });
+  }
+
+  function onFrame(frame) {
+    if (!PHONE_PAGE.test(String(frame.src || ''))) return;
+
+    if (!frame.etkPhoneFrame) {
+      frame.etkPhoneFrame = true;
+      frame.addEventListener('load', function () { chase(frame, CHASE_FRAMES); });
+    }
+
+    chase(frame, CHASE_FRAMES);
+  }
+
+  // Every game page is an iframe in this document: a new one, or one sent to a new address, is looked at at once.
+  function watchFrames() {
+    if (typeof MutationObserver === 'undefined') return;
+
+    new MutationObserver(function (records) {
+      for (var i = 0; i < records.length; i++) {
+        var record = records[i];
+
+        if (record.type === 'attributes') {
+          if (record.target.tagName === 'IFRAME') onFrame(record.target);
+
+          continue;
+        }
+
+        for (var j = 0; j < record.addedNodes.length; j++) {
+          var node = record.addedNodes[j];
+
+          if (node.nodeType !== 1) continue;
+
+          if (node.tagName === 'IFRAME') {
+            onFrame(node);
+            continue;
+          }
+
+          var inner = node.getElementsByTagName('iframe');
+
+          for (var k = 0; k < inner.length; k++) onFrame(inner[k]);
+        }
+      }
+    }).observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['src'] });
+  }
+
+  // The poll stays as the fallback for a page the watchers missed.
   function poll() {
     var frames = document.getElementsByTagName('iframe');
 
     for (var i = 0; i < frames.length; i++) {
-      if (!PHONE_PAGE.test(String(frames[i].src || ''))) continue;
-
-      try {
-        var doc = frames[i].contentDocument;
-        var dock = doc && doc.querySelector('.app-dock');
-
-        if (!dock) continue;
-
-        addStyle(doc);
-        watch(doc, dock);
-        layoutSafely(doc, dock);
-      } catch (e) {}
+      if (PHONE_PAGE.test(String(frames[i].src || ''))) watchPhone(frames[i]);
     }
   }
 
+  watchFrames();
   setInterval(poll, POLL_MS);
   poll();
 

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.1
+
+- Mod apps on the phone are in the dock the moment the phone opens, instead of showing up a moment later.
+- Made for Survival Log 1.1.19611.
+
 ## 0.9.0
 
 - The Mods button is now also in the bag panel of the workbench, stove, ration press, greenhouse, drone hub, brewing barrel, dye vat, rat cage, material rack and shop screens, not just the inventory. It lists the actions that work there. The shredder and the drone trade are left out.
