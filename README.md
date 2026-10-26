@@ -2,7 +2,7 @@
 
 A shared library for my Survival Log mods. On its own it does nothing you can see. Install it when another mod says it needs it.
 
-Right now the Toolkit gives mods five things. The first is toasts. A toast is a short notice that appears next to the phone, defense and other tool buttons, stays a few seconds, and goes away by itself. Mods that use the Toolkit show their messages this way instead of each drawing their own. The second is live settings: mods can apply a changed setting while you play, so a change in the Mod Manager works without restarting the game. The third is the inventory's "Mods" dropdown, one button in the inventory toolbar that holds the actions mods add there. The fourth keeps the HUD's tool buttons tidy: once mods have added enough buttons that the column would run past four, they are laid out in columns of four instead. The fifth tidies the phone: apps that mods add go into the dock at the bottom, after the game's own apps.
+Right now the Toolkit gives mods six things. The first is toasts. A toast is a short notice that appears next to the phone, defense and other tool buttons, stays a few seconds, and goes away by itself. Mods that use the Toolkit show their messages this way instead of each drawing their own. The second is live settings: mods can apply a changed setting while you play, so a change in the Mod Manager works without restarting the game. The third is the inventory's "Mods" dropdown, one button in the inventory toolbar that holds the actions mods add there. The fourth keeps the HUD's tool buttons tidy: once mods have added enough buttons that the column would run past four, they are laid out in columns of four instead. The fifth tidies the phone: apps that mods add go into the dock at the bottom, after the game's own apps. The sixth is the UI size: one setting draws the windows and panels of every mod that supports it bigger or smaller.
 
 ## Features
 
@@ -16,6 +16,7 @@ Right now the Toolkit gives mods five things. The first is toasts. A toast is a 
 - **No pile-ups**: at most 4 toasts show at once by default. The rest wait their turn and appear as earlier ones close. If more than 30 are waiting, the oldest waiting ones are never shown, though mods that keep a list of toasts still get them.
 - **Tidy tool buttons**: the column of buttons on the left of the HUD (the phone, the bag and the buttons mods add there) never gets taller than four buttons. The rest go into a second column to its right, top to bottom, and a third after that. The phone and bag stay where they always are, and toasts move right to clear the extra column.
 - **Tidy phone apps**: apps that mods add to the phone go into the dock at the bottom, after the game's own, in rows of four, instead of stacking in the middle of the home screen.
+- **Bigger or smaller mod windows**: `UiScale` draws mod windows, panels and toasts from 75% to 200% of their size. A change shows at once, without a restart. A window that would run off the screen is drawn as big as still fits.
 - **Survives reloads**: if the game's web interface reloads, the toasts on screen come back with the time they had left.
 
 The Toolkit adds nothing to your save and does not edit game files.
@@ -24,6 +25,7 @@ The Toolkit adds nothing to your save and does not edit game files.
 
 - A toast covers whatever is under it. Next to the HUD that is empty space, and toasts hide for open panels, but a game button under a toast cannot be clicked until the toast goes. Move the toasts with `Position` if they are in your way.
 - Toasts that hide for an open panel keep counting down, so a short one can run out before the panel closes. Mods that keep a list of toasts still get it.
+- `UiScale` changes only what mods draw. The game's own screens keep their size, and a mod's windows follow the setting only once that mod supports it.
 
 ## Requirements
 
@@ -49,7 +51,7 @@ Settings live in `BepInEx\config\com.dev.survivallog.exiledtoolkit.cfg`, created
 
 Tested on Survival Log 1.1.19611 with BepInEx `6.0.0-be.788`.
 
-Check `BepInEx\LogOutput.log` for `===== Exiled's Toolkit 0.8.0 started`. A few lines below it, `toasts shown ...` tells you whether toasts are shown, where they appear, how long they stay and how many show at once; it is written again whenever one of those settings changes. Once the game's interface is up, `toast script sent to the web UI` means toasts can appear. The same lines are in `BepInEx\exiled-toolkit.log`, which survives restarts.
+Check `BepInEx\LogOutput.log` for `===== Exiled's Toolkit 0.10.0 started`. A few lines below it, `toasts shown ...` tells you whether toasts are shown, where they appear, how long they stay and how many show at once; it is written again whenever one of those settings changes. `mod windows drawn at ...%` gives the UI size, also written again on every change. Once the game's interface is up, `toast script sent to the web UI` means toasts can appear. The same lines are in `BepInEx\exiled-toolkit.log`, which survives restarts.
 
 If no toasts appear, check that `Enabled` is `true` in the config, then look in `BepInEx\exiled-toolkit.log` for a line starting with `could not`.
 
@@ -182,6 +184,34 @@ Nothing else is needed, and the mark does nothing without the Toolkit, so a mod 
 
 A mod that adds an app to the phone's home screen (PhoneSMS.html) builds it like the game's own (`.app` with `.app-icon` and `.app-label`), puts it in `.app-grid`, and marks it with `data-etk-phone="<order>"`. The Toolkit moves marked apps into `.app-dock` after the game's apps, lowest order first, and past four shown apps lays the dock out in rows of four. Without the Toolkit the app stays in `.app-grid`. Look the app up by its class anywhere in the document, not only in `.app-grid`, or it is added again once moved. Field Guide uses 10 and Neighbor Basket 20.
 
+### UI size
+
+The player's `UiScale` setting draws mod windows bigger or smaller with CSS `zoom`. A page script hands each window or panel it draws to `ExiledUi.size` once, right after it puts the element in the page, and the Toolkit zooms it at once and again after every change of the setting. Carry this helper in the script and call it instead: it holds panels until the Toolkit's script has loaded, so load order does not matter, and it does nothing without the Toolkit, so the Toolkit can stay optional.
+
+```js
+function uiSize(el, options) {
+  var ui = window.ExiledUi;
+  if (ui) {
+    ui.size(el, options);
+    return;
+  }
+  var waiting = window.__exiledUiWait = window.__exiledUiWait || [];
+  waiting.push([el, options]);
+  if (waiting.length > 32) waiting.shift();
+}
+
+uiSize(root);                                         // a window
+uiSize(backdrop, { fit: backdrop.firstChild });       // a full-screen backdrop: the window inside it must fit
+uiSize(tooltip, { fit: false });                      // never shrunk to fit
+uiSize(root, { onZoom: function (zoom) { refit(); } });
+```
+
+- Above 100%, a panel whose box would run past its page's window is zoomed as far as still fits, and never below 100%. `fit` names the element whose box is measured; leave it out to measure the panel itself.
+- `onZoom(zoom)` runs after each new zoom, say to place the panel again. One that throws is skipped and does not stop other panels.
+- In a zoomed panel, `getBoundingClientRect` and mouse positions are screen pixels, while `left`, `top`, `width` and `offsetLeft` inside it are the panel's own pixels. Divide screen pixels by `el.currentCSSZoom` before writing them as positions.
+- A panel taken out of its page, or left in a page that reloaded, is let go. Hand it over again when you put it back. Handing the same element twice changes nothing but its options.
+- `ExiledUi.scale` is the size now as a factor (1.25 at 125%).
+
 ## Build
 
 This is a BepInEx 6 IL2CPP plugin. It compiles against BepInEx and the game's IL2CPP interop assemblies, so a game install with BepInEx set up and started once is required. Those assemblies come from the game and are not part of this repo. The .NET 8 SDK is required.
@@ -192,7 +222,7 @@ dotnet build src/ExiledToolkit -c Release -p:GameDir="C:\path\to\Survival Log"
 
 `GameDir` is the game folder. The default in the project file is a local path you will almost certainly need to override. The output DLL is at `src\ExiledToolkit\bin\Release\ExiledToolkit.dll`.
 
-The unit tests cover the pure toast rules and need nothing from the game:
+The unit tests cover the toast rules and the page scripts, and need nothing from the game:
 
 ```
 dotnet test tests/ExiledToolkit.Tests

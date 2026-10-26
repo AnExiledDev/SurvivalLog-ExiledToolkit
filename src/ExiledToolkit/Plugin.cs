@@ -15,11 +15,12 @@ public sealed class Plugin : BasePlugin
 {
     /// <summary>For <c>[BepInDependency(ExiledToolkit.Plugin.Guid)]</c> in a mod that shows toasts.</summary>
     public const string Guid = "com.dev.survivallog.exiledtoolkit";
-    public const string Version = "0.9.2";
+    public const string Version = "0.10.0";
 
     public override void Load()
     {
         var entries = BindToastSettings();
+        var uiScale = BindUiScale();
         var log = new ToolkitLog(Log, Path.Combine(Paths.BepInExRootPath, "exiled-toolkit.log"));
         var harmony = new Harmony(Guid);
         var clock = Stopwatch.StartNew();
@@ -34,12 +35,26 @@ public sealed class Plugin : BasePlugin
         ToastTicker.Page = new WebPage(log.Write, "ExiledToolkit.toasts.js", ToastScript.Probe, "toast");
         ToastTicker.Dock = new WebPage(log.Write, "ExiledToolkit.dock.js", "", "HUD dock");
         ToastTicker.Phone = new WebPage(log.Write, "ExiledToolkit.phone.js", "", "phone apps");
+        ToastTicker.Ui = new UiSizePage(new WebPage(log.Write, "ExiledToolkit.ui.js", "", "UI size"));
         ToastTicker.Menu = new MenuRunner(new WebPage(log.Write, "ExiledToolkit.menu.js", MenuScript.Probe, "Mods menu"), log.Write);
         ToastTicker.Log = log.Write;
 
         AddComponent<ToastTicker>();
         LiveSettings.Watch(() => ApplyToastSettings(center, entries.Read(), log.Write), entries.All);
+        LiveSettings.Watch(uiScale, percent => ApplyUiScale(percent, log.Write));
     }
+
+    private static void ApplyUiScale(int percent, Action<string> log)
+    {
+        ToastTicker.Ui?.Set(percent);
+        log($"mod windows drawn at {UiSize.Clamp(percent)}%");
+    }
+
+    private ConfigEntry<int> BindUiScale() =>
+        Config.Bind("Interface", "UiScale", UiSize.Default, new ConfigDescription(
+            "How big mod windows, panels and toasts are drawn, in percent, from " + UiSize.Min + " to " + UiSize.Max + ". A change shows at once in every mod that supports it. A window that would no longer fit on the screen is drawn as big as still fits. Default: " + UiSize.Default + ".\n" +
+            "模组的窗口、面板和通知的显示大小（百分比），范围 " + UiSize.Min + " 到 " + UiSize.Max + "。改动会立即在所有支持此设置的模组中生效。放大后超出屏幕的窗口会以能完整显示的最大尺寸显示。默认 " + UiSize.Default + "。",
+            new AcceptableValueRange<int>(UiSize.Min, UiSize.Max)));
 
     private static void ApplyToastSettings(ToastCenter center, ToastSettings settings, Action<string> log)
     {

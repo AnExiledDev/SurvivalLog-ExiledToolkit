@@ -292,6 +292,54 @@ public class PageScriptTests
         Assert.Equal((left, top), (box.Left, box.Top));
     }
 
+    // ===== At another UI size =====
+
+    /// <summary>Interface &gt; UiScale grows the deck at once, still beside the HUD, and clicks still land on its cards.</summary>
+    [Fact]
+    public void A_bigger_ui_size_grows_the_deck_at_once_in_its_place_beside_the_hud()
+    {
+        var page = new PageScript(uiPercent: 100);
+        page.Run("addHud(1)");
+        page.Apply(new PageOp.Place(ToastPosition.Hud), new PageOp.Show(View(1, Stamina)));
+
+        page.Run(UiSize.SetScript(150));
+        page.NextFrame();
+        var box = Px(Assert.Single(LastRects(page).Boxes));
+
+        Assert.Equal((77 + 10, 980 - 8), (box.Left, box.Bottom));
+        Assert.Equal((280 * 3 / 2, 60 * 3 / 2), (box.Width, box.Height));
+    }
+
+    [Fact]
+    public void A_bigger_deck_in_a_corner_keeps_its_gap_from_the_screen_edges()
+    {
+        var page = new PageScript(uiPercent: 200);
+        page.NextFrame();
+
+        page.Apply(new PageOp.Place(ToastPosition.BottomRight), new PageOp.Show(View(1, Stamina)));
+        var box = Px(Assert.Single(LastRects(page).Boxes));
+
+        Assert.Equal((1920 - 16, 1080 - 16), (box.Left + box.Width, box.Bottom));
+    }
+
+    /// <summary>The bigger deck covers more of the screen, so it steps aside for a panel button it now reaches.</summary>
+    [Theory]
+    [InlineData(100, false)]
+    [InlineData(200, true)]
+    public void A_panel_button_near_the_deck_hides_it_once_the_ui_size_makes_the_deck_reach_it(int percent, bool isHidden)
+    {
+        var page = new PageScript(uiPercent: percent);
+        page.Run("addHud(1)");
+        page.Run("addFrame('BattleBag', 'https://webui/UI/BattleBag/BattleBag.html', 4)");
+        page.NextFrame();
+        page.Apply(new PageOp.Place(ToastPosition.Hud), new PageOp.Show(View(1, Stamina)));
+
+        page.Run("window.syncInteractiveRects('BattleBag', [{ x: 0.25, y: 0.86, w: 0.1, h: 0.02 }], null)");
+        page.NextFrame();
+
+        Assert.Equal(isHidden ? 0 : 1, LastRects(page).Boxes.Count);
+    }
+
     // ===== The deck =====
 
     /// <summary>A card past the fourth would sit unseen behind the last, so it is not drawn and takes no clicks.</summary>

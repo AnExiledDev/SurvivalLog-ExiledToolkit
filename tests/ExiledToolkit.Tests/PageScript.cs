@@ -13,11 +13,18 @@ internal sealed class PageScript
     private readonly Engine _engine = new();
 
     /// <param name="hasBridge">False loads the script before the vuplex bridge exists, as can happen in the game.</param>
-    public PageScript(bool hasBridge = true)
+    /// <param name="uiPercent">Puts ui.js in first at this Interface &gt; UiScale, as the plugin does.</param>
+    public PageScript(bool hasBridge = true, int? uiPercent = null)
     {
         _engine.Execute(Resource("ExiledToolkit.Tests.FakePage.js"));
 
         if (hasBridge) _engine.Execute("connectVuplex()");
+
+        if (uiPercent is { } percent)
+        {
+            _engine.Execute(Resource("ExiledToolkit.ui.js"));
+            _engine.Execute(UiSize.SetScript(percent));
+        }
 
         _engine.Execute(Resource("ExiledToolkit.toasts.js"));
         Hear();

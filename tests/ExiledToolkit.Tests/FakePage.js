@@ -133,6 +133,23 @@ var FakeElement = class {
 
   get firstChild() { return this.children.length ? this.children[0] : null; }
 
+  get ownerDocument() { return document; }
+
+  get isConnected() {
+    for (var node = this; node; node = node.parentNode) {
+      if (node === document.body || node === document.head || node === document.documentElement) return true;
+    }
+
+    return false;
+  }
+
+  // Its own zoom times every parent's, as the zoom from ui.js on the stack reaches each box in it.
+  get currentCSSZoom() {
+    var own = Number(this.style.zoom) || 1;
+
+    return this.parentNode ? own * this.parentNode.currentCSSZoom : own;
+  }
+
   get className() { return this.classes.join(' '); }
 
   set className(value) { this.classes = String(value).split(' ').filter(function (name) { return name !== ''; }); }
@@ -148,6 +165,7 @@ var FakeElement = class {
 
   // Layout, as a browser does it for the zero-size fixed stack and the absolute boxes in it: the stack sits where its
   // left/right/top/bottom put it, and a box sits by its own sides, measured from the stack. Nothing else takes room.
+  // Offsets and sizes are in the stack's own pixels; only the stack's screen box shows its zoom.
   get isInStack() { return !!this.parentNode && this.parentNode.id === 'etk-stack'; }
 
   get offsetLeft() { return this.isInStack ? this.side('left', 'right', this.offsetWidth) : 0; }
@@ -175,12 +193,13 @@ var FakeElement = class {
     if (this.tagName === 'iframe') return { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
 
     if (this.id === 'etk-stack') {
+      var zoom = this.currentCSSZoom;
       var left = styleLength(this.style.left);
       var top = styleLength(this.style.top);
 
       return {
-        left: left !== null ? left : window.innerWidth - (styleLength(this.style.right) || 0),
-        top: top !== null ? top : window.innerHeight - (styleLength(this.style.bottom) || 0),
+        left: left !== null ? left * zoom : window.innerWidth - (styleLength(this.style.right) || 0) * zoom,
+        top: top !== null ? top * zoom : window.innerHeight - (styleLength(this.style.bottom) || 0) * zoom,
         width: 0,
         height: 0
       };
@@ -227,6 +246,7 @@ var FakeElement = class {
 var frames = [];
 
 var document = {
+  defaultView: window,
   head: new FakeElement('head'),
   body: new FakeElement('body'),
   documentElement: new FakeElement('html'),

@@ -1,0 +1,248 @@
+// Exiled's Toolkit: the size mods draw their own windows and panels at, run in the game's root web document above
+// every page. The player sets it as Interface > UiScale and the C# side sends it through ExiledUi.set. A mod hands
+// each panel it draws to ExiledUi.size once, when it makes the panel, and the panel is zoomed to that size at once and
+// again after every change. A panel that would then be bigger than its window is shrunk until it fits, but never below
+// its own size. A panel taken out of its page is dropped, so a mod that puts one back hands it again. A mod whose
+// script ran before this one leaves its panels in window.__exiledUiWait as [element, options], taken here.
+(function () {
+  if (window.ExiledUi) return;
+
+  // A shrunk panel keeps this share of its window, so its edges stay clear of the screen's.
+  var MARGIN = 0.96;
+  // A zoom this close to the one already set is not written again.
+  var STEP = 0.005;
+  // Passes in a row that change one panel's zoom before it is left as it is until the size or the window changes. A
+  // panel sized by its window changes size with its own zoom and settles in a few; one that never settles must not
+  // lay the page out every frame.
+  var MAX_TRIES = 8;
+
+  // { el, fit: the element measured or null, onZoom, zoom: as last written, tries }
+  var items = [];
+  var scale = 1;
+  var isDue = false;
+
+  var api = { version: 1, scale: scale, size: size, set: set };
+
+  window.ExiledUi = api;
+  window.addEventListener('resize', windowResized);
+  takeWaiting();
+
+  // ===== What mods and the C# side call =====
+
+  // options.fit: the element whose box must fit the window (the window inside a full-screen backdrop), or false for
+  // a panel that is never shrunk. options.onZoom(zoom): runs after each change, say to have the game page fit itself
+  // to its window again.
+  function size(el, options) {
+    if (!el || !el.style) return;
+
+    var fit = options && options.fit === false ? null : (options && options.fit) || el;
+    var onZoom = options && typeof options.onZoom === 'function' ? options.onZoom : null;
+    var item = itemFor(el);
+
+    if (item && item.fit === fit) {
+      item.onZoom = onZoom;
+      return;
+    }
+
+    if (!item) {
+      item = { el: el, fit: null, onZoom: null, zoom: Number(el.style.zoom) || 1, tries: 0 };
+      items.push(item);
+    }
+
+    unwatch(item.fit);
+    item.fit = fit;
+    item.onZoom = onZoom;
+    item.tries = 0;
+    watch(fit);
+    schedule();
+  }
+
+  function set(value) {
+    var next = Math.max(0.5, Math.min(3, rounded(Number(value) || 1)));
+
+    if (next === scale) return;
+
+    scale = next;
+    api.scale = scale;
+    retryAll();
+  }
+
+  // ===== When panels are fitted =====
+
+  // A bigger or smaller window can let a shrunk panel grow back, or make one too big.
+  function windowResized() {
+    if (scale > 1) retryAll();
+  }
+
+  // A panel that changed size, say as it was shown or filled, is fitted again.
+  function resized(entries) {
+    if (scale <= 1) return;
+
+    for (var i = 0; i < entries.length; i++) {
+      if (itemMeasuring(entries[i].target)) {
+        schedule();
+        return;
+      }
+    }
+  }
+
+  function retryAll() {
+    items.forEach(function (item) { item.tries = 0; });
+    schedule();
+  }
+
+  function schedule() {
+    if (isDue) return;
+
+    isDue = true;
+    window.requestAnimationFrame(pass);
+  }
+
+  // ===== The pass =====
+
+  function pass() {
+    var measured = [];
+
+    isDue = false;
+
+    for (var i = items.length - 1; i >= 0; i--) {
+      var item = items[i];
+
+      if (!isLive(item.el)) {
+        unwatch(item.fit);
+        items.splice(i, 1);
+      } else if (scale <= 1 || !item.fit) {
+        // Smaller than the panel's own size always fits, and a panel never shrunk takes the size as it is.
+        write(item, scale);
+      } else if (item.tries < MAX_TRIES) {
+        measured.push(item);
+      }
+    }
+
+    // Every box is read before any zoom is written, so the pass lays the page out once.
+    var boxes = measured.map(function (item) { return item.fit.getBoundingClientRect(); });
+    var isAnyFitted = false;
+
+    measured.forEach(function (item, k) {
+      var box = boxes[k];
+
+      // A hidden panel takes the size now and is fitted once it shows, which changes its size.
+      if (!(box.width > 0 && box.height > 0)) {
+        write(item, scale);
+      } else if (write(item, fitted(item, box, item.fit.ownerDocument.defaultView))) {
+        item.tries++;
+        isAnyFitted = true;
+      } else {
+        item.tries = 0;
+      }
+    });
+
+    // The next frame looks again, so a fit is known to have settled whether or not the new zoom changed the box.
+    if (isAnyFitted) schedule();
+  }
+
+  // The zoom that shows the panel at the player's size or, when that would not fit its window, the biggest that does,
+  // worked out from its box at the zoom it has now.
+  function fitted(item, box, view) {
+    var grow = scale / item.zoom;
+    var width = box.width * grow;
+    var height = box.height * grow;
+    var roomX = width > view.innerWidth ? view.innerWidth * MARGIN / width : 1;
+    var roomY = height > view.innerHeight ? view.innerHeight * MARGIN / height : 1;
+
+    return Math.min(scale, Math.max(1, scale * Math.min(roomX, roomY)));
+  }
+
+  // True when the zoom changed.
+  function write(item, zoom) {
+    zoom = rounded(zoom);
+
+    if (Math.abs(zoom - item.zoom) < STEP) return false;
+
+    item.zoom = zoom;
+    item.el.style.zoom = zoom === 1 ? '' : String(zoom);
+
+    if (item.onZoom) {
+      try {
+        item.onZoom(zoom);
+      } catch (e) {
+        // A mod's own follow-up must not stop the other panels.
+      }
+    }
+
+    return true;
+  }
+
+  // ===== Helpers =====
+
+  function rounded(n) {
+    return Math.round(n * 1000) / 1000;
+  }
+
+  // The panel's document is still the one shown in its frame: a removed or reloaded frame keeps its old elements
+  // connected to their old document, so isConnected alone does not tell.
+  function isLive(el) {
+    if (!el || !el.isConnected) return false;
+
+    var doc = el.ownerDocument;
+    var view = doc && doc.defaultView;
+
+    if (!view) return false;
+    if (view === window) return true;
+
+    var frame = view.frameElement;
+
+    return !!frame && frame.isConnected && frame.contentDocument === doc;
+  }
+
+  function itemFor(el) {
+    for (var i = 0; i < items.length; i++) {
+      if (items[i].el === el) return items[i];
+    }
+
+    return null;
+  }
+
+  function itemMeasuring(target) {
+    for (var i = 0; i < items.length; i++) {
+      if (items[i].fit === target) return items[i];
+    }
+
+    return null;
+  }
+
+  // One observer per window the panels live in, made from that window, so a frame's panels are watched by its own.
+  function observerFor(el, isMade) {
+    var view = el && el.ownerDocument && el.ownerDocument.defaultView;
+
+    if (!view || typeof view.ResizeObserver !== 'function') return null;
+
+    if (!view.__exiledUiWatch && isMade) view.__exiledUiWatch = new view.ResizeObserver(resized);
+
+    return view.__exiledUiWatch || null;
+  }
+
+  function watch(el) {
+    var observer = observerFor(el, true);
+
+    if (observer) observer.observe(el);
+  }
+
+  function unwatch(el) {
+    var observer = observerFor(el, false);
+
+    if (observer) observer.unobserve(el);
+  }
+
+  function takeWaiting() {
+    var waiting = window.__exiledUiWait;
+
+    window.__exiledUiWait = null;
+
+    if (!waiting || !waiting.length) return;
+
+    waiting.forEach(function (entry) {
+      if (entry && isLive(entry[0])) size(entry[0], entry[1]);
+    });
+  }
+})();

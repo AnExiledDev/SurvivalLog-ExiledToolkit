@@ -165,6 +165,13 @@
     return Math.round(value) + 'px';
   }
 
+  // The stack's zoom from Interface > UiScale. Its own place and everything laid out inside it are in its zoomed
+  // pixels, the screen and the game's pages in plain ones: a length inside is this many screen pixels.
+  function zoom() {
+    var z = Number(stack.currentCSSZoom);
+    return z > 0 ? z : 1;
+  }
+
   // Builds the inside of a box from one toast; used for new boxes and for boxes updated in place.
   function fill(box, toast) {
     box.el.className = 'etk-toast etk-' + kindName(toast.kind) + (toast.click ? ' etk-clickable' : '');
@@ -443,6 +450,7 @@
   // The deck stays where the HUD last was while the HUD is hidden, so it does not jump about in plan mode.
   function placeStack() {
     var s = stack.style;
+    var z = zoom();
     var left = '';
     var right = '';
     var top = '';
@@ -453,19 +461,31 @@
       var spot = hudSpot || HUD_FALLBACK;
       var width = window.innerWidth || 0;
       var height = window.innerHeight || 0;
-      left = px(Math.max(EDGE, Math.min(spot.left, width - CARD_WIDTH - EDGE)));
-      bottom = px(Math.max(EDGE, Math.min(spot.bottom, height - EDGE)));
+      left = px(Math.max(EDGE, Math.min(spot.left, width - CARD_WIDTH * z - EDGE)) / z);
+      bottom = px(Math.max(EDGE, Math.min(spot.bottom, height - EDGE)) / z);
     } else {
-      if (position.indexOf('left') >= 0) left = px(EDGE);
-      else right = px(EDGE);
-      if (position.indexOf('top') === 0) top = px(EDGE);
-      else bottom = px(EDGE);
+      var edge = px(EDGE / z);
+      if (position.indexOf('left') >= 0) left = edge;
+      else right = edge;
+      if (position.indexOf('top') === 0) top = edge;
+      else bottom = edge;
     }
 
     if (s.left !== left) s.left = left;
     if (s.right !== right) s.right = right;
     if (s.top !== top) s.top = top;
     if (s.bottom !== bottom) s.bottom = bottom;
+  }
+
+  // Hands the deck to the UI size script (ui.js), or leaves it for that script to take when it is not in yet.
+  function uiSize(el, options) {
+    var ui = window.ExiledUi;
+    if (ui) {
+      ui.size(el, options);
+      return;
+    }
+    var waiting = window.__exiledUiWait = window.__exiledUiWait || [];
+    waiting.push([el, options]);
   }
 
   // Live boxes, newest first.
@@ -673,11 +693,12 @@
     var width = window.innerWidth || 1;
     var height = window.innerHeight || 1;
     var origin = stack.getBoundingClientRect();
+    var z = zoom();
     var deckBox = {
-      x: (origin.left + footprint.x0) / width,
-      y: (origin.top + footprint.y0) / height,
-      w: (footprint.x1 - footprint.x0) / width,
-      h: (footprint.y1 - footprint.y0) / height
+      x: (origin.left + footprint.x0 * z) / width,
+      y: (origin.top + footprint.y0 * z) / height,
+      w: (footprint.x1 - footprint.x0) * z / width,
+      h: (footprint.y1 - footprint.y0) * z / height
     };
 
     return panelFrames().some(function (frame) {
@@ -738,12 +759,13 @@
     var cards = isHidden ? [] : inDeck();
     // With no card to report the page is not measured at all.
     var origin = cards.length > 0 ? stack.getBoundingClientRect() : null;
+    var z = cards.length > 0 ? zoom() : 1;
     var parts = [];
 
     cards.forEach(function (box) {
       var el = box.el;
       if (el.offsetWidth <= 0 || el.offsetHeight <= 0) return;
-      parts.push([(origin.left + el.offsetLeft) / width, (origin.top + el.offsetTop) / height, el.offsetWidth / width, el.offsetHeight / height]
+      parts.push([(origin.left + el.offsetLeft * z) / width, (origin.top + el.offsetTop * z) / height, el.offsetWidth * z / width, el.offsetHeight * z / height]
         .map(function (n) { return n.toFixed(5); }).join(','));
     });
 
@@ -799,6 +821,7 @@
   watchHud();
   askUnheardPanels();
   placeStack();
+  uiSize(stack, { fit: false, onZoom: redraw });
   window.addEventListener('resize', redraw);
   setInterval(heartbeat, RECT_POLL_MS);
   setInterval(watch, WATCH_MS);

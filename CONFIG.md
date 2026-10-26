@@ -2,6 +2,14 @@
 
 Settings live in `BepInEx\config\com.dev.survivallog.exiledtoolkit.cfg`, created the first time the game starts with the mod. Change them in game on the Mod Manager's Mods screen, where they take effect at once, or edit the file while the game is closed. Delete the file to get the defaults back.
 
+## Interface
+
+| Setting | Default | What it does |
+| --- | --- | --- |
+| `UiScale` | `100` | How big mod windows, panels and toasts are drawn, in percent, from 75 to 200. A change shows at once in every mod that supports it. A window that would no longer fit on the screen is drawn as big as still fits, but never smaller than at 100. |
+
+`UiScale` changes only what mods draw. The game's own screens keep their size.
+
 ## Toasts
 
 | Setting | Default | What it does |

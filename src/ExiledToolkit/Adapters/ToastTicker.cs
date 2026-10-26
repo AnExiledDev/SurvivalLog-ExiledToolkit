@@ -21,6 +21,9 @@ public sealed class ToastTicker : MonoBehaviour
 
     /// <summary>The phone app layout also runs in the root document, so it is put back with the toasts too.</summary>
     internal static WebPage? Phone;
+
+    /// <summary>The UI size script also runs in the root document; it goes in first, so the toasts find it.</summary>
+    internal static UiSizePage? Ui;
     internal static MenuRunner? Menu;
     internal static Action<string> Log = _ => { };
 
@@ -93,6 +96,7 @@ public sealed class ToastTicker : MonoBehaviour
                 break;
             case PageCommand.NoScript:
                 Area.Forget();
+                Ui?.Install();
                 page.Install();
                 Dock?.Install();
                 Phone?.Install();

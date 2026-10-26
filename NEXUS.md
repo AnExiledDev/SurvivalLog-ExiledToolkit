@@ -1,10 +1,10 @@
 Name: Exiled's Toolkit
-Summary: The shared library my Survival Log mods use. With it, settings changed on the Mod Manager's Mods screen apply without a restart, mods show their short notices as small toasts beside the HUD, tool buttons and phone apps stay in tidy groups of four, and mods share one Mods menu in the inventory. On its own it does nothing you can see.
+Summary: The shared library my Survival Log mods use. It lets you draw mod windows bigger or smaller, applies settings changed in the Mod Manager without a restart, shows mods' short notices as toasts beside the HUD, keeps tool buttons and phone apps in tidy groups of four, and gives mods one shared Mods menu. On its own it does nothing you can see.
 
 Description (BBCode):
 [center][img]https://sldb.core-directive.com/media/save/1-save-safe.png[/img][/center]
 
-Exiled's Toolkit is the shared part of my Survival Log mods. Right now it gives them five things. The first is toasts. A toast is a short notice that appears next to the phone, defense and other tool buttons, stays a few seconds, and goes away by itself. Mods that use the Toolkit show their messages this way instead of each drawing their own. The second is live settings: mods can apply a changed setting while you play, so a change in the Mod Manager works without restarting the game. The third is the inventory's Mods dropdown: mods add their own entries to it, all under one button. The fourth keeps the HUD's tool buttons tidy, in columns of four. The fifth puts the apps mods add to the phone into its dock, in rows of four. Mod authors: see [url=https://github.com/AnExiledDev/SurvivalLog-ExiledToolkit#for-mod-authors]For mod authors[/url] in the README.
+Exiled's Toolkit is the shared part of my Survival Log mods. Right now it gives them six things. The first is toasts. A toast is a short notice that appears next to the phone, defense and other tool buttons, stays a few seconds, and goes away by itself. Mods that use the Toolkit show their messages this way instead of each drawing their own. The second is live settings: mods can apply a changed setting while you play, so a change in the Mod Manager works without restarting the game. The third is the inventory's Mods dropdown: mods add their own entries to it, all under one button. The fourth keeps the HUD's tool buttons tidy, in columns of four. The fifth puts the apps mods add to the phone into its dock, in rows of four. The sixth is the UI size: one setting draws the windows and panels of every mod that supports it bigger or smaller. Mod authors: see [url=https://github.com/AnExiledDev/SurvivalLog-ExiledToolkit#for-mod-authors]For mod authors[/url] in the README.
 
 [size=5]Main features[/size]
 [list]
@@ -17,6 +17,7 @@ Exiled's Toolkit is the shared part of my Survival Log mods. Right now it gives 
 [*][b]No pile-ups[/b]: at most 4 toasts show at once by default; the rest wait their turn.[/*]
 [*][b]Tidy tool buttons[/b]: the column of buttons on the left of the HUD never gets taller than four. The rest go into a column to its right, top to bottom; the phone and bag stay where they are.[/*]
 [*][b]Tidy phone apps[/b]: apps that mods add to the phone go into the dock at the bottom, after the game's own, in rows of four.[/*]
+[*][b]Bigger or smaller mod windows[/b]: the UiScale setting draws mod windows, panels and toasts from 75% to 200% of their size. A change shows at once, without a restart. A window that would run off the screen is drawn as big as still fits.[/*]
 [/list]
 
 The Toolkit adds nothing to your save and does not edit game files.
@@ -27,6 +28,7 @@ Works in English and Chinese.
 [list]
 [*]A toast covers whatever is under it. A game button under a toast cannot be clicked until the toast goes. Move the toasts with the Position setting if they are in your way.[/*]
 [*]Toasts that hide for an open panel keep counting down, so a short one can run out before the panel closes.[/*]
+[*]UiScale changes only what mods draw. The game's own screens keep their size, and a mod's windows follow the setting only once that mod supports it.[/*]
 [/list]
 
 [center][img]https://sldb.core-directive.com/img/mods-banner.jpg[/img]
@@ -50,7 +52,7 @@ Works in English and Chinese.
 Remove every mod that needs the Toolkit first; they will not load without it. Then delete [font=Courier New]ExiledToolkit.dll[/font] from the [font=Courier New]BepInEx\plugins[/font] folder.
 
 [size=5]Configuration[/size]
-To move the toasts, change how long they stay or how many show, or turn them off, use the Mod Manager's Mods screen in game, where changes take effect at once, or edit [font=Courier New]BepInEx\config\com.dev.survivallog.exiledtoolkit.cfg[/font] while the game is closed (see [url=https://github.com/AnExiledDev/SurvivalLog-ExiledToolkit/blob/main/CONFIG.md]CONFIG.md[/url]; the cfg file explains each setting in English and Chinese).
+To make mod windows bigger or smaller, move the toasts, change how long they stay or how many show, or turn them off, use the Mod Manager's Mods screen in game, where changes take effect at once, or edit [font=Courier New]BepInEx\config\com.dev.survivallog.exiledtoolkit.cfg[/font] while the game is closed (see [url=https://github.com/AnExiledDev/SurvivalLog-ExiledToolkit/blob/main/CONFIG.md]CONFIG.md[/url]; the cfg file explains each setting in English and Chinese).
 
 [size=5]Feedback[/size]
 Found a bug or have an idea? Come say hi on the [url=https://discord.gg/trTsyxUFqg]Core Directive Discord[/url], or leave a comment here. For bugs, please include [font=Courier New]BepInEx\LogOutput.log[/font] and [font=Courier New]BepInEx\exiled-toolkit.log[/font].
@@ -62,7 +64,7 @@ Open source under MIT: [url=https://github.com/AnExiledDev/SurvivalLog-ExiledToo
 [line]
 [size=5]简体中文[/size]
 
-Exiled's Toolkit 是我的 Survival Log 模组共用的部分。目前它为这些模组提供五样东西。第一样是通知。通知是一条简短的提示，出现在手机、防御和其他工具按钮旁边，停留几秒后自动消失。使用 Toolkit 的模组都用这种方式显示消息，而不是各自绘制。第二样是即时设置：模组可以在游戏进行中应用改动过的设置，因此在 Mod Manager 里改设置无需重启游戏。第三样是背包的「Mods」下拉菜单：各个模组把自己的条目加到这一个按钮下。第四样是让 HUD 的工具按钮保持整齐，每列最多四个。第五样是把模组加到手机上的应用放进底部的程序栏，每行四个。模组作者请看 README 中的 [url=https://github.com/AnExiledDev/SurvivalLog-ExiledToolkit#for-mod-authors]For mod authors[/url] 一节（英文）。
+Exiled's Toolkit 是我的 Survival Log 模组共用的部分。目前它为这些模组提供六样东西。第一样是通知。通知是一条简短的提示，出现在手机、防御和其他工具按钮旁边，停留几秒后自动消失。使用 Toolkit 的模组都用这种方式显示消息，而不是各自绘制。第二样是即时设置：模组可以在游戏进行中应用改动过的设置，因此在 Mod Manager 里改设置无需重启游戏。第三样是背包的「Mods」下拉菜单：各个模组把自己的条目加到这一个按钮下。第四样是让 HUD 的工具按钮保持整齐，每列最多四个。第五样是把模组加到手机上的应用放进底部的程序栏，每行四个。第六样是界面大小：一项设置就能把所有支持它的模组的窗口和面板放大或缩小。模组作者请看 README 中的 [url=https://github.com/AnExiledDev/SurvivalLog-ExiledToolkit#for-mod-authors]For mod authors[/url] 一节（英文）。
 
 [size=5]主要功能[/size]
 [list]
@@ -75,6 +77,7 @@ Exiled's Toolkit 是我的 Survival Log 模组共用的部分。目前它为这�
 [*][b]不会堆积[/b]：默认最多同时显示 4 条通知，其余的排队等候。[/*]
 [*][b]工具按钮整齐排列[/b]：HUD 左侧的按钮列最多四个高，其余的按从上到下的顺序排到右边的新列；手机和背包保持原位。[/*]
 [*][b]手机应用整齐排列[/b]：模组加到手机上的应用放进底部的程序栏，排在游戏自带应用之后，每行四个。[/*]
+[*][b]模组窗口可放大缩小[/b]：UiScale 设置可以把模组的窗口、面板和通知按 75% 到 200% 显示。改动立即生效，无需重启。放大后会超出屏幕的窗口，会以能完整显示的最大尺寸显示。[/*]
 [/list]
 
 Toolkit 不会往存档里写入任何内容，也不会修改游戏文件。
@@ -85,6 +88,7 @@ Toolkit 不会往存档里写入任何内容，也不会修改游戏文件。
 [list]
 [*]通知会挡住下面的内容。通知下方的游戏按钮要等通知消失后才能点击。如果通知挡路，可以用 Position 设置移动它们。[/*]
 [*]因面板打开而隐藏的通知仍在倒计时，所以时间短的通知可能在面板关闭前就已结束。[/*]
+[*]UiScale 只改变模组绘制的界面，游戏自带的界面大小不变；模组更新到支持此设置后，它的窗口才会跟着变化。[/*]
 [/list]
 
 [url=https://www.nexusmods.com/survivallog/mods/73]获取 Mod Manager[/url]，在游戏里设置所有模组。[url=https://sldb.core-directive.com/zh/]打开 Survival Log 维基[/url]，物品、配方、地图一查就有。
@@ -107,7 +111,7 @@ Toolkit 不会往存档里写入任何内容，也不会修改游戏文件。
 从 [font=Courier New]BepInEx\plugins[/font] 文件夹中删除 [font=Courier New]ExiledToolkit.dll[/font]。删除前，请先移除所有需要 Toolkit 的模组，否则它们无法加载。
 
 [size=5]配置[/size]
-如需移动通知、修改停留时间或显示数量，或关闭通知，可以在游戏内 Mod Manager 的「模组」界面修改，改动立即生效；也可以在游戏关闭时编辑 [font=Courier New]BepInEx\config\com.dev.survivallog.exiledtoolkit.cfg[/font]。配置文件中每项设置都有中文说明，完整说明见 [url=https://github.com/AnExiledDev/SurvivalLog-ExiledToolkit/blob/main/CONFIG.md]CONFIG.md[/url]（英文）。
+如需放大或缩小模组窗口、移动通知、修改停留时间或显示数量，或关闭通知，可以在游戏内 Mod Manager 的「模组」界面修改，改动立即生效；也可以在游戏关闭时编辑 [font=Courier New]BepInEx\config\com.dev.survivallog.exiledtoolkit.cfg[/font]。配置文件中每项设置都有中文说明，完整说明见 [url=https://github.com/AnExiledDev/SurvivalLog-ExiledToolkit/blob/main/CONFIG.md]CONFIG.md[/url]（英文）。
 
 [size=5]反馈[/size]
 发现 bug 或有好点子？欢迎来 [url=https://discord.gg/trTsyxUFqg]Core Directive Discord[/url] 打个招呼，或在这里留言。报告 bug 时，请附上 [font=Courier New]BepInEx\LogOutput.log[/font] 和 [font=Courier New]BepInEx\exiled-toolkit.log[/font]。

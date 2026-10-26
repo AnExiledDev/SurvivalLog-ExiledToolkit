@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.10.0
+
+- New: the UI size setting (`UiScale` under Interface) draws mod windows, panels and toasts bigger or smaller, from 75% to 200%. A change shows at once, without restarting the game.
+- A mod window that would run off the screen at a bigger size is drawn as big as still fits.
+- Toasts follow the UI size now. Each other mod's windows follow it once that mod is updated for it.
+- For mod authors: hand a panel your page script draws to `ExiledUi.size` and it follows the player's UI size. See "UI size" in the README.
+- Made for Survival Log 1.1.19611.
+
 ## 0.9.2
 
 - Fixed: the phone was very laggy since 0.9.1. Mod apps still go into the dock as soon as the phone opens.

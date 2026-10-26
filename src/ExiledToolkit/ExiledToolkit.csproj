@@ -4,7 +4,7 @@
     <TargetFramework>net6.0</TargetFramework>
     <AssemblyName>ExiledToolkit</AssemblyName>
     <RootNamespace>ExiledToolkit</RootNamespace>
-    <Version>0.9.2</Version>
+    <Version>0.10.0</Version>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -37,12 +37,13 @@
     <EmbeddedResource Include="menu.js" LogicalName="ExiledToolkit.menu.js" />
     <EmbeddedResource Include="dock.js" LogicalName="ExiledToolkit.dock.js" />
     <EmbeddedResource Include="phone.js" LogicalName="ExiledToolkit.phone.js" />
+    <EmbeddedResource Include="ui.js" LogicalName="ExiledToolkit.ui.js" />
   </ItemGroup>
 
   <!-- What the Mod Manager's Mods screen shows about this mod. -->
   <ItemGroup>
     <AssemblyMetadata Include="ModManager.Name" Value="Exiled's Toolkit&#10;Exiled 工具包" />
-    <AssemblyMetadata Include="ModManager.Description" Value="A shared library for my Survival Log mods. It shows their short notices (toasts) beside the HUD, holds the entries they add to the inventory's Mods dropdown, lets them apply changed settings at once, and keeps their buttons and phone apps tidy. On its own it does nothing you can see; install it when another mod says it needs it.&#10;我的 Survival Log 模组共用的库，负责在 HUD 旁显示它们的简短通知，管理它们加入背包「Mods」下拉菜单的条目，让它们立即应用改动过的设置，并让它们的按钮和手机应用排列整齐。单独安装时没有任何可见效果；当其他模组说需要它时再安装。" />
+    <AssemblyMetadata Include="ModManager.Description" Value="A shared library for my Survival Log mods. It shows their short notices (toasts) beside the HUD, holds the entries they add to the inventory's Mods dropdown, lets them apply changed settings at once, keeps their buttons and phone apps tidy, and lets you draw their windows bigger or smaller. On its own it does nothing you can see; install it when another mod says it needs it.&#10;我的 Survival Log 模组共用的库，负责在 HUD 旁显示它们的简短通知，管理它们加入背包「Mods」下拉菜单的条目，让它们立即应用改动过的设置，让它们的按钮和手机应用排列整齐，还能把它们的窗口放大或缩小。单独安装时没有任何可见效果；当其他模组说需要它时再安装。" />
     <AssemblyMetadata Include="ModManager.Author" Value="AnExiledDev" />
     <AssemblyMetadata Include="ModManager.Category" Value="Tools" />
     <AssemblyMetadata Include="ModManager.Library" Value="true" />
