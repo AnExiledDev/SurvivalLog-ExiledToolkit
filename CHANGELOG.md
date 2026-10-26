@@ -27,7 +27,7 @@
 
 - New: the HUD's tool buttons stay four high. When mods add enough buttons that the column on the left would grow past four, the rest go into a second column to its right, filled top to bottom. The phone and bag stay in place, and toasts move right to clear the wider column.
 - For mod authors: mark a HUD button with `data-etk-dock="<order>"` to set its place in the layout.
-- After a game update, a hook that can no longer be placed is logged as an error, so the Mod Manager can mark the mod as maybe needing an update.
+- After a game update, Mod Manager can tell you if this mod may need an update.
 - Made for Survival Log 1.1.19131.
 
 ## 0.5.0
@@ -44,8 +44,11 @@
 
 ## 0.3.0
 
-No visible change. The Mod Manager needs this version.
+- No visible change. Mod Manager needs this version.
 
 ## 0.2.2
 
-First public release. A shared library for my Survival Log mods. It shows their short notices (toasts) beside the HUD. On its own it does nothing you can see; install it when another mod says it needs it.
+- First release.
+- A shared library for my Survival Log mods.
+- It shows their short notices (toasts) beside the HUD.
+- On its own it does nothing you can see. Install it when another mod says it needs it.
