@@ -1,7 +1,8 @@
-// Just enough of the root document and the game's phone page for phone.js to run in Jint: elements that report their
-// changes to mutation observers, frames whose document is swapped when a page loads, and an interval and animation
-// frames the tests run by hand. Observers are called only by flush(), the way a browser calls them before it paints.
-// Test code only; nothing here ships.
+// Just enough of the root document and the game's pages for phone.js (and dock.js, when a test wants its watcher) to
+// run in Jint: elements that report their changes to mutation observers, frames whose document is swapped when a page
+// loads, and an interval and animation frames the tests run by hand. Observers are called only by flush(), the way a
+// browser calls them before it paints. Each page document counts its whole-page searches (scans) and style reads, so a
+// test can tell a look at the page from none. Test code only; nothing here ships.
 var window = this;
 var intervals = [];
 var frameCallbacks = [];
@@ -46,6 +47,17 @@ MutationObserver.prototype.observe = function (target, options) {
   if (observers.indexOf(this) < 0) observers.push(this);
 };
 
+// The changes waiting for this observer, taken so its callback never hears them.
+MutationObserver.prototype.takeRecords = function () {
+  var records = this.records;
+  var self = this;
+
+  this.records = [];
+  pending = pending.filter(function (observer) { return observer !== self; });
+
+  return records;
+};
+
 function isInside(node, ancestor) {
   for (var at = node; at; at = at.parentNode) {
     if (at === ancestor) return true;
@@ -85,7 +97,8 @@ function flush() {
       var records = observer.records;
 
       observer.records = [];
-      observer.callback(records);
+
+      if (records.length > 0) observer.callback(records);
     });
   }
 }
@@ -149,6 +162,21 @@ Element.prototype.getElementsByTagName = function (tag) {
   return this.all().filter(function (el) { return el.tagName === tag.toUpperCase(); });
 };
 
+// A search under one element; not a scan of the page.
+Element.prototype.querySelector = function (selector) {
+  return this.all().filter(function (el) { return matches(el, selector); })[0] || null;
+};
+
+Object.defineProperty(Element.prototype, 'isConnected', {
+  get: function () {
+    for (var at = this; at; at = at.parentNode) {
+      if (at.nodeType === 9) return true;
+    }
+
+    return false;
+  }
+});
+
 function matches(el, selector) {
   if (selector.charAt(0) === '.') return el.classList.contains(selector.substring(1));
   if (selector.charAt(0) === '[') return el.hasAttribute(selector.substring(1, selector.length - 1));
@@ -157,12 +185,16 @@ function matches(el, selector) {
 }
 
 function makeDocument(href) {
-  var doc = { nodeType: 9, parentNode: null };
+  var doc = { nodeType: 9, parentNode: null, scans: 0, styleReads: 0 };
 
   doc.defaultView = {
     location: { href: href },
     MutationObserver: MutationObserver,
-    getComputedStyle: function (el) { return { display: el.style.display === 'none' ? 'none' : 'block' }; }
+    getComputedStyle: function (el) {
+      doc.styleReads++;
+
+      return { display: el.style.display === 'none' ? 'none' : 'block' };
+    }
   };
   doc.createElement = function (tag) { return new Element(doc, tag); };
   doc.documentElement = new Element(doc, 'html');
@@ -173,9 +205,15 @@ function makeDocument(href) {
     return doc.documentElement.all().filter(function (el) { return el.id === id; })[0] || null;
   };
   doc.querySelectorAll = function (selector) {
+    doc.scans++;
+
     return doc.documentElement.all().filter(function (el) { return matches(el, selector); });
   };
-  doc.querySelector = function (selector) { return doc.querySelectorAll(selector)[0] || null; };
+  doc.querySelector = function (selector) {
+    doc.scans++;
+
+    return doc.documentElement.querySelector(selector);
+  };
   doc.getElementsByTagName = function (tag) { return doc.documentElement.getElementsByTagName(tag); };
 
   return doc;
@@ -199,7 +237,25 @@ function openFrame(url) {
 // The page arrives in the frame: a new document with the phone's home screen, the empty grid and the game's dock.
 function loadPhone(frame) {
   var doc = makeDocument(frame.src);
-  var home = doc.body.appendChild(doc.createElement('div'));
+
+  buildHome(doc);
+  frame.contentDocument = doc;
+
+  return doc;
+}
+
+// The page arrives empty; the game builds the home screen into it later.
+function loadEmptyPhone(frame) {
+  var doc = makeDocument(frame.src);
+
+  frame.contentDocument = doc;
+
+  return doc;
+}
+
+// The phone's home screen as the game builds it: the empty grid and the dock with the game's three apps.
+function buildHome(doc) {
+  var home = doc.createElement('div');
   var grid = home.appendChild(doc.createElement('div'));
   var dock = home.appendChild(doc.createElement('div'));
 
@@ -210,9 +266,8 @@ function loadPhone(frame) {
 
     app.name = name;
   });
-  frame.contentDocument = doc;
 
-  return doc;
+  return doc.body.appendChild(home);
 }
 
 function fireLoad(frame) {
@@ -226,7 +281,7 @@ function modApp(doc, name, order) {
   app.name = name;
   app.setAttribute('data-etk-phone', order);
 
-  return doc.querySelector('.app-grid').appendChild(app);
+  return doc.documentElement.querySelector('.app-grid').appendChild(app);
 }
 
 // Root.html sending a frame it already has to a new address: the old page goes, an empty document holds the frame.
@@ -238,5 +293,5 @@ function navigate(frame, url) {
 
 // The dock's apps by name, in order.
 function dockNames(doc) {
-  return doc.querySelector('.app-dock').children.map(function (el) { return el.name; }).join(',');
+  return doc.documentElement.querySelector('.app-dock').children.map(function (el) { return el.name; }).join(',');
 }

@@ -408,8 +408,10 @@ public class PageScriptTests
         page.Apply(new PageOp.Place(ToastPosition.Hud), new PageOp.Show(View(1, Stamina)));
 
         page.Run($"window.syncInteractiveRects('BattleBag', [{{ x: {buttonX.ToString(CultureInfo.InvariantCulture)}, y: 0.86, w: 0.1, h: 0.02 }}], null)");
+        page.NextFrame();
         var whileOpen = LastRects(page);
         page.Run("window.syncInteractiveRects('BattleBag', [], null)");
+        page.NextFrame();
 
         Assert.Equal(isHidden ? 0 : 1, whileOpen.Boxes.Count);
         Assert.Single(LastRects(page).Boxes);
@@ -464,6 +466,7 @@ public class PageScriptTests
         page.Run("addHud(1); var bag = addFrame('BattleBag', 'https://webui/UI/BattleBag/BattleBag.html', 4)");
         page.Apply(new PageOp.Place(ToastPosition.Hud), new PageOp.Show(View(1, Stamina)));
         page.Run("window.syncInteractiveRects('BattleBag', [{ x: 0.60, y: 0.86, w: 0.1, h: 0.02 }], null)");
+        page.NextFrame();
 
         var firstTime = LastRects(page);
         page.Run("frames.splice(frames.indexOf(bag), 1)");
@@ -481,6 +484,80 @@ public class PageScriptTests
     /// <summary>A reported box back in page pixels, rounded.</summary>
     private static (int Left, int Top, int Width, int Height, int Bottom) Px(NormalRect box) =>
         ((int)Math.Round(box.X * 1920), (int)Math.Round(box.Y * 1080), (int)Math.Round(box.W * 1920), (int)Math.Round(box.H * 1080), (int)Math.Round((box.Y + box.H) * 1080));
+
+    // ===== Keeping the game smooth =====
+
+    /// <summary>Counts each time the page is made to work out where the deck is on screen.</summary>
+    private const string CountDeckMeasures =
+        "var measured = 0; (function () { var s = stack(); var read = s.getBoundingClientRect; s.getBoundingClientRect = function () { measured++; return read.call(s); }; })()";
+
+    [Fact]
+    public void With_no_toasts_up_pages_reporting_their_buttons_reach_the_game_without_the_deck_being_measured()
+    {
+        var page = new PageScript();
+        page.Run("addHud(1); addFrame('BattleBag', 'https://webui/UI/BattleBag/BattleBag.html', 4)");
+        page.Run(CountDeckMeasures);
+
+        page.Run("for (var i = 0; i < 3; i++) window.syncInteractiveRects('BattleBag', [{ x: 0.05, y: 0.86, w: 0.1, h: 0.02 }], null)");
+        page.NextFrame();
+        var measured = page.Number("measured");
+        page.Apply(new PageOp.Place(ToastPosition.Hud), new PageOp.Show(View(1, Stamina)));
+
+        Assert.Equal(0, measured);
+        Assert.Equal("BattleBag,BattleBag,BattleBag", page.Text("syncedPages.join(',')"));
+        // What the panel reported is still known: the first toast steps aside for its buttons.
+        Assert.Empty(LastRects(page).Boxes);
+    }
+
+    [Fact]
+    public void Many_reports_in_one_frame_measure_the_deck_no_more_than_one_report_does()
+    {
+        var page = new PageScript();
+        page.Run("addHud(1); addFrame('BattleBag', 'https://webui/UI/BattleBag/BattleBag.html', 4)");
+        page.Apply(new PageOp.Place(ToastPosition.Hud), new PageOp.Show(View(1, Stamina)));
+        page.Advance(400);
+        page.Run(CountDeckMeasures);
+
+        page.Run("window.syncInteractiveRects('BattleBag', [{ x: 0.60, y: 0.86, w: 0.1, h: 0.02 }], null)");
+        page.NextFrame();
+        var afterOne = page.Number("measured");
+        page.Run("measured = 0; for (var i = 0; i < 3; i++) window.syncInteractiveRects('BattleBag', [{ x: 0.60, y: 0.86, w: 0.1, h: 0.02 }], null)");
+        page.NextFrame();
+
+        Assert.True(afterOne > 0);
+        Assert.Equal(afterOne, page.Number("measured"));
+    }
+
+    [Fact]
+    public void While_toasts_are_up_the_deck_is_not_laid_out_again_when_nothing_about_it_changed()
+    {
+        var page = new PageScript();
+        page.Run("addHud(1)");
+        page.Apply(new PageOp.Place(ToastPosition.Hud), new PageOp.Show(View(1, "1")), new PageOp.Show(View(2, "2")));
+        page.Advance(400);
+
+        var before = page.Number("boxes()[1].added['etk-behind']");
+        page.Advance(1_000);
+
+        Assert.Equal(before, page.Number("boxes()[1].added['etk-behind']"));
+    }
+
+    [Fact]
+    public void A_card_that_grows_on_its_own_moves_the_card_behind_it_within_a_quarter_second()
+    {
+        var page = new PageScript();
+        page.Run("addHud(1)");
+        page.Apply(new PageOp.Place(ToastPosition.Hud), new PageOp.Show(View(1, "1")), new PageOp.Show(View(2, "2")));
+        page.Advance(400);
+
+        var before = Px(LastRects(page).Boxes[1]);
+        page.Run("boxes()[0].extraHeight = 20");
+        page.Advance(250);
+        var after = Px(LastRects(page).Boxes[1]);
+
+        Assert.Equal(964, before.Bottom);
+        Assert.Equal(944, after.Bottom);
+    }
 
     // ===== Item chips and the time bar =====
 

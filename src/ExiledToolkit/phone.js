@@ -60,13 +60,15 @@
     for (var j = 0; j < apps.length; j++) dock.appendChild(apps[j]);
   }
 
+  // Four apps or fewer can never make rows, so their styles are not read at all.
   function layout(dock, apps) {
     arrange(dock, apps);
 
+    var children = dock.children;
     var shown = 0;
 
-    for (var i = 0; i < dock.children.length; i++) {
-      if (isShown(dock.children[i])) shown++;
+    for (var i = 0; children.length > COLUMNS && i < children.length; i++) {
+      if (isShown(children[i])) shown++;
     }
 
     var isGrid = shown > COLUMNS;
@@ -83,25 +85,79 @@
     (doc.head || doc.body).appendChild(style);
   }
 
-  function layoutSafely(doc, dock) {
+  // One look at a phone page: finds its dock if the one it had is gone, and lays it out. Only what this pass moved
+  // itself is waiting for the observer by then, so that is dropped and the pass does not wake the watcher again.
+  function pass(watcher) {
+    watcher.isDue = false;
+
     try {
-      layout(dock, markedApps(doc));
+      var dock = watcher.dock;
+
+      if (!dock || !dock.isConnected) dock = watcher.dock = watcher.doc.querySelector('.app-dock');
+
+      if (dock) {
+        addStyle(watcher.doc);
+        layout(dock, markedApps(watcher.doc));
+      }
+    } catch (e) {}
+
+    try {
+      if (watcher.observer && watcher.observer.takeRecords) watcher.observer.takeRecords();
     } catch (e) {}
   }
 
-  // Lays the dock out for one phone page, if it has its dock yet.
-  function patch(doc) {
-    var dock = doc.querySelector('.app-dock');
+  // One pass per page per frame however many changes came in, on the root's frames: the root always draws, while a
+  // page that is not shown yet may not be given frames of its own.
+  function passSoon(watcher) {
+    if (watcher.isDue) return;
 
-    if (!dock) return;
+    if (typeof requestAnimationFrame === 'undefined') {
+      pass(watcher);
 
-    addStyle(doc);
-    layoutSafely(doc, dock);
+      return;
+    }
+
+    watcher.isDue = true;
+    requestAnimationFrame(function () { pass(watcher); });
+  }
+
+  function hasMarkedApp(node) {
+    return node.hasAttribute(ORDER_ATTR) || !!node.querySelector('[' + ORDER_ATTR + ']');
+  }
+
+  function isOrHasDock(node) {
+    return node.classList.contains('app-dock') || !!node.querySelector('.app-dock');
+  }
+
+  // Whether a batch of changes can move an app: the dock gained or lost a child, a marked app was put somewhere, or
+  // the page has no dock yet and one came in. Text, the clock and everything else the page redraws is passed over
+  // without reading the page.
+  function matters(watcher, records) {
+    var dock = watcher.dock;
+    var hasDock = !!dock && dock.isConnected;
+
+    for (var i = 0; i < records.length; i++) {
+      var record = records[i];
+
+      if (hasDock && record.target === dock) return true;
+
+      var added = record.addedNodes;
+
+      for (var j = 0; j < added.length; j++) {
+        var node = added[j];
+
+        if (node.nodeType !== 1) continue;
+
+        if (hasMarkedApp(node) || (!hasDock && isOrHasDock(node))) return true;
+      }
+    }
+
+    return false;
   }
 
   // The game builds a new phone page every time the phone opens and shows it two frames after the page starts,
-  // long before the next poll. So the page is watched from the moment it is built: the observer runs before the next
-  // paint whenever the game or a mod changes the page, and only writes when an app is out of place.
+  // long before the next poll. So the page is watched from the moment it is built and laid out at once; after that a
+  // change that can move an app has the dock laid out before the next paint. True once the page is watched.
   function watchPhone(frame) {
     try {
       var doc = frame.contentDocument;
@@ -109,16 +165,27 @@
 
       if (!doc || !win || !PHONE_PAGE.test(String(win.location.href))) return false;
 
-      if (!doc.etkPhoneWatched && typeof win.MutationObserver !== 'undefined') {
-        doc.etkPhoneWatched = true;
-        new win.MutationObserver(function () {
-          try {
-            patch(doc);
-          } catch (e) {}
-        }).observe(doc, { childList: true, subtree: true });
+      var watcher = doc.etkPhoneWatcher;
+
+      if (watcher) {
+        // Without an observer the poll is all there is, so it lays the page out each time.
+        if (!watcher.observer) pass(watcher);
+
+        return true;
       }
 
-      patch(doc);
+      watcher = doc.etkPhoneWatcher = { doc: doc, dock: null, isDue: false, observer: null };
+
+      if (typeof win.MutationObserver !== 'undefined') {
+        watcher.observer = new win.MutationObserver(function (records) {
+          try {
+            if (matters(watcher, records)) passSoon(watcher);
+          } catch (e) {}
+        });
+        watcher.observer.observe(doc, { childList: true, subtree: true });
+      }
+
+      pass(watcher);
 
       return true;
     } catch (e) {
@@ -128,11 +195,27 @@
   }
 
   // A new frame first holds an empty document; the phone page replaces it a moment later. Look each frame until it is
-  // there, for about two seconds at most.
-  function chase(frame, framesLeft) {
-    if (watchPhone(frame) || framesLeft <= 0 || typeof requestAnimationFrame === 'undefined') return;
+  // there, for about two seconds at most. A frame has one such look going at a time; being told about it again only
+  // gives that look its two seconds again.
+  function chase(frame) {
+    if (watchPhone(frame)) return;
 
-    requestAnimationFrame(function () { chase(frame, framesLeft - 1); });
+    frame.etkChaseLeft = CHASE_FRAMES;
+
+    if (frame.etkIsChased || typeof requestAnimationFrame === 'undefined') return;
+
+    frame.etkIsChased = true;
+    requestAnimationFrame(function next() {
+      frame.etkChaseLeft--;
+
+      if (watchPhone(frame) || frame.etkChaseLeft <= 0) {
+        frame.etkIsChased = false;
+
+        return;
+      }
+
+      requestAnimationFrame(next);
+    });
   }
 
   function onFrame(frame) {
@@ -140,10 +223,10 @@
 
     if (!frame.etkPhoneFrame) {
       frame.etkPhoneFrame = true;
-      frame.addEventListener('load', function () { chase(frame, CHASE_FRAMES); });
+      frame.addEventListener('load', function () { chase(frame); });
     }
 
-    chase(frame, CHASE_FRAMES);
+    chase(frame);
   }
 
   // Every game page is an iframe in this document: a new one, or one sent to a new address, is looked at at once.
@@ -178,7 +261,7 @@
     }).observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['src'] });
   }
 
-  // The poll stays as the fallback for a page the watchers missed.
+  // The poll stays as the fallback for a page the watchers missed. A page already watched is left to its watcher.
   function poll() {
     var frames = document.getElementsByTagName('iframe');
 

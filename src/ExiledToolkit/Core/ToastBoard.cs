@@ -116,9 +116,10 @@ internal sealed class ToastBoard
     /// <summary>Takes down boxes the page has not reported gone long after their time.</summary>
     public void Expire(long now, List<PageOp> ops)
     {
-        var overdue = _visible.Where(entry => entry.DueAt <= now).ToList();
+        // Runs every frame: a plain look first, so a frame with nothing overdue allocates nothing.
+        if (!HasOverdue(now)) return;
 
-        if (overdue.Count == 0) return;
+        var overdue = _visible.Where(entry => entry.DueAt <= now).ToList();
 
         foreach (var entry in overdue)
         {
@@ -127,6 +128,16 @@ internal sealed class ToastBoard
         }
 
         Promote(now, ops);
+    }
+
+    private bool HasOverdue(long now)
+    {
+        foreach (var entry in _visible)
+        {
+            if (entry.DueAt <= now) return true;
+        }
+
+        return false;
     }
 
     /// <summary>Sends every box on screen again, oldest first so the newest ends on top, with the time it has left.</summary>

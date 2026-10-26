@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.2
+
+- Fixed: the phone was very laggy since 0.9.1. Mod apps still go into the dock as soon as the phone opens.
+- The HUD buttons, the toasts and the Mods button do much less work while you play, so the game runs more smoothly with several mods installed.
+- Made for Survival Log 1.1.19611.
+
 ## 0.9.1
 
 - Mod apps on the phone are in the dock the moment the phone opens, instead of showing up a moment later.

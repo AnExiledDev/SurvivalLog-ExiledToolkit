@@ -110,6 +110,16 @@ public class PageTests
         Assert.Equal(new PageOp[] { shown, Merge(a, 3, true), Merge(b, 2, false), new PageOp.Remove(a) }, coalesced);
     }
 
+    /// <summary>Most frames have nothing for the page, and those must not leave garbage behind every frame.</summary>
+    [Fact]
+    public void A_frame_with_nothing_for_the_page_hands_back_the_same_empty_list_every_time()
+    {
+        var first = PageOp.Coalesce(new List<PageOp>());
+
+        Assert.Empty(first);
+        Assert.Same(first, PageOp.Coalesce(new List<PageOp>()));
+    }
+
     [Fact]
     public void Every_kind_and_corner_has_a_page_name()
     {

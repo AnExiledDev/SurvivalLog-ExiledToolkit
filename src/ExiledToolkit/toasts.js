@@ -55,6 +55,8 @@
   var toolsSeenAt = 0;
   // The clickable areas each game page last reported, by page id, copied into plain objects of this document.
   var pageRects = {};
+  var isRefreshDue = false;
+  var settleTimer = 0;
 
   function send(text) {
     try {
@@ -502,6 +504,7 @@
       var s = el.style;
       var restInset = depth * INSET;
       var restHeight = measureAtRest(box, depth, restInset);
+      box.restHeight = restHeight;
       var inset = box.hovered ? 0 : restInset;
 
       s.width = px(CARD_WIDTH - 2 * inset);
@@ -590,7 +593,7 @@
     var watched = function (pageId, rects) {
       try {
         pageRects[String(pageId)] = copyRects(rects);
-        refresh();
+        if (deck().length > 0) refreshSoon();
       } catch (e) {
         // The page's own rects must reach the game whatever happens here.
       }
@@ -704,6 +707,23 @@
     syncRects();
   }
 
+  // Pages report their clickable parts often, some many times a frame; the deck looks again once, before the next
+  // frame is drawn.
+  function refreshSoon() {
+    if (isRefreshDue) return;
+
+    if (typeof requestAnimationFrame === 'undefined') {
+      refresh();
+      return;
+    }
+
+    isRefreshDue = true;
+    requestAnimationFrame(function () {
+      isRefreshDue = false;
+      refresh();
+    });
+  }
+
   function redraw() {
     placeStack();
     layout();
@@ -715,17 +735,17 @@
   function syncRects() {
     var width = window.innerWidth || 1;
     var height = window.innerHeight || 1;
-    var origin = stack.getBoundingClientRect();
+    var cards = isHidden ? [] : inDeck();
+    // With no card to report the page is not measured at all.
+    var origin = cards.length > 0 ? stack.getBoundingClientRect() : null;
     var parts = [];
 
-    if (!isHidden) {
-      inDeck().forEach(function (box) {
-        var el = box.el;
-        if (el.offsetWidth <= 0 || el.offsetHeight <= 0) return;
-        parts.push([(origin.left + el.offsetLeft) / width, (origin.top + el.offsetTop) / height, el.offsetWidth / width, el.offsetHeight / height]
-          .map(function (n) { return n.toFixed(5); }).join(','));
-      });
-    }
+    cards.forEach(function (box) {
+      var el = box.el;
+      if (el.offsetWidth <= 0 || el.offsetHeight <= 0) return;
+      parts.push([(origin.left + el.offsetLeft) / width, (origin.top + el.offsetTop) / height, el.offsetWidth / width, el.offsetHeight / height]
+        .map(function (n) { return n.toFixed(5); }).join(','));
+    });
 
     var text = parts.join(';');
     if (text === lastRects) return;
@@ -743,10 +763,21 @@
     syncRects();
   }
 
+  // Follows the HUD and the panels while cards are up. The cards are laid out again only when one changed height on
+  // its own (a picture or a font that came in late); everything else that moves them lays them out as it happens.
   function watch() {
-    if (deck().length > 0) redraw();
+    if (deck().length === 0) return;
+    placeStack();
+    if (hasCardResized()) layout();
+    refresh();
   }
 
+  // Read in one go, after the stack is placed, so the page is laid out once for all of them.
+  function hasCardResized() {
+    return inDeck().some(function (box) { return !box.hovered && box.el.offsetHeight !== box.restHeight; });
+  }
+
+  // A burst of ops lays the deck out again once, when the last of them has settled.
   function apply(ops) {
     (ops || []).forEach(function (op) {
       try {
@@ -760,7 +791,8 @@
       }
     });
     redraw();
-    setTimeout(redraw, RECT_SETTLE_MS);
+    clearTimeout(settleTimer);
+    settleTimer = setTimeout(redraw, RECT_SETTLE_MS);
   }
 
   watchPages();

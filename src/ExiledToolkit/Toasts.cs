@@ -33,6 +33,22 @@ public static class Toasts
     /// </summary>
     public static bool Activate(ToastId id) => Center?.Activate(id) ?? false;
 
-    internal static IReadOnlyList<Action<ToastRecord>> Listeners() =>
-        Raised?.GetInvocationList().OfType<Action<ToastRecord>>().ToList() ?? new List<Action<ToastRecord>>();
+    private static Action<ToastRecord>? _listenersOf;
+    private static IReadOnlyList<Action<ToastRecord>> _listeners = Array.Empty<Action<ToastRecord>>();
+
+    /// <summary>
+    /// Main thread, once a frame. The list is built again only when a mod subscribed or left: a subscription makes a
+    /// new delegate, so the same delegate means the same listeners.
+    /// </summary>
+    internal static IReadOnlyList<Action<ToastRecord>> Listeners()
+    {
+        var raised = Raised;
+
+        if (ReferenceEquals(raised, _listenersOf)) return _listeners;
+
+        _listeners = raised?.GetInvocationList().OfType<Action<ToastRecord>>().ToArray() ?? Array.Empty<Action<ToastRecord>>();
+        _listenersOf = raised;
+
+        return _listeners;
+    }
 }

@@ -39,7 +39,13 @@ internal sealed class HitArea
         var x = localX / width + pivotX;
         var y = 1 - (localY / height + pivotY);
 
-        return _boxes.Any(box => box.Contains(x, y));
+        // Runs on the game's pointer checks, several a frame: a plain loop allocates nothing.
+        foreach (var box in _boxes)
+        {
+            if (box.Contains(x, y)) return true;
+        }
+
+        return false;
     }
 }
 

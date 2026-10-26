@@ -82,6 +82,9 @@ internal abstract record PageOp
     /// </summary>
     public static IReadOnlyList<PageOp> Coalesce(IReadOnlyList<PageOp> ops)
     {
+        // Most frames send nothing; those cost no allocation.
+        if (ops.Count == 0) return Array.Empty<PageOp>();
+
         var lastMergeAt = new Dictionary<ToastId, int>();
 
         for (var i = 0; i < ops.Count; i++)

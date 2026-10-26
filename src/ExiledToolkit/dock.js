@@ -111,21 +111,88 @@
     (doc.head || doc.body).appendChild(style);
   }
 
-  // Lays the column out again the moment a button is added, removed, shown or hidden, so a new button never shows
-  // in a tall column first. Changes deep inside a button wake it too, but find nothing to move and write nothing.
-  function watch(column) {
-    if (column.etkDockWatched || typeof MutationObserver === 'undefined') return;
-
-    column.etkDockWatched = true;
-    new MutationObserver(function () { layoutSafely(column); }).observe(column, { childList: true, attributes: true, subtree: true, attributeFilter: ['style', 'class'] });
+  // What about a button can show or hide it: its inline display, its classes and the hidden flag. Cheap to read; the
+  // page does not have to work out its styles for it.
+  function looksOf(node) {
+    return node.style.display + '|' + node.getAttribute('class') + '|' + node.hasAttribute('hidden');
   }
 
-  function layoutSafely(column) {
+  function remember(column) {
+    var children = column.children;
+
+    for (var i = 0; i < children.length; i++) children[i].etkDockLooks = looksOf(children[i]);
+  }
+
+  // Whether a batch of changes can move a button: one added to or taken from the column, or one whose display,
+  // classes or hidden flag changed since the last layout. What a button redraws inside itself, and the dock's own
+  // grid places, are passed over without reading the page.
+  function matters(column, records) {
+    for (var i = 0; i < records.length; i++) {
+      var record = records[i];
+      var target = record.target;
+
+      if (record.type === 'childList') {
+        if (target === column) return true;
+
+        continue;
+      }
+
+      if (target.parentNode === column && target.etkDockLooks !== looksOf(target)) return true;
+    }
+
+    return false;
+  }
+
+  // One layout of the column. What it wrote itself is waiting for the observer by then, so that is dropped.
+  function pass(column) {
+    column.etkDockDue = false;
+
     try {
       layout(column);
+      remember(column);
+    } catch (e) {}
+
+    try {
+      if (column.etkDockObserver && column.etkDockObserver.takeRecords) column.etkDockObserver.takeRecords();
     } catch (e) {}
   }
 
+  // One layout per column per frame however many changes came in, before the frame is drawn.
+  function passSoon(column) {
+    if (column.etkDockDue) return;
+
+    if (typeof requestAnimationFrame === 'undefined') {
+      pass(column);
+
+      return;
+    }
+
+    column.etkDockDue = true;
+    requestAnimationFrame(function () { pass(column); });
+  }
+
+  // Lays the column out again in the frame a button is added, removed, shown or hidden, so a new button never shows
+  // in a tall column first.
+  function watch(column) {
+    if (column.etkDockObserver || typeof MutationObserver === 'undefined') return;
+
+    column.etkDockObserver = new MutationObserver(function (records) {
+      try {
+        if (matters(column, records)) passSoon(column);
+      } catch (e) {}
+    });
+    column.etkDockObserver.observe(column, { childList: true, attributes: true, subtree: true, attributeFilter: ['style', 'class', 'hidden'] });
+  }
+
+  // A column still in its page with its watcher on is left to the watcher.
+  function isWatched(frame, doc) {
+    var column = frame.etkDockColumn;
+
+    return !!column && !!column.etkDockObserver && column.ownerDocument === doc && column.isConnected === true;
+  }
+
+  // The poll finds the column of a HUD page that is not watched yet: one just loaded, or a new column in place of
+  // the last. Without observers it is all there is, so it lays the column out each time.
   function poll() {
     var frames = document.getElementsByTagName('iframe');
 
@@ -134,13 +201,17 @@
 
       try {
         var doc = frames[i].contentDocument;
-        var column = doc && doc.querySelector('.vertical-tools');
+
+        if (!doc || isWatched(frames[i], doc)) continue;
+
+        var column = doc.querySelector('.vertical-tools');
 
         if (!column) continue;
 
+        frames[i].etkDockColumn = column;
         addStyle(doc);
         watch(column);
-        layout(column);
+        pass(column);
       } catch (e) {}
     }
   }

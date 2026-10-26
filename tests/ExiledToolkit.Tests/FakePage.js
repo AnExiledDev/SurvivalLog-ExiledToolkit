@@ -54,6 +54,22 @@ function advance(ms) {
   now = until;
 }
 
+// Animation frames run only when a test calls nextFrame(), as the next frame being drawn.
+var frameCallbacks = [];
+
+function requestAnimationFrame(callback) {
+  frameCallbacks.push(callback);
+
+  return frameCallbacks.length;
+}
+
+function nextFrame() {
+  var due = frameCallbacks;
+
+  frameCallbacks = [];
+  due.forEach(function (callback) { callback(); });
+}
+
 // ===== The vuplex bridge =====
 
 var posted = [];
@@ -71,7 +87,8 @@ function connectVuplex() {
 
 // ===== Elements =====
 
-// A box is 60 px tall, and 84 px with its text in full (etk-front); its width is whatever its style says.
+// A box is 60 px tall, and 84 px with its text in full (etk-front); its width is whatever its style says. A test can
+// make one taller with extraHeight, as a picture that loads late does.
 var BOX_HEIGHT = 60;
 var FRONT_HEIGHT = 84;
 
@@ -142,7 +159,7 @@ var FakeElement = class {
   get offsetHeight() {
     if (!this.isInStack) return 0;
 
-    return this.classList.contains('etk-front') ? FRONT_HEIGHT : BOX_HEIGHT;
+    return (this.classList.contains('etk-front') ? FRONT_HEIGHT : BOX_HEIGHT) + (this.extraHeight || 0);
   }
 
   side(start, end, size) {

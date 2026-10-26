@@ -31,6 +31,9 @@ internal sealed class PageScript
     /// <summary>Moves the page's clock on, firing its timers on the way.</summary>
     public void Advance(int milliseconds) => Run($"advance({milliseconds})");
 
+    /// <summary>The page draws its next frame: what it put off until then runs.</summary>
+    public void NextFrame() => Run("nextFrame()");
+
     public void ConnectBridge() => Run("connectVuplex()");
 
     /// <summary>A click on the box at this place in the stack, top first; on its close button with <paramref name="part"/>.</summary>

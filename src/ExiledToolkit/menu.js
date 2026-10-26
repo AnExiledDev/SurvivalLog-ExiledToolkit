@@ -520,7 +520,9 @@
     return function () { send('run|' + id); };
   }
 
-  // The whole list every time, so an entry the plugin dropped leaves the menu here too.
+  // The whole list every time, so an entry the plugin dropped leaves the menu here too. The plugin's rule decides
+  // each entry, sent as wanted; the plugin sends the list again whenever that changes. These entries stay on the
+  // inventory screen, as they do not say stations.
   function set(list) {
     var next = {};
 
@@ -528,7 +530,7 @@
       if (!row || typeof row.id !== 'string' || !row.id) return;
 
       next[row.id] = row;
-      slmodMenu.add({ id: row.id, label: String(row.label || ''), title: String(row.title || ''), icon: String(row.icon || ''), hotkey: '', order: Number(row.order) || 0, run: runner(row.id) });
+      slmodMenu.add({ id: row.id, label: String(row.label || ''), title: String(row.title || ''), icon: String(row.icon || ''), hotkey: '', order: Number(row.order) || 0, wanted: row.wanted === true, run: runner(row.id) });
     });
 
     Object.keys(rows).forEach(function (id) {
@@ -536,23 +538,26 @@
     });
 
     rows = next;
-    refresh();
+    slmodMenu.placeAll();
   }
 
-  // The plugin's rule decides each entry; the menu itself decides where it shows. Polled because the game creates and
-  // drops its pages whenever it likes. These entries stay on the inventory screen, as they do not say stations.
-  function refresh() {
-    Object.keys(rows).forEach(function (id) { slmodMenu.setWanted(id, rows[id].wanted === true); });
-    slmodMenu.placeAll();
+  function hasWanted() {
+    for (var id in rows) {
+      if (rows[id].wanted === true) return true;
+    }
+
+    return false;
   }
 
   // The game sends the page no keys, so the plugin holds the game's hotkeys back while the menu is open and closes
   // it on Esc itself.
   slmodMenu.watch('exiledtoolkit', function (isOpen) { send('open|' + (isOpen ? '1' : '0')); }, function (text) { send('diag|' + text); });
 
+  // Polled because the game creates and drops its pages whenever it likes; the menu itself decides where the button
+  // shows. With none of these entries wanted there is nothing of this mod's to show, so the poll waits.
   setInterval(function () {
     try {
-      refresh();
+      if (hasWanted()) slmodMenu.placeAll();
     } catch (e) {}
   }, POLL_MS);
 
