@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.0
+
+- The Mods button is now also in the bag panel of the workbench, stove, ration press, greenhouse, drone hub, brewing barrel, dye vat, rat cage, material rack and shop screens, not just the inventory. It lists the actions that work there. The shredder and the drone trade are left out.
+- For mod authors: page-script entries in the shared menu can ask to be listed on those screens too (`stations: true`). Entries added with `ModsMenu` stay on the inventory.
+- Made for Survival Log 1.1.19611.
+
 ## 0.8.0
 
 - New: mod apps on the phone go into the dock at the bottom, after the game's own apps, instead of stacking in the middle of the home screen over the notifications. Past four apps the dock shows rows of four.

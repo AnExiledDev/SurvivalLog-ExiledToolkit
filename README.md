@@ -149,7 +149,7 @@ kit.Value = ItemValues.FormatCounts(new[] { new ItemCount(1203, 10) });
 
 ### Mods menu
 
-`ModsMenu` puts an entry in the inventory toolbar's "Mods" dropdown, between the game's discard and sort buttons. Every mod's entries share the one button, and the button only shows while at least one entry wants to be listed.
+`ModsMenu` puts an entry in the inventory toolbar's "Mods" dropdown, between the game's discard and sort buttons. Every mod's entries share the one button, and the button only shows while at least one entry wants to be listed. The same button also sits in the bag panel of the workbench, stove, ration press, greenhouse, drone hub, brewing barrel, dye vat, rat cage, material rack and shop screens (not the shredder or the drone trade), but it lists only page-script entries added with `stations: true`; `ModsMenu` entries stay on the inventory.
 
 ```csharp
 using ExiledToolkit;
