@@ -35,7 +35,7 @@ public class MenuBlockTests
         $"var station = page('{name}'); var bar = el(el(station, 'div.bag-panel'), 'div#bagToolbar'); el(bar, 'input.filter'); el(bar, 'button#btn-sort-bag.action-btn.unity-interactive');");
 
     [Fact]
-    public void A_station_gets_the_button_in_front_of_its_sort_button_listing_only_the_station_entries()
+    public void A_station_gets_the_button_with_a_caret_in_front_of_its_sort_button_listing_only_the_station_entries()
     {
         LoadV2();
         AddEntries();
@@ -45,6 +45,8 @@ public class MenuBlockTests
 
         Assert.Equal("btn-sort-bag", Text("station.querySelector('.slmm-wrap').nextElementSibling.id"));
         Assert.True(Is("station.querySelector('.slmm-btn').classList.contains('action-btn')"));
+        Assert.False(Is("station.querySelector('.slmm-wrap').classList.contains('slmm-st-down')"));
+        Assert.True(Is("station.getElementById('slmm-style-v2').textContent.indexOf('.slmm-st .slmm-btn::after') >= 0"));
 
         Run("click(station.querySelector('.slmm-btn'));");
 
@@ -98,7 +100,7 @@ public class MenuBlockTests
     }
 
     [Fact]
-    public void A_title_row_station_gets_its_own_button_at_the_end_opening_downwards()
+    public void A_title_row_station_gets_its_own_button_at_the_end_opening_downwards_with_its_caret_pointing_down()
     {
         LoadV2();
         AddEntries();
@@ -109,6 +111,7 @@ public class MenuBlockTests
         Assert.True(Is("title.children[title.children.length - 1].classList.contains('slmm-wrap')"));
         Assert.True(Is("cage.querySelector('.slmm-btn').classList.contains('slmm-own')"));
         Assert.True(Is("cage.querySelector('.slmm-menu').classList.contains('slmm-down')"));
+        Assert.True(Is("cage.querySelector('.slmm-wrap').classList.contains('slmm-st-down')"));
     }
 
     [Fact]
