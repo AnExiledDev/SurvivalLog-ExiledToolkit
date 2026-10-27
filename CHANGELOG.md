@@ -5,7 +5,7 @@
 - New: the UI size setting (`UiScale` under Interface) draws mod windows, panels and toasts bigger or smaller, from 75% to 200%. A change shows at once, without restarting the game.
 - A mod window that would run off the screen at a bigger size is drawn as big as still fits.
 - Toasts follow the UI size now. Each other mod's windows follow it once that mod is updated for it.
-- For mod authors: hand a panel your page script draws to `ExiledUi.size` and it follows the player's UI size. See "UI size" in the README.
+- For mod authors: hand a panel your page script draws to `ExiledUi.size` and it follows the player's UI size, and `ExiledUi.zoomAt` gives the size a tooltip should take to match the panel under it. See "UI size" in the README.
 - Made for Survival Log 1.1.19611.
 
 ## 0.9.2

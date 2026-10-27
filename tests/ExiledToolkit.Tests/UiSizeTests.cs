@@ -285,6 +285,50 @@ public class UiSizeTests
         Assert.Equal("500x375", ui.Text("drawn(p)"));
     }
 
+    // ===== A tooltip matching its panel =====
+
+    /// <summary>
+    /// A tooltip drawn on the page's body for a row inside a panel takes zoomAt, so it must carry the panel's zoom and
+    /// not the page's own: the game zooms some pages itself, and a tooltip on that page's body already has that zoom.
+    /// </summary>
+    [Fact]
+    public void ZoomAt_gives_a_row_its_panels_zoom_without_the_pages_own()
+    {
+        var ui = new UiScript();
+        ui.Run("var page = addPage(); page.document.body.style.zoom = '0.8';" +
+            "var p = panel(400, 300, page); var row = panel(100, 20, page, p); var loose = panel(100, 20, page);" +
+            "uiSize(p, { fit: false })");
+
+        ui.Set(150);
+
+        Assert.Equal(("1.5", "1"), (ui.Text("ExiledUi.zoomAt(row)"), ui.Text("ExiledUi.zoomAt(loose)")));
+    }
+
+    [Fact]
+    public void ZoomAt_multiplies_a_panel_inside_another_and_follows_a_new_size()
+    {
+        var ui = new UiScript();
+        ui.Run("var outer = panel(800, 600); var inner = panel(200, 100, null, outer); var row = panel(100, 20, null, inner);" +
+            "uiSize(outer, { fit: false }); uiSize(inner, { fit: false })");
+
+        ui.Set(150);
+        var first = ui.Text("ExiledUi.zoomAt(row)");
+        ui.Set(80);
+
+        Assert.Equal(("2.25", "0.64"), (first, ui.Text("ExiledUi.zoomAt(row)")));
+    }
+
+    [Fact]
+    public void ZoomAt_is_1_before_any_panel_is_handed_over()
+    {
+        var ui = new UiScript();
+        ui.Run("var row = panel(100, 20)");
+
+        ui.Set(150);
+
+        Assert.Equal("1", ui.Text("ExiledUi.zoomAt(row)"));
+    }
+
     /// <summary>ui.js on UiFake.js. <see cref="Set"/> sends the size as the plugin does, then lets the page settle.</summary>
     private sealed class UiScript
     {

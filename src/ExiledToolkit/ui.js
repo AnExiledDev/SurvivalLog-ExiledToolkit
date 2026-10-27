@@ -21,7 +21,7 @@
   var scale = 1;
   var isDue = false;
 
-  var api = { version: 1, scale: scale, size: size, set: set };
+  var api = { version: 1, scale: scale, size: size, set: set, zoomAt: zoomAt };
 
   window.ExiledUi = api;
   window.addEventListener('resize', windowResized);
@@ -65,6 +65,23 @@
     scale = next;
     api.scale = scale;
     retryAll();
+  }
+
+  // The zoom el is drawn at by the panels it sits in: the zooms this script wrote on el and the elements around it,
+  // multiplied, and 1 outside any panel. A page's own zoom is not counted. A tooltip a mod draws on the page's body for
+  // something inside a panel takes this zoom, so the two show at the same size.
+  function zoomAt(el) {
+    var zoom = 1;
+
+    if (!items.length) return zoom;
+
+    for (var node = el; node && node.style; node = node.parentNode) {
+      var item = itemFor(node);
+
+      if (item) zoom *= item.zoom;
+    }
+
+    return rounded(zoom);
   }
 
   // ===== When panels are fitted =====

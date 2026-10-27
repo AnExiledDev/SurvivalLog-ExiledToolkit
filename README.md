@@ -211,6 +211,7 @@ uiSize(root, { onZoom: function (zoom) { refit(); } });
 - In a zoomed panel, `getBoundingClientRect` and mouse positions are screen pixels, while `left`, `top`, `width` and `offsetLeft` inside it are the panel's own pixels. Divide screen pixels by `el.currentCSSZoom` before writing them as positions.
 - A panel taken out of its page, or left in a page that reloaded, is let go. Hand it over again when you put it back. Handing the same element twice changes nothing but its options.
 - `ExiledUi.scale` is the size now as a factor (1.25 at 125%).
+- `ExiledUi.zoomAt(el)` is the zoom the Toolkit draws `el` at through the panels it sits in, and 1 outside any. The page's own zoom is not counted. A tooltip drawn on the page's body for a row inside a panel can take this zoom to match the panel. Read it again on each draw, since the size can change while the tooltip shows.
 
 ## Build
 
