@@ -166,6 +166,45 @@ public class UiSizeTests
         Assert.Equal("600x1050", ui.Text("drawn(p)"));
     }
 
+    /// <summary>A big window the player closes and opens again must show at the size that fits from its first frame,
+    /// not at the full size until the next frame fits it again.</summary>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void A_panel_shrunk_to_fit_and_closed_opens_again_at_the_size_that_fits_not_bigger(bool observerSeesZoom)
+    {
+        var ui = new UiScript(observerSeesZoom: observerSeesZoom);
+        ui.Run("var p = panel(400, 900, addPage()); uiSize(p)");
+        ui.Set(150);
+        var fittedZoom = ui.Text("zoomOf(p)");
+
+        ui.Run("p.hidden = true");
+        ui.Settle();
+        ui.Run("p.hidden = false");
+
+        Assert.Equal("1.152", fittedZoom);
+        Assert.Equal(fittedZoom, ui.Text("zoomOf(p)"));
+        Assert.InRange(ui.Number("p.getBoundingClientRect().height"), 1000, 1080);
+    }
+
+    [Fact]
+    public void A_closed_panel_that_was_shrunk_takes_a_new_size_only_as_far_as_it_still_fits()
+    {
+        var ui = new UiScript();
+        ui.Run("var p = panel(400, 900, addPage()); uiSize(p)");
+        ui.Set(150);
+        ui.Run("p.hidden = true");
+        ui.Settle();
+
+        ui.Set(200);
+        var atBigger = ui.Text("zoomOf(p)");
+        ui.Set(110);
+        var atSmaller = ui.Text("zoomOf(p)");
+
+        Assert.Equal("1.152", atBigger);
+        Assert.Equal("1.1", atSmaller);
+    }
+
     [Fact]
     public void A_panel_shrunk_to_fit_grows_back_to_the_full_size_when_the_game_window_gets_bigger()
     {

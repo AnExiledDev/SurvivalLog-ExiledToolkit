@@ -16,7 +16,8 @@
   // lay the page out every frame.
   var MAX_TRIES = 8;
 
-  // { el, fit: the element measured or null, onZoom, zoom: as last written, tries }
+  // { el, fit: the element measured or null, onZoom, zoom: as last written, tries, room: the zoom it was last shrunk
+  // to, or 0 }
   var items = [];
   var scale = 1;
   var isDue = false;
@@ -45,7 +46,7 @@
     }
 
     if (!item) {
-      item = { el: el, fit: null, onZoom: null, zoom: Number(el.style.zoom) || 1, tries: 0 };
+      item = { el: el, fit: null, onZoom: null, zoom: Number(el.style.zoom) || 1, tries: 0, room: 0 };
       items.push(item);
     }
 
@@ -53,6 +54,7 @@
     item.fit = fit;
     item.onZoom = onZoom;
     item.tries = 0;
+    item.room = 0;
     watch(fit);
     schedule();
   }
@@ -143,10 +145,19 @@
     measured.forEach(function (item, k) {
       var box = boxes[k];
 
-      // A hidden panel takes the size now and is fitted once it shows, which changes its size.
+      // A hidden panel takes the size now and is fitted once it shows, which changes its size. One that had to be
+      // shrunk before takes no more than that, so a big window closed and opened again does not show too big for a
+      // frame first.
       if (!(box.width > 0 && box.height > 0)) {
-        write(item, scale);
-      } else if (write(item, fitted(item, box, item.fit.ownerDocument.defaultView))) {
+        write(item, item.room ? Math.min(scale, item.room) : scale);
+        return;
+      }
+
+      var zoom = fitted(item, box, item.fit.ownerDocument.defaultView);
+
+      item.room = zoom < scale ? zoom : 0;
+
+      if (write(item, zoom)) {
         item.tries++;
         isAnyFitted = true;
       } else {
