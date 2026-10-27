@@ -124,6 +124,44 @@ public class UiSizeTests
         Assert.InRange(ui.Number("win.getBoundingClientRect().height"), 1000, 1080);
     }
 
+    /// <summary>
+    /// The workbench zooms its own body down when its panels are too wide for the window, and a column a mod adds is one
+    /// of those panels. Fitted at the page's own size, the column grows only as far as the page still shows at full
+    /// size; 600 + 1000 x 1.24 is 96% of 1920.
+    /// </summary>
+    [Fact]
+    public void A_column_on_a_page_that_fits_itself_grows_only_as_far_as_the_page_keeps_its_own_size()
+    {
+        var ui = new UiScript();
+        ui.Run("var page = selfFittingPage(600, 1000, 700); uiSize(page.column, { fit: page.box, pageFits: true, onZoom: page.fit })");
+
+        ui.Set(150);
+
+        Assert.InRange(double.Parse(ui.Text("zoomOf(page.column)"), CultureInfo.InvariantCulture), 1.2, 1.25);
+        Assert.Equal("", ui.Text("page.document.body.style.zoom"));
+    }
+
+    /// <summary>
+    /// After the window gets smaller the page has already zoomed itself down by the time the Toolkit looks, so the box
+    /// fits on screen. Measured on screen the column would keep its size and the game's panels would stay small; at the
+    /// page's own size the column shrinks until the page needs no zoom of its own.
+    /// </summary>
+    [Fact]
+    public void A_column_on_a_page_that_fits_itself_gives_way_when_the_window_gets_smaller_so_the_game_keeps_its_size()
+    {
+        var ui = new UiScript();
+        ui.Run("resizeWindow(2560, 1440); var page = selfFittingPage(600, 1000, 700); uiSize(page.column, { fit: page.box, pageFits: true, onZoom: page.fit })");
+        ui.Set(200);
+        var wide = double.Parse(ui.Text("zoomOf(page.column)"), CultureInfo.InvariantCulture);
+
+        ui.Run("resizeWindow(1700, 1080); page.fit()");
+        ui.Settle();
+
+        Assert.InRange(wide, 1.8, 1.86);
+        Assert.InRange(double.Parse(ui.Text("zoomOf(page.column)"), CultureInfo.InvariantCulture), 1.0, 1.05);
+        Assert.Equal("", ui.Text("page.document.body.style.zoom"));
+    }
+
     [Fact]
     public void A_panel_hidden_when_the_size_changes_takes_it_and_is_fitted_once_it_shows()
     {

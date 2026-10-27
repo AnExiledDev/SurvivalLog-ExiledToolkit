@@ -196,6 +196,26 @@ function panel(width, height, view, parent) {
   return el;
 }
 
+// A game page that fits itself to its window (createViewportFit, webui-bag.js:1259) with a column a mod adds: the
+// game's own panels, gameWidth across, and the column beside them, in one box the page measures at its own size. When
+// the box is too big for the window less 24 px, fit() zooms the page's body down until it fits.
+function selfFittingPage(gameWidth, columnWidth, height) {
+  var view = addPage();
+  var box = panel(0, height, view);
+  var column = panel(columnWidth, height, view, box);
+
+  Object.defineProperty(box, 'width', { get: function () { return gameWidth + columnWidth * (Number(column.style.zoom) || 1); } });
+  view.box = box;
+  view.column = column;
+  view.fit = function () {
+    var k = Math.min(1, (view.innerWidth - 24) / box.width, (view.innerHeight - 24) / box.height);
+
+    view.document.body.style.zoom = k < 1 ? k : '';
+  };
+
+  return view;
+}
+
 // What a test reads: the zoom a panel was given and its drawn box, rounded.
 function zoomOf(el) {
   return el.style.zoom;

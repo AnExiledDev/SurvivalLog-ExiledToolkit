@@ -16,8 +16,8 @@
   // lay the page out every frame.
   var MAX_TRIES = 8;
 
-  // { el, fit: the element measured or null, onZoom, zoom: as last written, tries, room: the zoom it was last shrunk
-  // to, or 0 }
+  // { el, fit: the element measured or null, onZoom, pageFits, zoom: as last written, tries, room: the zoom it was
+  // last shrunk to, or 0 }
   var items = [];
   var scale = 1;
   var isDue = false;
@@ -32,27 +32,32 @@
 
   // options.fit: the element whose box must fit the window (the window inside a full-screen backdrop), or false for
   // a panel that is never shrunk. options.onZoom(zoom): runs after each change, say to have the game page fit itself
-  // to its window again.
+  // to its window again. options.pageFits: true for a panel inside a game page that zooms its own body down when its
+  // panels are too big for its window: the fit element is measured at the page's own size, so the panel grows only as
+  // far as the page still shows at full size and the game's own panels keep theirs.
   function size(el, options) {
     if (!el || !el.style) return;
 
     var fit = options && options.fit === false ? null : (options && options.fit) || el;
     var onZoom = options && typeof options.onZoom === 'function' ? options.onZoom : null;
+    var pageFits = !!(options && options.pageFits);
     var item = itemFor(el);
 
     if (item && item.fit === fit) {
       item.onZoom = onZoom;
+      item.pageFits = pageFits;
       return;
     }
 
     if (!item) {
-      item = { el: el, fit: null, onZoom: null, zoom: Number(el.style.zoom) || 1, tries: 0, room: 0 };
+      item = { el: el, fit: null, onZoom: null, pageFits: false, zoom: Number(el.style.zoom) || 1, tries: 0, room: 0 };
       items.push(item);
     }
 
     unwatch(item.fit);
     item.fit = fit;
     item.onZoom = onZoom;
+    item.pageFits = pageFits;
     item.tries = 0;
     item.room = 0;
     watch(fit);
@@ -139,7 +144,7 @@
     }
 
     // Every box is read before any zoom is written, so the pass lays the page out once.
-    var boxes = measured.map(function (item) { return item.fit.getBoundingClientRect(); });
+    var boxes = measured.map(measure);
     var isAnyFitted = false;
 
     measured.forEach(function (item, k) {
@@ -202,6 +207,21 @@
   }
 
   // ===== Helpers =====
+
+  // The fit element's box in its window or, for a page that fits itself, at the page's own size: the box over the
+  // zoom the page set on its body.
+  function measure(item) {
+    var box = item.fit.getBoundingClientRect();
+    var zoom = item.pageFits ? bodyZoom(item.fit.ownerDocument) : 1;
+
+    return zoom === 1 ? box : { width: box.width / zoom, height: box.height / zoom };
+  }
+
+  function bodyZoom(doc) {
+    var zoom = Number(doc && doc.body && doc.body.style.zoom);
+
+    return zoom > 0 ? zoom : 1;
+  }
 
   function rounded(n) {
     return Math.round(n * 1000) / 1000;

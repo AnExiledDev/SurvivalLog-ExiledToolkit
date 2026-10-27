@@ -204,10 +204,12 @@ uiSize(root);                                         // a window
 uiSize(backdrop, { fit: backdrop.firstChild });       // a full-screen backdrop: the window inside it must fit
 uiSize(tooltip, { fit: false });                      // never shrunk to fit
 uiSize(root, { onZoom: function (zoom) { refit(); } });
+uiSize(column, { fit: page, pageFits: true, onZoom: function () { applyViewportFit(); } });   // inside a page that fits itself
 ```
 
 - Above 100%, a panel whose box would run past its page's window is zoomed as far as still fits, and never below 100%. `fit` names the element whose box is measured; leave it out to measure the panel itself.
 - `onZoom(zoom)` runs after each new zoom, say to place the panel again. One that throws is skipped and does not stop other panels.
+- `pageFits: true` is for a panel added inside a game page that zooms its own body down when its panels are too big for the window (the workbench and several machine screens do). `fit` is then measured at the page's own size, without that body zoom, so the panel grows only as far as the whole page still shows at full size and the game's own panels keep their size. Have `onZoom` ask the page to fit itself again.
 - In a zoomed panel, `getBoundingClientRect` and mouse positions are screen pixels, while `left`, `top`, `width` and `offsetLeft` inside it are the panel's own pixels. Divide screen pixels by `el.currentCSSZoom` before writing them as positions.
 - A panel taken out of its page, or left in a page that reloaded, is let go. Hand it over again when you put it back. Handing the same element twice changes nothing but its options.
 - `ExiledUi.scale` is the size now as a factor (1.25 at 125%).
