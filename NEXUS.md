@@ -2,6 +2,8 @@ Name: Exiled's Toolkit
 Summary: The shared library my Survival Log mods use. With it, settings changed on the Mod Manager's Mods screen apply without a restart, mods show their short notices as small toasts beside the HUD, tool buttons and phone apps stay in tidy groups of four, and mods share one Mods menu in the inventory. On its own it does nothing you can see.
 
 Description (BBCode):
+[center][img]https://sldb.core-directive.com/media/save/1-save-safe.png[/img][/center]
+
 Exiled's Toolkit is the shared part of my Survival Log mods. Right now it gives them five things. The first is toasts. A toast is a short notice that appears next to the phone, defense and other tool buttons, stays a few seconds, and goes away by itself. Mods that use the Toolkit show their messages this way instead of each drawing their own. The second is live settings: mods can apply a changed setting while you play, so a change in the Mod Manager works without restarting the game. The third is the inventory's Mods dropdown: mods add their own entries to it, all under one button. The fourth keeps the HUD's tool buttons tidy, in columns of four. The fifth puts the apps mods add to the phone into its dock, in rows of four. Mod authors: see [url=https://github.com/AnExiledDev/SurvivalLog-ExiledToolkit#for-mod-authors]For mod authors[/url] in the README.
 
 [size=5]Main features[/size]
