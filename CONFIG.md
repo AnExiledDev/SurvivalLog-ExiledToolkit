@@ -6,7 +6,8 @@ Settings live in `BepInEx\config\com.dev.survivallog.exiledtoolkit.cfg`, created
 
 | Setting | Default | What it does |
 | --- | --- | --- |
-| `UiScale` | `100` | How big mod windows, panels and toasts are drawn, in percent, from 75 to 200. A change shows at once in every mod that supports it. A window that would no longer fit on the screen is drawn as big as still fits, but never smaller than at 100. |
+| `UiScale` | `100` | How big mod windows, panels and toasts are drawn, in percent, from 75 to 200. A change shows at once in every mod that supports it. A window that would no longer fit on the screen is drawn as big as still fits, but never smaller than at 100. A mod with a UI size setting of its own uses that one when it is set. |
+| `HudButtonSize` | `80` | How big the column of tool buttons on the left of the HUD is drawn, in percent of the game's size, from 50 to 150. It covers the buttons mods add and the game's own phone and bag. 100 is the game's size. |
 
 `UiScale` changes only what mods draw. The game's own screens keep their size.
 

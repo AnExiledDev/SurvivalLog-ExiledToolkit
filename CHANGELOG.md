@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.11.0
+
+- New: the HUD button size setting (`HudButtonSize` under Interface) draws the column of tool buttons on the left of the HUD smaller or bigger, from 50% to 150%. It covers the buttons mods add and the game's own phone and bag. It starts at 80%; set it to 100 for the game's size.
+- Mods can have a UI size setting of their own, which overrides `UiScale` for that mod's windows. Each mod gets it once it is updated for it.
+- For mod authors: `ModUiSize.Set` and `{ mod: "<name>" }` in `ExiledUi.size`. See "UI size" in the README.
+- Made for Survival Log 1.1.19611.
+
 ## 0.10.0
 
 - New: the UI size setting (`UiScale` under Interface) draws mod windows, panels and toasts bigger or smaller, from 75% to 200%. A change shows at once, without restarting the game.

@@ -406,6 +406,105 @@ public class UiSizeTests
         Assert.Equal("1", ui.Text("ExiledUi.zoomAt(row)"));
     }
 
+    // ===== A mod's own size =====
+
+    [Fact]
+    public void A_mod_with_its_own_size_draws_its_panels_at_that_size_and_every_other_panel_keeps_the_players()
+    {
+        var ui = new UiScript();
+        ui.Run("var page = addPage(); var farm = panel(400, 300, page); var trap = panel(400, 300, page); var plain = panel(400, 300, page);" +
+            "uiSize(farm, { mod: 'FarmHub' }); uiSize(trap, { mod: 'TrapHub' }); uiSize(plain)");
+
+        ui.Set(125);
+        ui.SetMod("FarmHub", 150);
+
+        Assert.Equal(("600x450", "500x375", "500x375"), (ui.Text("drawn(farm)"), ui.Text("drawn(trap)"), ui.Text("drawn(plain)")));
+    }
+
+    [Fact]
+    public void A_mod_size_of_0_has_its_panels_follow_the_players_size_again()
+    {
+        var ui = new UiScript();
+        ui.Run("var p = panel(400, 300, addPage()); uiSize(p, { mod: 'FarmHub' })");
+        ui.Set(125);
+        ui.SetMod("FarmHub", 75);
+        var own = ui.Text("drawn(p)");
+
+        ui.SetMod("FarmHub", 0);
+
+        Assert.Equal(("300x225", "500x375"), (own, ui.Text("drawn(p)")));
+    }
+
+    [Fact]
+    public void A_new_player_size_leaves_a_mod_with_its_own_size_where_it_is()
+    {
+        var ui = new UiScript();
+        ui.Run("var p = panel(400, 300, addPage()); uiSize(p, { mod: 'FarmHub' })");
+        ui.SetMod("FarmHub", 125);
+
+        ui.Set(150);
+
+        Assert.Equal("500x375", ui.Text("drawn(p)"));
+    }
+
+    [Fact]
+    public void A_mod_size_sent_before_the_panel_is_handed_over_applies_to_it()
+    {
+        var ui = new UiScript();
+        ui.SetMod("FarmHub", 150);
+
+        ui.Run("var p = panel(400, 300, addPage()); uiSize(p, { mod: 'FarmHub' })");
+        ui.Settle();
+
+        Assert.Equal("600x450", ui.Text("drawn(p)"));
+    }
+
+    [Fact]
+    public void A_panel_a_mod_queued_before_ui_js_loaded_keeps_its_mods_size()
+    {
+        var ui = new UiScript(isLoaded: false);
+        ui.Run("var p = panel(400, 300, addPage()); uiSize(p, { mod: 'FarmHub' })");
+
+        ui.Load();
+        ui.SetMod("FarmHub", 150);
+
+        Assert.Equal("600x450", ui.Text("drawn(p)"));
+    }
+
+    [Fact]
+    public void A_panel_too_tall_for_the_screen_at_its_mods_size_is_drawn_as_big_as_still_fits()
+    {
+        var ui = new UiScript();
+        ui.Run("var p = panel(400, 900, addPage()); uiSize(p, { mod: 'FarmHub' })");
+
+        ui.SetMod("FarmHub", 150);
+
+        Assert.InRange(ui.Number("p.getBoundingClientRect().height"), 1000, 1080);
+    }
+
+    [Theory]
+    [InlineData(500, "800x600")]
+    [InlineData(10, "300x225")]
+    public void A_mod_size_outside_75_to_200_is_drawn_at_the_nearest_end(int percent, string drawn)
+    {
+        var ui = new UiScript();
+        ui.Run("var p = panel(400, 300, addPage()); uiSize(p, { mod: 'FarmHub' })");
+
+        ui.SetMod("FarmHub", percent);
+
+        Assert.Equal(drawn, ui.Text("drawn(p)"));
+    }
+
+    /// <summary>The name goes into the page's script as a string; one that could end the string is refused.</summary>
+    [Theory]
+    [InlineData("Farm\"Hub")]
+    [InlineData("Farm Hub")]
+    [InlineData("")]
+    public void A_mod_name_that_is_not_letters_digits_dots_dashes_or_underscores_is_refused(string mod)
+    {
+        Assert.Throws<ArgumentException>(() => UiSize.ModScript(mod, 120));
+    }
+
     /// <summary>ui.js on UiFake.js. <see cref="Set"/> sends the size as the plugin does, then lets the page settle.</summary>
     private sealed class UiScript
     {
@@ -424,6 +523,12 @@ public class UiSizeTests
         public void Set(int percent)
         {
             _engine.Execute(UiSize.SetScript(percent));
+            Settle();
+        }
+
+        public void SetMod(string mod, int percent)
+        {
+            _engine.Execute(UiSize.ModScript(mod, percent));
             Settle();
         }
 

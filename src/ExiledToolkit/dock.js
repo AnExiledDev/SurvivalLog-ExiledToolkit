@@ -6,7 +6,9 @@
 //
 // A mod marks its button with data-etk-dock="<order>"; marked buttons come first, lowest order first, so the layout
 // does not depend on which mod happened to load first. Unmarked buttons (the game's, and mods that do not mark theirs)
-// follow in the order the page has them. With four buttons or fewer the game's own layout is left untouched.
+// follow in the order the page has them. With four buttons or fewer the game's own layout is left untouched. The whole
+// column, the game's buttons with the mods', is drawn at the player's HUD button size (Interface > HudButtonSize),
+// which the C# side sends through size().
 (function () {
   if (window.__exiledtoolkitdock) return;
 
@@ -16,6 +18,8 @@
   var STYLE_ID = 'etk-dock-style';
   var ORDER_ATTR = 'data-etk-dock';
   var HUD_PAGES = /CoreUI[01]\.html/;
+  // The HUD button size as a factor, as last sent; 1 is the game's own size.
+  var buttonZoom = 1;
   // The grid keeps the column's own gap between rows and columns. A hovered button rises above its neighbours, so its
   // tip, which opens to the right, is not drawn under the next column's buttons. The display rule stays without
   // !important: two classes already beat the game's flex rule, and the game hides the column in plan mode with an
@@ -83,6 +87,8 @@
 
   function layout(column) {
     var buttons = dockOrder(column);
+
+    setStyle(column, 'zoom', buttonZoom === 1 ? '' : String(buttonZoom));
 
     if (buttons.length <= ROWS) {
       release(column);
@@ -216,8 +222,25 @@
     }
   }
 
+  // A new HUD button size, drawn at once on every column found so far.
+  function size(value) {
+    var next = Math.max(0.25, Math.min(2, Math.round((Number(value) || 1) * 1000) / 1000));
+
+    if (next === buttonZoom) return;
+
+    buttonZoom = next;
+
+    var frames = document.getElementsByTagName('iframe');
+
+    for (var i = 0; i < frames.length; i++) {
+      var column = frames[i].etkDockColumn;
+
+      if (column && column.isConnected) pass(column);
+    }
+  }
+
   setInterval(poll, POLL_MS);
   poll();
 
-  window.__exiledtoolkitdock = { slots: slots, layout: layout };
+  window.__exiledtoolkitdock = { slots: slots, layout: layout, size: size };
 })();

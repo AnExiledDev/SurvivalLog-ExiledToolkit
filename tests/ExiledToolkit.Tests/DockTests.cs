@@ -1,3 +1,4 @@
+using ExiledToolkit.Core;
 using Jint;
 using Xunit;
 
@@ -94,6 +95,55 @@ public class DockTests
 
         Assert.True(IsDocked());
         Assert.DoesNotContain("!important", _engine.Evaluate("hud.getElementById('etk-dock-style').textContent").AsString());
+    }
+
+    // ===== The HUD button size =====
+
+    private string Zoom() => _engine.Evaluate("String(column.style.zoom || '')").AsString();
+
+    private void SetSize(int percent) => Run("column.isConnected = true; " + ButtonSize.SetScript(percent));
+
+    [Fact]
+    public void A_button_size_draws_the_whole_column_at_that_size_at_once_and_back_at_the_games_size_at_100()
+    {
+        AddModButtons();
+
+        SetSize(80);
+        var small = Zoom();
+        SetSize(100);
+
+        Assert.Equal(("0.8", ""), (small, Zoom()));
+        Assert.Equal("1:4", Place("bag"));
+    }
+
+    [Fact]
+    public void The_games_own_column_of_four_or_fewer_buttons_is_drawn_at_the_button_size_too()
+    {
+        SetSize(120);
+
+        Assert.False(IsDocked());
+        Assert.Equal("1.2", Zoom());
+    }
+
+    /// <summary>The HUD page is rebuilt when the game reloads it; its new column must come up at the size already set.</summary>
+    [Fact]
+    public void A_new_column_in_place_of_the_last_is_drawn_at_the_size_already_set()
+    {
+        SetSize(80);
+
+        Run("column = hud.createElement('div'); button('phone'); button('bag'); tick();");
+
+        Assert.Equal("0.8", Zoom());
+    }
+
+    [Theory]
+    [InlineData(10, "0.5")]
+    [InlineData(400, "1.5")]
+    public void A_button_size_outside_50_to_150_is_drawn_at_the_nearest_end(int percent, string zoom)
+    {
+        SetSize(percent);
+
+        Assert.Equal(zoom, Zoom());
     }
 
     [Fact]

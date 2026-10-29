@@ -16,7 +16,8 @@ Right now the Toolkit gives mods six things. The first is toasts. A toast is a s
 - **No pile-ups**: at most 4 toasts show at once by default. The rest wait their turn and appear as earlier ones close. If more than 30 are waiting, the oldest waiting ones are never shown, though mods that keep a list of toasts still get them.
 - **Tidy tool buttons**: the column of buttons on the left of the HUD (the phone, the bag and the buttons mods add there) never gets taller than four buttons. The rest go into a second column to its right, top to bottom, and a third after that. The phone and bag stay where they always are, and toasts move right to clear the extra column.
 - **Tidy phone apps**: apps that mods add to the phone go into the dock at the bottom, after the game's own, in rows of four, instead of stacking in the middle of the home screen.
-- **Bigger or smaller mod windows**: `UiScale` draws mod windows, panels and toasts from 75% to 200% of their size. A change shows at once, without a restart. A window that would run off the screen is drawn as big as still fits.
+- **Bigger or smaller mod windows**: `UiScale` draws mod windows, panels and toasts from 75% to 200% of their size. A change shows at once, without a restart. A window that would run off the screen is drawn as big as still fits. A mod with a UI size setting of its own uses that one when it is set.
+- **Smaller or bigger tool buttons**: `HudButtonSize` draws the HUD's tool buttons from 50% to 150% of the game's size, 80% unless you change it.
 - **Survives reloads**: if the game's web interface reloads, the toasts on screen come back with the time they had left.
 
 The Toolkit adds nothing to your save and does not edit game files.
@@ -51,7 +52,7 @@ Settings live in `BepInEx\config\com.dev.survivallog.exiledtoolkit.cfg`, created
 
 Tested on Survival Log 1.1.19611 with BepInEx `6.0.0-be.788`.
 
-Check `BepInEx\LogOutput.log` for `===== Exiled's Toolkit 0.10.0 started`. A few lines below it, `toasts shown ...` tells you whether toasts are shown, where they appear, how long they stay and how many show at once; it is written again whenever one of those settings changes. `mod windows drawn at ...%` gives the UI size, also written again on every change. Once the game's interface is up, `toast script sent to the web UI` means toasts can appear. The same lines are in `BepInEx\exiled-toolkit.log`, which survives restarts.
+Check `BepInEx\LogOutput.log` for `===== Exiled's Toolkit 0.11.0 started`. A few lines below it, `toasts shown ...` tells you whether toasts are shown, where they appear, how long they stay and how many show at once; it is written again whenever one of those settings changes. `mod windows drawn at ...%` gives the UI size and `HUD buttons drawn at ...%` the button size, both written again on every change. A mod with its own UI size writes `<mod> windows drawn at ...%` when it sets it. Once the game's interface is up, `toast script sent to the web UI` means toasts can appear. The same lines are in `BepInEx\exiled-toolkit.log`, which survives restarts.
 
 If no toasts appear, check that `Enabled` is `true` in the config, then look in `BepInEx\exiled-toolkit.log` for a line starting with `could not`.
 
@@ -180,6 +181,8 @@ A mod that adds a button to the HUD's tool column (`.vertical-tools` in CoreUI1 
 
 Nothing else is needed, and the mark does nothing without the Toolkit, so a mod can keep the Toolkit optional.
 
+The player's `HudButtonSize` zooms the whole column, the game's buttons with the mods', so a button needs nothing more to follow it.
+
 ### Phone apps
 
 A mod that adds an app to the phone's home screen (PhoneSMS.html) builds it like the game's own (`.app` with `.app-icon` and `.app-label`), puts it in `.app-grid`, and marks it with `data-etk-phone="<order>"`. The Toolkit moves marked apps into `.app-dock` after the game's apps, lowest order first, and past four shown apps lays the dock out in rows of four. Without the Toolkit the app stays in `.app-grid`. Look the app up by its class anywhere in the document, not only in `.app-grid`, or it is added again once moved. Field Guide uses 10 and Neighbor Basket 20.
@@ -213,6 +216,7 @@ uiSize(column, { fit: page, pageFits: true, onZoom: function () { applyViewportF
 - In a zoomed panel, `getBoundingClientRect` and mouse positions are screen pixels, while `left`, `top`, `width` and `offsetLeft` inside it are the panel's own pixels. Divide screen pixels by `el.currentCSSZoom` before writing them as positions.
 - A panel taken out of its page, or left in a page that reloaded, is let go. Hand it over again when you put it back. Handing the same element twice changes nothing but its options.
 - `ExiledUi.scale` is the size now as a factor (1.25 at 125%).
+- A mod with a UI size setting of its own passes its name as `mod` with every panel (`uiSize(root, { mod: 'FarmHub' })`) and, when the setting loads or changes, calls `ExiledToolkit.ModUiSize.Set("FarmHub", percent)` from C# (Toolkit 0.11.0 and newer). 75 to 200 draws that mod's panels at that size whatever `UiScale` is; 0 has them follow `UiScale` again. The name is letters, digits, dots, dashes and underscores. With an older Toolkit the call throws `MissingMethodException`, so keep it behind the same guard as the rest of the optional Toolkit calls. `ExiledUi.scaleOf(name)` is the size that mod's panels are drawn at now.
 - `ExiledUi.zoomAt(el)` is the zoom the Toolkit draws `el` at through the panels it sits in, and 1 outside any. The page's own zoom is not counted. A tooltip drawn on the page's body for a row inside a panel can take this zoom to match the panel. Read it again on each draw, since the size can change while the tooltip shows.
 
 ## Build
