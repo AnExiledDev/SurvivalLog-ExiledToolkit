@@ -30,7 +30,7 @@ The Toolkit adds nothing to your save and does not edit game files.
 
 ## Requirements
 
-- Survival Log 1.1.19611. Built and tested on this version; a game update can break it until the mod is updated.
+- Survival Log 1.1.20151. Built and tested on this version; a game update can break it until the mod is updated.
 - The [BepInEx Pack for Survival Log](https://www.nexusmods.com/survivallog/mods/12), the BepInEx 6 (IL2CPP) build for the game.
 
 ## Install
@@ -50,9 +50,9 @@ Settings live in `BepInEx\config\com.dev.survivallog.exiledtoolkit.cfg`, created
 
 ## Troubleshooting
 
-Tested on Survival Log 1.1.19611 with BepInEx `6.0.0-be.788`.
+Tested on Survival Log 1.1.20151 with BepInEx `6.0.0-be.788`.
 
-Check `BepInEx\LogOutput.log` for `===== Exiled's Toolkit 0.11.0 started`. A few lines below it, `toasts shown ...` tells you whether toasts are shown, where they appear, how long they stay and how many show at once; it is written again whenever one of those settings changes. `mod windows drawn at ...%` gives the UI size and `HUD buttons drawn at ...%` the button size, both written again on every change. A mod with its own UI size writes `<mod> windows drawn at ...%` when it sets it. Once the game's interface is up, `toast script sent to the web UI` means toasts can appear. The same lines are in `BepInEx\exiled-toolkit.log`, which survives restarts.
+Check `BepInEx\LogOutput.log` for `===== Exiled's Toolkit 0.11.2 started`. A few lines below it, `toasts shown ...` tells you whether toasts are shown, where they appear, how long they stay and how many show at once; it is written again whenever one of those settings changes. `mod windows drawn at ...%` gives the UI size and `HUD buttons drawn at ...%` the button size, both written again on every change. A mod with its own UI size writes `<mod> windows drawn at ...%` when it sets it. Once the game's interface is up, `toast script sent to the web UI` means toasts can appear. The same lines are in `BepInEx\exiled-toolkit.log`, which survives restarts.
 
 If no toasts appear, check that `Enabled` is `true` in the config, then look in `BepInEx\exiled-toolkit.log` for a line starting with `could not`.
 

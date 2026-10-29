@@ -16,6 +16,7 @@ Exiled's Toolkit is the shared part of my Survival Log mods. Right now it gives 
 [*][b]Repeats merge[/b]: the same notice sent again counts up (x2, x3, ...) instead of adding another box.[/*]
 [*][b]No pile-ups[/b]: at most 4 toasts show at once by default; the rest wait their turn.[/*]
 [*][b]Tidy tool buttons[/b]: the column of buttons on the left of the HUD never gets taller than four. The rest go into a column to its right, top to bottom; the phone and bag stay where they are.[/*]
+[*][b]Smaller or bigger tool buttons[/b]: the HudButtonSize setting draws the HUD's tool buttons from 50% to 150% of the game's size, 80% unless you change it. 100 is the game's size.[/*]
 [*][b]Tidy phone apps[/b]: apps that mods add to the phone go into the dock at the bottom, after the game's own, in rows of four.[/*]
 [*][b]Bigger or smaller mod windows[/b]: the UiScale setting draws mod windows, panels and toasts from 75% to 200% of their size. A change shows at once, without a restart. A window that would run off the screen is drawn as big as still fits.[/*]
 [/list]
@@ -36,7 +37,7 @@ Works in English and Chinese.
 
 [size=5]Requirements[/size]
 [list]
-[*]Survival Log 1.1.19611. A game update can break it until the mod is updated.[/*]
+[*]Survival Log 1.1.20151. A game update can break it until the mod is updated.[/*]
 [*][url=https://www.nexusmods.com/survivallog/mods/12]BepInEx for Survival Log[/url]. Install it first.[/*]
 [/list]
 
@@ -76,6 +77,7 @@ Exiled's Toolkit 是我的 Survival Log 模组共用的部分。目前它为这�
 [*][b]重复合并[/b]：再次发送相同的通知时，会计数（x2、x3 等），而不会新增一个方框。[/*]
 [*][b]不会堆积[/b]：默认最多同时显示 4 条通知，其余的排队等候。[/*]
 [*][b]工具按钮整齐排列[/b]：HUD 左侧的按钮列最多四个高，其余的按从上到下的顺序排到右边的新列；手机和背包保持原位。[/*]
+[*][b]工具按钮大小[/b]：HudButtonSize 设置把 HUD 左侧的工具按钮按游戏原尺寸的 50% 到 150% 绘制，默认 80%。设为 100 即为游戏原尺寸。[/*]
 [*][b]手机应用整齐排列[/b]：模组加到手机上的应用放进底部的程序栏，排在游戏自带应用之后，每行四个。[/*]
 [*][b]模组窗口可放大缩小[/b]：UiScale 设置可以把模组的窗口、面板和通知按 75% 到 200% 显示。改动立即生效，无需重启。放大后会超出屏幕的窗口，会以能完整显示的最大尺寸显示。[/*]
 [/list]
@@ -95,7 +97,7 @@ Toolkit 不会往存档里写入任何内容，也不会修改游戏文件。
 
 [size=5]前置要求[/size]
 [list]
-[*]Survival Log 1.1.19611。游戏更新后模组可能暂时失效，直到模组更新为止。[/*]
+[*]Survival Log 1.1.20151。游戏更新后模组可能暂时失效，直到模组更新为止。[/*]
 [*][url=https://www.nexusmods.com/survivallog/mods/12]BepInEx for Survival Log[/url]，请先安装。[/*]
 [/list]
 
