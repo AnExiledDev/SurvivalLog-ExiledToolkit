@@ -14,7 +14,7 @@
   var BUMP_MS = 260;
   var RECT_SETTLE_MS = 350;
   var RECT_POLL_MS = 1000;
-  // While boxes are up the HUD is measured this often, so the deck follows it and steps aside for panels.
+  // While boxes are up the HUD is measured this often, so the deck follows it and lets clicks through to panels.
   var WATCH_MS = 250;
   // The deck stays aside this long after the last pointer event on the HUD's buttons: the game may send nothing more
   // once the pointer leaves for the world, so a mouseout that never comes must not keep the deck hidden.
@@ -51,6 +51,8 @@
   // The deck at rest, relative to the stack's anchor; what is checked against open panels.
   var footprint = null;
   var isHidden = false;
+  // Over an open panel the deck stays in sight but lets every click through to the panel.
+  var isThrough = false;
   var isToolsHovered = false;
   var toolsSeenAt = 0;
   // The clickable areas each game page last reported, by page id, copied into plain objects of this document.
@@ -79,7 +81,7 @@
     '#etk-stack { position: fixed; z-index: 2147483000; width: 0; height: 0; pointer-events: none;',
     '  font-family: "Segoe UI", "Microsoft YaHei", sans-serif; transition: opacity .15s ease; }',
     '#etk-stack.etk-hidden { opacity: 0; }',
-    '#etk-stack.etk-hidden .etk-toast { pointer-events: none; }',
+    '#etk-stack.etk-hidden .etk-toast, #etk-stack.etk-through .etk-toast { pointer-events: none; }',
     '.etk-toast { --etk-accent: #d9bf8a; --etk-tint: rgba(217,191,138,.2); --etk-edge: rgba(217,191,138,.45);',
     '  position: absolute; box-sizing: border-box; display: flex; align-items: center; gap: 10px;',
     '  padding: 8px 26px 8px 10px; pointer-events: auto; cursor: default;',
@@ -390,7 +392,7 @@
 
   function place(pos) {
     position = POSITIONS.indexOf(pos) >= 0 ? pos : 'hud';
-    stack.className = 'etk-' + position + (isHidden ? ' etk-hidden' : '');
+    stack.className = 'etk-' + position + (isHidden ? ' etk-hidden' : '') + (isThrough ? ' etk-through' : '');
     redraw();
   }
 
@@ -716,15 +718,26 @@
     if (isOn === isHidden) return;
     isHidden = isOn;
     stack.classList.toggle('etk-hidden', isOn);
-    if (!isOn) return;
+    if (isOn) letGoAll();
+  }
 
+  // A deck over a panel is still drawn on top, so its news is seen, but like a hidden one it takes no clicks.
+  function setThrough(isOn) {
+    if (isOn === isThrough) return;
+    isThrough = isOn;
+    stack.classList.toggle('etk-through', isOn);
+    if (isOn) letGoAll();
+  }
+
+  function letGoAll() {
     var wasHeld = false;
     deck().forEach(function (box) { if (letGo(box)) wasHeld = true; });
     if (wasHeld) layout();
   }
 
   function refresh() {
-    setHidden((position === 'hud' && isOnTools()) || isPanelOver());
+    setHidden(position === 'hud' && isOnTools());
+    setThrough(isPanelOver());
     syncRects();
   }
 
@@ -756,7 +769,7 @@
   function syncRects() {
     var width = window.innerWidth || 1;
     var height = window.innerHeight || 1;
-    var cards = isHidden ? [] : inDeck();
+    var cards = isHidden || isThrough ? [] : inDeck();
     // With no card to report the page is not measured at all.
     var origin = cards.length > 0 ? stack.getBoundingClientRect() : null;
     var z = cards.length > 0 ? zoom() : 1;

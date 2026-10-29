@@ -9,7 +9,7 @@ Right now the Toolkit gives mods six things. The first is toasts. A toast is a s
 - **Beside the HUD**: toasts sit to the right of the phone, defense and other tool buttons, above the action queue, and follow them if the screen size changes. You can put them in a screen corner instead. Each one has a thin coloured edge that says what kind it is (info, success, warning or error).
 - **Small and tidy**: compact boxes in the game's colours and font, with long text cut to two lines. They stay 7 seconds by default.
 - **Layered**: several toasts lie on top of each other, newest in front, with the older ones peeking out behind, so they take about one toast's room. Rest the pointer on one behind to bring it to the front with more of its text (up to six lines).
-- **Never in the way**: toasts never take keyboard focus. Only the boxes themselves catch the mouse; the rest of the screen plays as normal. They hide for a few seconds while the pointer is on the tool buttons or the speed buttons, so those buttons' tips can be read, and while an open window takes the whole screen or has a button where they would be.
+- **Never in the way**: toasts never take keyboard focus. Only the boxes themselves catch the mouse; the rest of the screen plays as normal. They hide for a few seconds while the pointer is on the tool buttons or the speed buttons, so those buttons' tips can be read. Over an open window, such as a bench, they stay in sight on top of it, and every click goes through them to the window.
 - **Hover to keep one**: while the pointer rests on a toast, it stays. Move away and it leaves after a moment.
 - **Click to open**: when a mod gives a toast something to open, clicking the toast opens it. The small x closes a toast without opening anything.
 - **Repeats merge**: the same notice sent again while the first is still showing does not add another box. The first one counts up instead (x2, x3, ...) and its timer starts over.
@@ -24,8 +24,8 @@ The Toolkit adds nothing to your save and does not edit game files.
 
 ## Known issues and limits
 
-- A toast covers whatever is under it. Next to the HUD that is empty space, and toasts hide for open panels, but a game button under a toast cannot be clicked until the toast goes. Move the toasts with `Position` if they are in your way.
-- Toasts that hide for an open panel keep counting down, so a short one can run out before the panel closes. Mods that keep a list of toasts still get it.
+- With no window open, a game button under a toast cannot be clicked until the toast goes. Next to the HUD that is empty space. Move the toasts with `Position` if they are in your way.
+- Over an open window a toast cannot be hovered to hold it or clicked, since its clicks go to the window. It runs out on its usual time.
 - `UiScale` changes only what mods draw. The game's own screens keep their size, and a mod's windows follow the setting only once that mod supports it.
 
 ## Requirements

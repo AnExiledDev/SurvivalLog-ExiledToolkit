@@ -11,7 +11,7 @@ Exiled's Toolkit is the shared part of my Survival Log mods. Right now it gives 
 [*][b]Beside the HUD[/b]: toasts sit to the right of the tool buttons, above the action queue. You can put them in a screen corner instead.[/*]
 [*][b]Small and tidy[/b]: compact warm-brown cards in the game's gold style, with a coloured edge for info, success, warning or error and a thin bar along the bottom that shows how long the toast has left.[/*]
 [*][b]Layered[/b]: several toasts lie on top of each other, newest in front. Rest the pointer on one behind to bring it to the front with more of its text, and the items it is about, when a mod lists them.[/*]
-[*][b]Never in the way[/b]: toasts never take keyboard focus, and they hide while the pointer is on the tool buttons or a full-screen window is open.[/*]
+[*][b]Never in the way[/b]: toasts never take keyboard focus, and they hide while the pointer is on the tool buttons. Over an open window, such as a bench, they stay in sight and every click goes through them to the window.[/*]
 [*][b]Hover to keep one, click to open[/b]: a toast stays while the pointer rests on it. When a mod gives a toast something to open, clicking it opens that; the small x just closes it.[/*]
 [*][b]Repeats merge[/b]: the same notice sent again counts up (x2, x3, ...) instead of adding another box.[/*]
 [*][b]No pile-ups[/b]: at most 4 toasts show at once by default; the rest wait their turn.[/*]
@@ -26,8 +26,8 @@ Works in English and Chinese.
 
 [size=5]Known issues[/size]
 [list]
-[*]A toast covers whatever is under it. A game button under a toast cannot be clicked until the toast goes. Move the toasts with the Position setting if they are in your way.[/*]
-[*]Toasts that hide for an open panel keep counting down, so a short one can run out before the panel closes.[/*]
+[*]With no window open, a game button under a toast cannot be clicked until the toast goes. Move the toasts with the Position setting if they are in your way.[/*]
+[*]Over an open window a toast cannot be hovered or clicked, since its clicks go to the window.[/*]
 [*]UiScale changes only what mods draw. The game's own screens keep their size, and a mod's windows follow the setting only once that mod supports it.[/*]
 [/list]
 
@@ -71,7 +71,7 @@ Exiled's Toolkit 是我的 Survival Log 模组共用的部分。目前它为这�
 [*][b]位于 HUD 旁边[/b]：通知位于工具按钮的右侧、行动队列的上方。也可以改到屏幕的某个角落。[/*]
 [*][b]小巧整洁[/b]：紧凑的暖棕色卡片，采用游戏的金色风格；边缘的色条表示信息、成功、警告或错误，底部的细条显示通知还剩多久。[/*]
 [*][b]层叠显示[/b]：多条通知叠放在一起，最新的在最前面。把鼠标停在后面的通知上，它会移到最前面并显示更多文字；如果模组列出了相关物品，也会一并显示。[/*]
-[*][b]不碍事[/b]：通知不会抢走键盘焦点；鼠标停在工具按钮上或打开全屏窗口时，通知会隐藏。[/*]
+[*][b]不碍事[/b]：通知不会抢走键盘焦点；鼠标停在工具按钮上时，通知会隐藏。打开窗口（例如工作台）时，通知仍显示在窗口上方，点击会穿过通知落到窗口上。[/*]
 [*][b]悬停保留，点击打开[/b]：鼠标停在通知上时，通知不会消失。如果模组为通知设置了可打开的内容，点击通知就会打开它；小 x 只关闭通知。[/*]
 [*][b]重复合并[/b]：再次发送相同的通知时，会计数（x2、x3 等），而不会新增一个方框。[/*]
 [*][b]不会堆积[/b]：默认最多同时显示 4 条通知，其余的排队等候。[/*]
@@ -86,8 +86,8 @@ Toolkit 不会往存档里写入任何内容，也不会修改游戏文件。
 
 [size=5]已知问题[/size]
 [list]
-[*]通知会挡住下面的内容。通知下方的游戏按钮要等通知消失后才能点击。如果通知挡路，可以用 Position 设置移动它们。[/*]
-[*]因面板打开而隐藏的通知仍在倒计时，所以时间短的通知可能在面板关闭前就已结束。[/*]
+[*]没有打开窗口时，通知下方的游戏按钮要等通知消失后才能点击。如果通知挡路，可以用 Position 设置移动它们。[/*]
+[*]打开窗口时，通知不能悬停或点击，因为点击会落到窗口上。[/*]
 [*]UiScale 只改变模组绘制的界面，游戏自带的界面大小不变；模组更新到支持此设置后，它的窗口才会跟着变化。[/*]
 [/list]
 

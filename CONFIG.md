@@ -22,6 +22,6 @@ Settings live in `BepInEx\config\com.dev.survivallog.exiledtoolkit.cfg`, created
 
 Toasts lie on top of each other, newest in front. A toast stays while the pointer rests on it, for up to about 15 seconds, then leaves as normal; resting on one of the toasts behind brings it to the front.
 
-Toasts step aside rather than cover the game: they hide for a few seconds while the pointer is on the tool buttons or the speed buttons (with `Hud`), and while an open window takes the whole screen or has a button where they would be. Their time keeps running while hidden.
+Toasts hide for a few seconds while the pointer is on the tool buttons or the speed buttons (with `Hud`). Their time keeps running while hidden. Over an open window, such as a bench, they stay in sight on top of it and every click goes through them to the window.
 
 Values outside a range are moved to the nearest end of it.

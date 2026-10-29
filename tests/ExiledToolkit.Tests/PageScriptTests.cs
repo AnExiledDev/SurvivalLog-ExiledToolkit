@@ -322,11 +322,11 @@ public class PageScriptTests
         Assert.Equal((1920 - 16, 1080 - 16), (box.Left + box.Width, box.Bottom));
     }
 
-    /// <summary>The bigger deck covers more of the screen, so it steps aside for a panel button it now reaches.</summary>
+    /// <summary>The bigger deck covers more of the screen, so it lets clicks through to a panel button it now reaches.</summary>
     [Theory]
     [InlineData(100, false)]
     [InlineData(200, true)]
-    public void A_panel_button_near_the_deck_hides_it_once_the_ui_size_makes_the_deck_reach_it(int percent, bool isHidden)
+    public void A_panel_button_near_the_deck_gets_its_clicks_once_the_ui_size_makes_the_deck_reach_it(int percent, bool isThrough)
     {
         var page = new PageScript(uiPercent: percent);
         page.Run("addHud(1)");
@@ -337,7 +337,8 @@ public class PageScriptTests
         page.Run("window.syncInteractiveRects('BattleBag', [{ x: 0.25, y: 0.86, w: 0.1, h: 0.02 }], null)");
         page.NextFrame();
 
-        Assert.Equal(isHidden ? 0 : 1, LastRects(page).Boxes.Count);
+        Assert.Equal(isThrough ? 0 : 1, LastRects(page).Boxes.Count);
+        Assert.Equal("false", page.Text("stack().classList.contains('etk-hidden')"));
     }
 
     // ===== The deck =====
@@ -443,12 +444,15 @@ public class PageScriptTests
         Assert.Single(LastRects(page).Boxes);
     }
 
-    /// <summary>The deck hides rather than covers an open panel's buttons; only a page drawn above the HUD counts as a panel.</summary>
+    /// <summary>
+    /// Over an open panel's buttons the deck stays in sight, since its news can matter, but the panel takes every click
+    /// under it. Only a page drawn above the HUD counts as a panel.
+    /// </summary>
     [Theory]
     [InlineData(4, 0.05, true)]
     [InlineData(4, 0.60, false)]
     [InlineData(0, 0.05, false)]
-    public void A_panel_with_buttons_under_the_deck_hides_it_until_the_buttons_go(int panelZ, double buttonX, bool isHidden)
+    public void Over_a_panel_with_buttons_under_it_the_deck_shows_and_lets_clicks_through_until_the_buttons_go(int panelZ, double buttonX, bool isThrough)
     {
         var page = new PageScript();
         page.Run("addHud(1)");
@@ -458,23 +462,29 @@ public class PageScriptTests
         page.Run($"window.syncInteractiveRects('BattleBag', [{{ x: {buttonX.ToString(CultureInfo.InvariantCulture)}, y: 0.86, w: 0.1, h: 0.02 }}], null)");
         page.NextFrame();
         var whileOpen = LastRects(page);
+        var isShownWhileOpen = page.Text("stack().classList.contains('etk-hidden')") == "false";
+        var isThroughWhileOpen = page.Text("stack().classList.contains('etk-through')") == "true";
         page.Run("window.syncInteractiveRects('BattleBag', [], null)");
         page.NextFrame();
 
-        Assert.Equal(isHidden ? 0 : 1, whileOpen.Boxes.Count);
+        Assert.Equal(isThrough ? 0 : 1, whileOpen.Boxes.Count);
+        Assert.True(isShownWhileOpen);
+        Assert.Equal(isThrough, isThroughWhileOpen);
         Assert.Single(LastRects(page).Boxes);
+        Assert.Equal("false", page.Text("stack().classList.contains('etk-through')"));
         Assert.Equal("BattleBag,BattleBag", page.Text("syncedPages.join(',')"));
     }
 
     /// <summary>
-    /// Most of the game's windows never report their buttons: the game hands them every click on the screen, so the
-    /// deck under one could be seen but not clicked. Only a page shown above the HUD and taking the pointer counts.
+    /// Most of the game's windows, a bench among them, never report their buttons: the game hands them every click on
+    /// the screen. The deck is drawn over such a window and takes none of its clicks. Only a page shown above the HUD
+    /// and taking the pointer counts.
     /// </summary>
     [Theory]
     [InlineData(4, "auto", true)]
     [InlineData(0, "auto", false)]
     [InlineData(4, "none", false)]
-    public void A_window_above_the_hud_that_reports_no_buttons_takes_every_click_so_the_deck_hides_until_it_closes(int windowZ, string pointerEvents, bool isHidden)
+    public void Over_a_window_above_the_hud_that_reports_no_buttons_the_deck_shows_and_takes_no_clicks_until_it_closes(int windowZ, string pointerEvents, bool isThrough)
     {
         var page = new PageScript();
         page.Run("addHud(1)");
@@ -483,10 +493,14 @@ public class PageScriptTests
         page.Run($"var shop = addFrame('Shop', 'https://webui/UI/Shop/Shop.html', {windowZ}); shop.style.pointerEvents = '{pointerEvents}'");
         page.Advance(1_000);
         var whileOpen = LastRects(page);
+        var isShownWhileOpen = page.Text("stack().classList.contains('etk-hidden')") == "false";
+        var isThroughWhileOpen = page.Text("stack().classList.contains('etk-through')") == "true";
         page.Run("shop.style.display = 'none'");
         page.Advance(250);
 
-        Assert.Equal(isHidden ? 0 : 1, whileOpen.Boxes.Count);
+        Assert.Equal(isThrough ? 0 : 1, whileOpen.Boxes.Count);
+        Assert.True(isShownWhileOpen);
+        Assert.Equal(isThrough, isThroughWhileOpen);
         Assert.Single(LastRects(page).Boxes);
     }
 
@@ -553,7 +567,7 @@ public class PageScriptTests
 
         Assert.Equal(0, measured);
         Assert.Equal("BattleBag,BattleBag,BattleBag", page.Text("syncedPages.join(',')"));
-        // What the panel reported is still known: the first toast steps aside for its buttons.
+        // What the panel reported is still known: the first toast lets clicks through to its buttons.
         Assert.Empty(LastRects(page).Boxes);
     }
 

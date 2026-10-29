@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.11.1
+
+- Toasts now show over open windows, such as a bench, instead of hiding until the window closes. Clicks there go through the toast to the window.
+- Made for Survival Log 1.1.19611.
+
 ## 0.11.0
 
 - New: the HUD button size setting (`HudButtonSize` under Interface) draws the column of tool buttons on the left of the HUD smaller or bigger, from 50% to 150%. It covers the buttons mods add and the game's own phone and bag. It starts at 80%; set it to 100 for the game's size.
