@@ -225,6 +225,67 @@ public class UiSizeTests
         Assert.InRange(ui.Number("p.getBoundingClientRect().height"), 1000, 1080);
     }
 
+    /// <summary>A window opened for the first time at a big size must fit on the frame it first shows in.</summary>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void A_panel_opened_for_the_first_time_fits_on_its_first_frame(bool observerSeesZoom)
+    {
+        var ui = new UiScript(observerSeesZoom: observerSeesZoom);
+        ui.Run("var p = panel(400, 900, addPage()); p.hidden = true; uiSize(p)");
+        ui.Set(150);
+
+        ui.Run("p.hidden = false; nextFrame()");
+
+        Assert.InRange(ui.Number("p.getBoundingClientRect().height"), 1000, 1080);
+    }
+
+    /// <summary>
+    /// A mod that draws its window again puts a new window in the backdrop it handed over and drops the old one. The new
+    /// one must still fit, not show at the full size because the old one measures nothing.
+    /// </summary>
+    [Fact]
+    public void A_window_the_mod_draws_again_inside_its_backdrop_still_fits_the_screen()
+    {
+        var ui = new UiScript();
+        ui.Run("var page = addPage(); var back = panel(0, 0, page); back.fills = true; var win = panel(400, 900, page, back); win.className = 'win';" +
+            "uiSize(back, { fit: win })");
+        ui.Set(150);
+
+        ui.Run("win.parentNode = null; var again = panel(400, 1000, page, back); again.className = 'win'");
+        ui.Settle();
+        ui.Set(160);
+
+        Assert.InRange(ui.Number("again.getBoundingClientRect().height"), 1000, 1080);
+    }
+
+    [Fact]
+    public void A_backdrop_whose_window_is_gone_keeps_its_size_rather_than_taking_a_bigger_one_unfitted()
+    {
+        var ui = new UiScript();
+        ui.Run("var page = addPage(); var back = panel(0, 0, page); back.fills = true; var win = panel(400, 600, page, back); win.className = 'win';" +
+            "uiSize(back, { fit: win })");
+        ui.Set(150);
+
+        ui.Run("win.parentNode = null");
+        ui.Set(200);
+
+        Assert.Equal("1.5", ui.Text("zoomOf(back)"));
+    }
+
+    /// <summary>A mod that hands over something that is not an element must not stop every other panel's size.</summary>
+    [Fact]
+    public void A_fit_that_is_not_an_element_fits_the_panel_itself_and_other_panels_still_take_the_size()
+    {
+        var ui = new UiScript();
+        ui.Run("var page = addPage(); var odd = panel(400, 900, page); uiSize(odd, { fit: 'card' }); var other = panel(400, 300, page); uiSize(other)");
+
+        ui.Set(150);
+
+        Assert.InRange(ui.Number("odd.getBoundingClientRect().height"), 1000, 1080);
+        Assert.Equal("600x450", ui.Text("drawn(other)"));
+    }
+
     [Fact]
     public void A_closed_panel_that_was_shrunk_takes_a_new_size_only_as_far_as_it_still_fits()
     {

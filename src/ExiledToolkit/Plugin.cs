@@ -15,7 +15,7 @@ public sealed class Plugin : BasePlugin
 {
     /// <summary>For <c>[BepInDependency(ExiledToolkit.Plugin.Guid)]</c> in a mod that shows toasts.</summary>
     public const string Guid = "com.dev.survivallog.exiledtoolkit";
-    public const string Version = "0.11.1";
+    public const string Version = "0.11.2";
 
     public override void Load()
     {
@@ -66,8 +66,8 @@ public sealed class Plugin : BasePlugin
 
     private ConfigEntry<int> BindUiScale() =>
         Config.Bind("Interface", "UiScale", UiSize.Default, new ConfigDescription(
-            "How big mod windows, panels and toasts are drawn, in percent, from " + UiSize.Min + " to " + UiSize.Max + ". A change shows at once in every mod that supports it. A window that would no longer fit on the screen is drawn as big as still fits. A mod with a UI size setting of its own uses that one when it is set. Default: " + UiSize.Default + ".\n" +
-            "模组的窗口、面板和通知的显示大小（百分比），范围 " + UiSize.Min + " 到 " + UiSize.Max + "。改动会立即在所有支持此设置的模组中生效。放大后超出屏幕的窗口会以能完整显示的最大尺寸显示。自带界面大小设置的模组在设置了该项时以其为准。默认 " + UiSize.Default + "。",
+            "How big mod windows, panels and toasts are drawn, in percent, from " + UiSize.Min + " to " + UiSize.Max + ". A change shows at once in every mod that supports it. A window that would no longer fit on the screen is drawn as big as still fits, so a large one such as the Mods screen grows only a little past about 110. A mod with a UI size setting of its own uses that one when it is set. Default: " + UiSize.Default + ".\n" +
+            "模组的窗口、面板和通知的显示大小（百分比），范围 " + UiSize.Min + " 到 " + UiSize.Max + "。改动会立即在所有支持此设置的模组中生效。放大后超出屏幕的窗口会以能完整显示的最大尺寸显示，所以像「模组」界面这样的大窗口超过 110 左右后只会再大一点。自带界面大小设置的模组在设置了该项时以其为准。默认 " + UiSize.Default + "。",
             new AcceptableValueRange<int>(UiSize.Min, UiSize.Max)));
 
     private static void ApplyToastSettings(ToastCenter center, ToastSettings settings, Action<string> log)

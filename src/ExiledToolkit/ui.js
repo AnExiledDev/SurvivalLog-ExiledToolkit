@@ -43,7 +43,7 @@
   function size(el, options) {
     if (!el || !el.style) return;
 
-    var fit = options && options.fit === false ? null : (options && options.fit) || el;
+    var fit = options && options.fit === false ? null : isElement(options && options.fit) ? options.fit : el;
     var onZoom = options && typeof options.onZoom === 'function' ? options.onZoom : null;
     var pageFits = !!(options && options.pageFits);
     var mod = options && typeof options.mod === 'string' ? options.mod : '';
@@ -124,13 +124,15 @@
     if (isAnyBig()) retryAll();
   }
 
-  // A panel that changed size, say as it was shown or filled, is fitted again.
+  // A panel that changed size, say as it was shown or filled, is fitted again. The observer runs after layout and
+  // before the frame is drawn, so fitting here, not on the next frame, keeps a panel that just opened from showing
+  // one frame at the full size first.
   function resized(entries) {
     if (!isAnyBig()) return;
 
     for (var i = 0; i < entries.length; i++) {
       if (itemMeasuring(entries[i].target)) {
-        schedule();
+        pass();
         return;
       }
     }
@@ -165,7 +167,9 @@
       } else if (own <= 1 || !item.fit) {
         // Smaller than the panel's own size always fits, and a panel never shrunk takes the size as it is.
         write(item, own);
-      } else if (item.tries < MAX_TRIES) {
+      } else if (followFit(item) && item.tries < MAX_TRIES) {
+        // A panel whose window was drawn again and not found keeps the zoom it has rather than taking the full size
+        // unfitted.
         measured.push(item);
       }
     }
@@ -284,6 +288,40 @@
     var frame = view.frameElement;
 
     return !!frame && frame.isConnected && frame.contentDocument === doc;
+  }
+
+  // A mod that draws its panel again replaces the window inside it, and the one it handed over is left out of the
+  // page, measuring nothing. The new one is the element in the panel with the same tag and classes. False when the
+  // fit element is gone and no such element is in the panel.
+  function followFit(item) {
+    if (item.fit === item.el || isLive(item.fit)) return true;
+
+    var next = sameKindIn(item.el, item.fit);
+
+    if (!next) return false;
+
+    unwatch(item.fit);
+    item.fit = next;
+    item.tries = 0;
+    watch(next);
+
+    return true;
+  }
+
+  function sameKindIn(panel, old) {
+    if (typeof panel.querySelectorAll !== 'function' || !old.tagName) return null;
+
+    var found = panel.querySelectorAll(old.tagName);
+
+    for (var i = 0; i < found.length; i++) {
+      if (found[i].className === old.className) return found[i];
+    }
+
+    return null;
+  }
+
+  function isElement(value) {
+    return !!value && typeof value.getBoundingClientRect === 'function' && !!value.style;
   }
 
   function itemFor(el) {

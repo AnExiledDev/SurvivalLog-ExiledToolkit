@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.11.2
+
+- Fixed: a mod window that redraws itself, such as a bench or storage window, could show too big for the screen after a redraw at a large UI size.
+- Fixed: a window opened for the first time at a large UI size no longer flashes too big for one frame before it fits.
+- Fixed: one mod handing the Toolkit a bad window could stop every other mod's windows from following the UI size.
+- The UiScale description now says that large windows, such as the Mods screen, grow only a little past about 110.
+- Made for Survival Log 1.1.20151.
+
 ## 0.11.1
 
 - Toasts now show over open windows, such as a bench, instead of hiding until the window closes. Clicks there go through the toast to the window.

@@ -81,6 +81,7 @@ function makeView(view, width, height) {
   view.observers = [];
   view.listeners = {};
   view.ResizeObserver = makeObserver(view);
+  view.elements = [];
   view.document = { defaultView: view };
   view.document.body = new FakeElement(view, width, height);
   view.document.body.isBody = true;
@@ -137,7 +138,7 @@ var FakeStyle = class {
 };
 
 // Drawn at its own width and height times its zoom and every parent's; a filling element (a full-screen backdrop)
-// takes its window's size whatever its zoom. A hidden one, or one inside a hidden one, has no box.
+// takes its window's size whatever its zoom. A hidden one, one inside a hidden one, or one out of its page has no box.
 var FakeElement = class {
   constructor(view, width, height) {
     this.view = view;
@@ -147,6 +148,9 @@ var FakeElement = class {
     this.style = new FakeStyle();
     this.hidden = false;
     this.fills = false;
+    this.tagName = 'DIV';
+    this.className = '';
+    view.elements.push(this);
   }
 
   get ownerDocument() { return this.view.document; }
@@ -165,12 +169,27 @@ var FakeElement = class {
     return this.parentNode ? own * this.parentNode.currentCSSZoom : own;
   }
 
+  // Elements inside this one with that tag, in the order they were made.
+  querySelectorAll(tag) {
+    var self = this;
+
+    return this.view.elements.filter(function (el) {
+      if (el === self || el.tagName !== tag.toUpperCase()) return false;
+
+      for (var node = el.parentNode; node; node = node.parentNode) {
+        if (node === self) return true;
+      }
+
+      return false;
+    });
+  }
+
   isShown() {
     return !this.hidden && (!this.parentNode || this.parentNode.isShown());
   }
 
   getBoundingClientRect() {
-    if (!this.isShown()) return { left: 0, top: 0, width: 0, height: 0 };
+    if (!this.isConnected || !this.isShown()) return { left: 0, top: 0, width: 0, height: 0 };
 
     if (this.fills) return { left: 0, top: 0, width: this.view.innerWidth, height: this.view.innerHeight };
 
