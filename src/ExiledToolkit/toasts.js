@@ -80,6 +80,7 @@
   style.textContent = [
     '#etk-stack { position: fixed; z-index: 2147483000; width: 0; height: 0; pointer-events: none;',
     '  font-family: "Segoe UI", "Microsoft YaHei", sans-serif; transition: opacity .15s ease; }',
+    '#etk-stack.etk-through { opacity: .5; }',
     '#etk-stack.etk-hidden { opacity: 0; }',
     '#etk-stack.etk-hidden .etk-toast, #etk-stack.etk-through .etk-toast { pointer-events: none; }',
     '.etk-toast { --etk-accent: #d9bf8a; --etk-tint: rgba(217,191,138,.2); --etk-edge: rgba(217,191,138,.45);',

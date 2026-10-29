@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.11.3
+
+- Toasts shown over an open window are half see-through, so the window under them stays readable. Clicks there still go through them to the window.
+- Made for Survival Log 1.1.20151.
+
 ## 0.11.2
 
 - Fixed: a mod window that redraws itself, such as a bench or storage window, could show too big for the screen after a redraw at a large UI size.

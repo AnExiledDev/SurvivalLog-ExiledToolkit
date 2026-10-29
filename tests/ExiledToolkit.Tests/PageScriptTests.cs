@@ -504,6 +504,23 @@ public class PageScriptTests
         Assert.Single(LastRects(page).Boxes);
     }
 
+    /// <summary>
+    /// Over an open window the deck is drawn half see-through, so the window under it stays readable. When it is also
+    /// hidden, hidden wins: that rule comes later at the same weight.
+    /// </summary>
+    [Fact]
+    public void Over_an_open_window_the_deck_is_half_see_through_and_hiding_still_wins()
+    {
+        var page = new PageScript();
+        var css = "document.head.children.filter(function (e) { return e.id === 'etk-style'; })[0].textContent";
+
+        var through = int.Parse(page.Text($"{css}.indexOf('#etk-stack.etk-through {{ opacity: .5; }}')"));
+        var hidden = int.Parse(page.Text($"{css}.indexOf('#etk-stack.etk-hidden {{ opacity: 0; }}')"));
+
+        Assert.True(through >= 0);
+        Assert.True(hidden > through);
+    }
+
     /// <summary>A window that reported its buttons before the toolkit was there is asked again, once, by a resize.</summary>
     [Fact]
     public void A_window_not_yet_heard_from_is_asked_for_its_buttons_and_the_deck_comes_back_when_none_are_under_it()
