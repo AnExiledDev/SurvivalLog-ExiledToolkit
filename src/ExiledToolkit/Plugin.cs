@@ -15,7 +15,7 @@ public sealed class Plugin : BasePlugin
 {
     /// <summary>For <c>[BepInDependency(ExiledToolkit.Plugin.Guid)]</c> in a mod that shows toasts.</summary>
     public const string Guid = "com.dev.survivallog.exiledtoolkit";
-    public const string Version = "0.11.3";
+    public const string Version = "0.12.0";
 
     public override void Load()
     {
@@ -31,12 +31,14 @@ public sealed class Plugin : BasePlugin
         PageInbox.Apply(harmony, log.Write);
         ClickRouting.Apply(harmony, log.Write);
         HotkeyGate.Apply(harmony, log.Write);
+        TypingGate.Apply(harmony, log.Write);
 
         Toasts.Center = center;
         ToastTicker.Page = new WebPage(log.Write, "ExiledToolkit.toasts.js", ToastScript.Probe, "toast");
         ToastTicker.Dock = new DockPage(new WebPage(log.Write, "ExiledToolkit.dock.js", "", "HUD dock"));
         ToastTicker.Phone = new WebPage(log.Write, "ExiledToolkit.phone.js", "", "phone apps");
         ToastTicker.Ui = new UiSizePage(new WebPage(log.Write, "ExiledToolkit.ui.js", "", "UI size"));
+        ToastTicker.Typing = new WebPage(log.Write, "ExiledToolkit.typing.js", "", "typing watch");
         ToastTicker.Menu = new MenuRunner(new WebPage(log.Write, "ExiledToolkit.menu.js", MenuScript.Probe, "Mods menu"), log.Write);
         ToastTicker.Log = log.Write;
 

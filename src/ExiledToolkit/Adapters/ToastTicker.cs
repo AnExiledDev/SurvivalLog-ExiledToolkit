@@ -24,6 +24,9 @@ public sealed class ToastTicker : MonoBehaviour
 
     /// <summary>The UI size script also runs in the root document; it goes in first, so the toasts find it.</summary>
     internal static UiSizePage? Ui;
+
+    /// <summary>The typing watch runs in the root document as well, so it is put back with the toasts.</summary>
+    internal static WebPage? Typing;
     internal static MenuRunner? Menu;
     internal static Action<string> Log = _ => { };
 
@@ -51,6 +54,7 @@ public sealed class ToastTicker : MonoBehaviour
 
         // Before the toast checks too: the Mods menu does not need the toasts.
         RunMenu();
+        RunTypingGate();
 
         if (center == null || page == null) return;
 
@@ -86,6 +90,18 @@ public sealed class ToastTicker : MonoBehaviour
         }
     }
 
+    private static void RunTypingGate()
+    {
+        try
+        {
+            TypingGate.Tick(Typing);
+        }
+        catch (Exception ex)
+        {
+            ReportOnce(ex);
+        }
+    }
+
     private static void Handle(PageCommand command, ToastCenter center, WebPage page, float now)
     {
         switch (command)
@@ -100,6 +116,8 @@ public sealed class ToastTicker : MonoBehaviour
                 page.Install();
                 Dock?.Install();
                 Phone?.Install();
+                Typing?.Install();
+                TypingGate.Set(false);
                 break;
             case PageCommand.Click click:
                 center.Activate(click.Id);
@@ -109,6 +127,9 @@ public sealed class ToastTicker : MonoBehaviour
                 break;
             case PageCommand.Rects rects:
                 Area.Heard(new HitArea(rects.Boxes), now);
+                break;
+            case PageCommand.Typing typing:
+                TypingGate.Set(typing.IsTyping);
                 break;
             case PageCommand.Unknown unknown:
                 Log("unknown message from the toast page: " + unknown.Text);

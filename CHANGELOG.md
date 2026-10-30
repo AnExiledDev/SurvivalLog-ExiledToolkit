@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.12.0
+
+- While you type in a mod's text box, such as a search box, the keys no longer reach the game: letters no longer open panels or take a photo, and WASD no longer moves the camera. This works for every mod's boxes without the mod doing anything. Clicking the world leaves the box.
+- Mods can ask the Toolkit whether you are typing, to skip their own hotkeys while you are.
+- Made for Survival Log 1.1.20151.
+
 ## 0.11.3
 
 - Toasts shown over an open window are half see-through, so the window under them stays readable. Clicks there still go through them to the window.

@@ -2,7 +2,7 @@
 
 A shared library for my Survival Log mods. On its own it does nothing you can see. Install it when another mod says it needs it.
 
-Right now the Toolkit gives mods six things. The first is toasts. A toast is a short notice that appears next to the phone, defense and other tool buttons, stays a few seconds, and goes away by itself. Mods that use the Toolkit show their messages this way instead of each drawing their own. The second is live settings: mods can apply a changed setting while you play, so a change in the Mod Manager works without restarting the game. The third is the inventory's "Mods" dropdown, one button in the inventory toolbar that holds the actions mods add there. The fourth keeps the HUD's tool buttons tidy: once mods have added enough buttons that the column would run past four, they are laid out in columns of four instead. The fifth tidies the phone: apps that mods add go into the dock at the bottom, after the game's own apps. The sixth is the UI size: one setting draws the windows and panels of every mod that supports it bigger or smaller.
+Right now the Toolkit gives mods seven things. The first is toasts. A toast is a short notice that appears next to the phone, defense and other tool buttons, stays a few seconds, and goes away by itself. Mods that use the Toolkit show their messages this way instead of each drawing their own. The second is live settings: mods can apply a changed setting while you play, so a change in the Mod Manager works without restarting the game. The third is the inventory's "Mods" dropdown, one button in the inventory toolbar that holds the actions mods add there. The fourth keeps the HUD's tool buttons tidy: once mods have added enough buttons that the column would run past four, they are laid out in columns of four instead. The fifth tidies the phone: apps that mods add go into the dock at the bottom, after the game's own apps. The sixth is the UI size: one setting draws the windows and panels of every mod that supports it bigger or smaller. The seventh keeps your typing out of the game: while you type in a mod's text box, the keys do not open panels or move the camera.
 
 ## Features
 
@@ -18,6 +18,7 @@ Right now the Toolkit gives mods six things. The first is toasts. A toast is a s
 - **Tidy phone apps**: apps that mods add to the phone go into the dock at the bottom, after the game's own, in rows of four, instead of stacking in the middle of the home screen.
 - **Bigger or smaller mod windows**: `UiScale` draws mod windows, panels and toasts from 75% to 200% of their size. A change shows at once, without a restart. A window that would run off the screen is drawn as big as still fits. A mod with a UI size setting of its own uses that one when it is set.
 - **Smaller or bigger tool buttons**: `HudButtonSize` draws the HUD's tool buttons from 50% to 150% of the game's size, 80% unless you change it.
+- **Typing stays in the box**: while a text box in any mod's window has the keyboard, the game's hotkeys and the camera keys are off, so typing "p" in a search box does not take a photo and WASD does not move the camera. Click the world, or anywhere outside the box, to give the keys back to the game.
 - **Survives reloads**: if the game's web interface reloads, the toasts on screen come back with the time they had left.
 
 The Toolkit adds nothing to your save and does not edit game files.
@@ -218,6 +219,20 @@ uiSize(column, { fit: page, pageFits: true, onZoom: function () { applyViewportF
 - `ExiledUi.scale` is the size now as a factor (1.25 at 125%).
 - A mod with a UI size setting of its own passes its name as `mod` with every panel (`uiSize(root, { mod: 'FarmHub' })`) and, when the setting loads or changes, calls `ExiledToolkit.ModUiSize.Set("FarmHub", percent)` from C# (Toolkit 0.11.0 and newer). 75 to 200 draws that mod's panels at that size whatever `UiScale` is; 0 has them follow `UiScale` again. The name is letters, digits, dots, dashes and underscores. With an older Toolkit the call throws `MissingMethodException`, so keep it behind the same guard as the rest of the optional Toolkit calls. `ExiledUi.scaleOf(name)` is the size that mod's panels are drawn at now.
 - `ExiledUi.zoomAt(el)` is the zoom the Toolkit draws `el` at through the panels it sits in, and 1 outside any. The page's own zoom is not counted. A tooltip drawn on the page's body for a row inside a panel can take this zoom to match the panel. Read it again on each draw, since the size can change while the tooltip shows.
+
+### Typing
+
+While any text box in any page has the keyboard, the Toolkit stops the game's hotkeys and the camera keys by itself, so a mod's search box needs nothing for that. A mod that reads its own hotkeys with `Input.GetKeyDown` skips them while `ExiledToolkit.Typing.IsActive` is true (Toolkit 0.12.0 and newer). Read it on the game's main thread. With an older Toolkit the read throws `MissingMethodException`, so keep it behind the same guard as the rest of the optional Toolkit calls:
+
+```csharp
+[MethodImpl(MethodImplOptions.NoInlining)]
+private static bool IsTypingUnguarded() => ExiledToolkit.Typing.IsActive;
+
+if (Input.GetKeyDown(Key) && !(IsToolkitLoaded && IsTypingUnguarded())) Toggle();
+```
+
+- A box counts while it has focus: a textarea, a contenteditable element, or an input of type text, search, number, email, password, url or tel that is not disabled or read-only. Checkboxes, sliders and buttons do not count.
+- A box that is removed or hidden stops counting within a quarter of a second. A click on the world (not on any UI) takes the keyboard from the box.
 
 ## Build
 

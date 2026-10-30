@@ -26,6 +26,8 @@
     <EmbeddedResource Include="..\..\src\ExiledToolkit\menu.js" LogicalName="ExiledToolkit.menu.js" Link="menu.js" />
     <EmbeddedResource Include="MenuFake.js" LogicalName="ExiledToolkit.Tests.MenuFake.js" />
     <EmbeddedResource Include="MenuV1.js" LogicalName="ExiledToolkit.Tests.MenuV1.js" />
+    <EmbeddedResource Include="..\..\src\ExiledToolkit\typing.js" LogicalName="ExiledToolkit.typing.js" Link="typing.js" />
+    <EmbeddedResource Include="TypingFake.js" LogicalName="ExiledToolkit.Tests.TypingFake.js" />
   </ItemGroup>
 
   <ItemGroup>

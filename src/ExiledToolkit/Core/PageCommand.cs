@@ -5,7 +5,7 @@ using System.Globalization;
 namespace ExiledToolkit.Core;
 
 /// <summary>
-/// A message from toasts.js, sent as <c>slmod|toolkit|verb|args</c> through the web view. Anything else, or a verb
+/// A message from toasts.js or typing.js, sent as <c>slmod|toolkit|verb|args</c> through the web view. Anything else, or a verb
 /// with bad arguments, parses to Unknown so it can be logged rather than acted on.
 /// </summary>
 internal abstract record PageCommand
@@ -37,6 +37,9 @@ internal abstract record PageCommand
     /// <summary>Where the boxes are now, as fractions of the page, top-left origin.</summary>
     public sealed record Rects(IReadOnlyList<NormalRect> Boxes) : PageCommand;
 
+    /// <summary>A text box in some page took the keyboard (true) or no box has it any more (false).</summary>
+    public sealed record Typing(bool IsTyping) : PageCommand;
+
     public sealed record Unknown(string Text) : PageCommand;
 
     public static bool IsOurs(string? message) => message is not null && message.StartsWith(Prefix, StringComparison.Ordinal);
@@ -55,6 +58,7 @@ internal abstract record PageCommand
             ("click", 2) when TryId(parts[1], out var id) => new Click(id),
             ("gone", 4) when TryId(parts[1], out var id) && TryCount(parts[2], out var count) && TryHowGone(parts[3], out var isClosed) => new Gone(id, count, isClosed),
             ("rects", 2) when TryRects(parts[1], out var boxes) => new Rects(boxes),
+            ("typing", 2) when parts[1] is "1" or "0" => new Typing(parts[1] == "1"),
             _ => new Unknown(message),
         };
     }
