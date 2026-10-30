@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.13.1
+
+- The HUD's tool buttons sit a little higher, so the bottom row no longer covers the quick actions bar above the action queue. This holds at every `HudButtonSize`.
+- Made for Survival Log 1.1.20151.
+
 ## 0.13.0
 
 - The HUD's tool buttons have a new look: the buttons mods add there and the game's own phone and bag. Pick it with `HudButtonStyle`: Lamplight (dark brown, each tool's icon in its own colour, the default), FieldKit (olive canvas with stitching, buttons press like keys), Signal (each tool lit in its own colour) or Classic (the game's own grey buttons).

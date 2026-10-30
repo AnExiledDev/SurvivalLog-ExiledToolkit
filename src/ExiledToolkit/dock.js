@@ -25,6 +25,10 @@
   var HUD_PAGES = /CoreUI[01]\.html/;
   // The HUD button size as a factor, as last sent; 1 is the game's own size.
   var buttonZoom = 1;
+  // How far above the screen's bottom the column's lowest button sits, in page pixels at every button size. The game
+  // pins the column at bottom:90px, but the button size's zoom scales that too (72px at 80%), which drops the bottom
+  // row over the game's quick actions bar; dividing by the zoom keeps it put, a little above where the game had it.
+  var BOTTOM_PX = 96;
   // The grid keeps the column's own gap between rows and columns. A hovered button rises above its neighbours, so its
   // tip, which opens to the right, is not drawn under the next column's buttons. The display rule stays without
   // !important: two classes already beat the game's flex rule, and the game hides the column in plan mode with an
@@ -94,6 +98,7 @@
     var buttons = dockOrder(column);
 
     setStyle(column, 'zoom', buttonZoom === 1 ? '' : String(buttonZoom));
+    setStyle(column, 'bottom', Math.round(BOTTOM_PX / buttonZoom * 100) / 100 + 'px');
 
     if (buttons.length <= ROWS) {
       release(column);

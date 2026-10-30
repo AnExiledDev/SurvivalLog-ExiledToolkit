@@ -136,6 +136,34 @@ public class DockTests
         Assert.Equal("0.8", Zoom());
     }
 
+    private string Bottom() => _engine.Evaluate("String(column.style.bottom || '')").AsString();
+
+    /// <summary>
+    /// The column's zoom scales its bottom offset too, so the offset is set to cancel it out: the lowest button sits the
+    /// same height above the screen's bottom (96 page pixels) at every size and never drops onto the quick actions bar.
+    /// </summary>
+    [Theory]
+    [InlineData(80, "120px")]
+    [InlineData(100, "96px")]
+    [InlineData(120, "80px")]
+    public void The_column_sits_96_pixels_up_at_every_button_size(int percent, string bottom)
+    {
+        AddModButtons();
+
+        SetSize(percent);
+
+        Assert.Equal(bottom, Bottom());
+    }
+
+    [Fact]
+    public void The_games_own_column_of_four_or_fewer_buttons_is_lifted_too()
+    {
+        SetSize(80);
+
+        Assert.False(IsDocked());
+        Assert.Equal("120px", Bottom());
+    }
+
     [Theory]
     [InlineData(10, "0.5")]
     [InlineData(400, "1.5")]
