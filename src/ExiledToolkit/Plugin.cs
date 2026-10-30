@@ -15,13 +15,14 @@ public sealed class Plugin : BasePlugin
 {
     /// <summary>For <c>[BepInDependency(ExiledToolkit.Plugin.Guid)]</c> in a mod that shows toasts.</summary>
     public const string Guid = "com.dev.survivallog.exiledtoolkit";
-    public const string Version = "0.12.0";
+    public const string Version = "0.13.0";
 
     public override void Load()
     {
         var entries = BindToastSettings();
         var uiScale = BindUiScale();
         var buttonSize = BindButtonSize();
+        var look = BindLook();
         var log = new ToolkitLog(Log, Path.Combine(Paths.BepInExRootPath, "exiled-toolkit.log"));
         var harmony = new Harmony(Guid);
         var clock = Stopwatch.StartNew();
@@ -46,6 +47,16 @@ public sealed class Plugin : BasePlugin
         LiveSettings.Watch(() => ApplyToastSettings(center, entries.Read(), log.Write), entries.All);
         LiveSettings.Watch(uiScale, percent => ApplyUiScale(percent, log.Write));
         LiveSettings.Watch(buttonSize, percent => ApplyButtonSize(percent, log.Write));
+        LiveSettings.Watch(() => ApplyLook(look, log.Write), look.Style, look.IconColours, look.Extras);
+    }
+
+    private static void ApplyLook(LookEntries look, Action<string> log)
+    {
+        var style = HudStyle.KnownStyle(look.Style.Value);
+        var iconColours = HudStyle.KnownIconColours(look.IconColours.Value);
+
+        ToastTicker.Dock?.SetLook(style, iconColours, look.Extras.Value);
+        log($"HUD buttons in the {style} style, icon colours {iconColours}, extras {look.Extras.Value}");
     }
 
     private static void ApplyButtonSize(int percent, Action<string> log)
@@ -65,6 +76,15 @@ public sealed class Plugin : BasePlugin
             "How big the buttons in the HUD's tool column are drawn, in percent, from " + ButtonSize.Min + " to " + ButtonSize.Max + ": the buttons mods add there and the game's own phone and bag buttons beside them. 100 is the game's size. A change shows at once. Default: " + ButtonSize.Default + ".\n" +
             "HUD 工具栏中按钮的显示大小（百分比），范围 " + ButtonSize.Min + " 到 " + ButtonSize.Max + "：包括模组添加的按钮，以及旁边游戏自带的手机和背包按钮。100 为游戏原本的大小。改动会立即生效。默认 " + ButtonSize.Default + "。",
             new AcceptableValueRange<int>(ButtonSize.Min, ButtonSize.Max)));
+
+    private sealed record LookEntries(ConfigEntry<string> Style, ConfigEntry<string> IconColours, ConfigEntry<bool> Extras);
+
+    private LookEntries BindLook() => new(
+        Config.Bind("Interface", "HudButtonStyle", HudStyle.DefaultStyle, new ConfigDescription(
+            HudStyle.StyleDescription, new AcceptableValueList<string>(HudStyle.Styles), HudStyle.StyleTags())),
+        Config.Bind("Interface", "HudIconColours", HudStyle.DefaultIconColours, new ConfigDescription(
+            HudStyle.IconColoursDescription, new AcceptableValueList<string>(HudStyle.IconColourChoices), HudStyle.IconColourTags)),
+        Config.Bind("Interface", "HudButtonExtras", HudStyle.DefaultExtras, HudStyle.ExtrasDescription));
 
     private ConfigEntry<int> BindUiScale() =>
         Config.Bind("Interface", "UiScale", UiSize.Default, new ConfigDescription(

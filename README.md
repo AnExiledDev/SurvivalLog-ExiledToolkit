@@ -18,6 +18,7 @@ Right now the Toolkit gives mods seven things. The first is toasts. A toast is a
 - **Tidy phone apps**: apps that mods add to the phone go into the dock at the bottom, after the game's own, in rows of four, instead of stacking in the middle of the home screen.
 - **Bigger or smaller mod windows**: `UiScale` draws mod windows, panels and toasts from 75% to 200% of their size. A change shows at once, without a restart. A window that would run off the screen is drawn as big as still fits. A mod with a UI size setting of its own uses that one when it is set.
 - **Smaller or bigger tool buttons**: `HudButtonSize` draws the HUD's tool buttons from 50% to 150% of the game's size, 80% unless you change it.
+- **A new look for the tool buttons**: `HudButtonStyle` draws the HUD's tool buttons, the mods' and the game's phone and bag, as Lamplight (dark brown, each tool's icon in its own colour), FieldKit (olive canvas that presses like a key), Signal (each tool lit in its own colour) or Classic (the game's own). The phone, the bag and the buttons of Trap Hub, Package Bank, Field Guide, Farm Hub, Defense Manager, Machines, Power Manager and Storage Hub get new icons. `HudIconColours` and `HudButtonExtras` fine-tune it. A change shows at once.
 - **Typing stays in the box**: while a text box in any mod's window has the keyboard, the game's hotkeys and the camera keys are off, so typing "p" in a search box does not take a photo and WASD does not move the camera. Click the world, or anywhere outside the box, to give the keys back to the game.
 - **Survives reloads**: if the game's web interface reloads, the toasts on screen come back with the time they had left.
 
@@ -27,6 +28,7 @@ The Toolkit adds nothing to your save and does not edit game files.
 
 - With no window open, a game button under a toast cannot be clicked until the toast goes. Next to the HUD that is empty space. Move the toasts with `Position` if they are in your way.
 - Over an open window a toast cannot be hovered to hold it or clicked, since its clicks go to the window. It runs out on its usual time.
+- A button from a mod the Toolkit does not know keeps its own icon, tinted amber, in the new button styles.
 - `UiScale` changes only what mods draw. The game's own screens keep their size, and a mod's windows follow the setting only once that mod supports it.
 
 ## Requirements
@@ -183,6 +185,8 @@ A mod that adds a button to the HUD's tool column (`.vertical-tools` in CoreUI1 
 Nothing else is needed, and the mark does nothing without the Toolkit, so a mod can keep the Toolkit optional.
 
 The player's `HudButtonSize` zooms the whole column, the game's buttons with the mods', so a button needs nothing more to follow it.
+
+The player's `HudButtonStyle` restyles every `.ui-btn` in the column, so a button that uses the game's `ui-btn icon-sq` classes takes the style with nothing more. The Toolkit marks the buttons it has an icon for with `data-etk-ic="<tool>"`, hides their `svg.icon-svg` and adds its own `svg.etk-ic` beside it; it knows the buttons by their classes (`th-hud-btn`, `pb-hud-btn`, `fg-hud-btn`, `fh-hud-btn`, `dm-hud-btn`, `mso-hud-btn`, `pm-hud-btn`, `sh-hud-btn`). Any other button keeps its own svg, filled with the style's amber, so keep its fill at `currentColor`. Badges named `th-hud-badge`, `fh-hud-badge`, `mso-hud-needs` and `mso-hud-working` take the stamped look of the extras.
 
 ### Phone apps
 

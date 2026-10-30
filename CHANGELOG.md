@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.13.0
+
+- The HUD's tool buttons have a new look: the buttons mods add there and the game's own phone and bag. Pick it with `HudButtonStyle`: Lamplight (dark brown, each tool's icon in its own colour, the default), FieldKit (olive canvas with stitching, buttons press like keys), Signal (each tool lit in its own colour) or Classic (the game's own grey buttons).
+- New icons for the phone, the bag and the buttons of Trap Hub, Package Bank, Field Guide, Farm Hub, Defense Manager, Machines, Power Manager and Storage Hub. Other buttons keep their own icon.
+- `HudIconColours` draws every icon in one colour instead of one per tool, and `HudButtonExtras` gives Lamplight and Signal the FieldKit touches: keys that press down, a striped edge on a button that needs you, stamped badges and paper tips.
+- A change to any of the three shows at once.
+- Made for Survival Log 1.1.20151.
+
 ## 0.12.0
 
 - While you type in a mod's text box, such as a search box, the keys no longer reach the game: letters no longer open panels or take a photo, and WASD no longer moves the camera. This works for every mod's boxes without the mod doing anything. Clicking the world leaves the box.

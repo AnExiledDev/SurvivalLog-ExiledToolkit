@@ -8,6 +8,9 @@ Settings live in `BepInEx\config\com.dev.survivallog.exiledtoolkit.cfg`, created
 | --- | --- | --- |
 | `UiScale` | `100` | How big mod windows, panels and toasts are drawn, in percent, from 75 to 200. A change shows at once in every mod that supports it. A window that would no longer fit on the screen is drawn as big as still fits, but never smaller than at 100, so a large one such as the Mods screen grows only a little past about 110. A mod with a UI size setting of its own uses that one when it is set. |
 | `HudButtonSize` | `80` | How big the column of tool buttons on the left of the HUD is drawn, in percent of the game's size, from 50 to 150. It covers the buttons mods add and the game's own phone and bag. 100 is the game's size. |
+| `HudButtonStyle` | `Lamplight` | How the tool buttons on the left of the HUD look, the buttons mods add and the game's own phone and bag. `Lamplight`: dark brown buttons with each tool's icon in its own colour. `FieldKit`: olive canvas buttons with stitching that press down like keys. `Signal`: dark buttons with each tool's icon lit in its own colour. `Classic`: the game's own grey buttons and icons. |
+| `HudIconColours` | `PerTool` | `PerTool` gives each tool's icon its own colour. `One` draws every icon amber in Lamplight and bone white in FieldKit. Signal always uses a colour per tool, and Classic keeps the game's icons. |
+| `HudButtonExtras` | `true` | Gives Lamplight and Signal the FieldKit touches: buttons that press down like keys, a striped edge on a button that needs you, stamped number badges and paper tags for the tips. FieldKit always has them and Classic never does. |
 
 `UiScale` changes only what mods draw. The game's own screens keep their size.
 
