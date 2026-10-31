@@ -19,6 +19,7 @@ Exiled's Toolkit is the shared part of my Survival Log mods. Right now it gives 
 [*][b]Smaller or bigger tool buttons[/b]: the HudButtonSize setting draws the HUD's tool buttons from 50% to 150% of the game's size, 80% unless you change it. 100 is the game's size.[/*]
 [*][b]A new look for the tool buttons[/b]: the HudButtonStyle setting draws the HUD's tool buttons, the mods' and the game's phone and bag, as Lamplight (dark brown, each tool's icon in its own colour), FieldKit (olive canvas that presses like a key), Signal (each tool lit in its own colour) or Classic (the game's own). The phone, the bag and the buttons of the Exiled mods get new icons. HudIconColours and HudButtonExtras fine-tune it.[/*]
 [*][b]Tidy phone apps[/b]: apps that mods add to the phone go into the dock at the bottom, after the game's own, in rows of four.[/*]
+[*][b]Pause menu that always fits[/b]: buttons mods add to the pause menu and title screen look like the game's own. With more than fit, the menu's buttons and text shrink just enough that Save & Exit stays on screen.[/*]
 [*][b]Bigger or smaller mod windows[/b]: the UiScale setting draws mod windows, panels and toasts from 75% to 200% of their size. A change shows at once, without a restart. A window that would run off the screen is drawn as big as still fits.[/*]
 [/list]
 
@@ -81,6 +82,7 @@ Exiled's Toolkit 是我的 Survival Log 模组共用的部分。目前它为这�
 [*][b]工具按钮大小[/b]：HudButtonSize 设置把 HUD 左侧的工具按钮按游戏原尺寸的 50% 到 150% 绘制，默认 80%。设为 100 即为游戏原尺寸。[/*]
 [*][b]工具按钮新样式[/b]：HudButtonStyle 设置决定 HUD 工具按钮（模组的按钮以及游戏的手机和背包）的样式：灯火（深棕色，每个工具的图标各有颜色）、野外装备（橄榄色帆布，按下时像按键一样下沉）、信号灯（每个工具以各自的颜色发光）或经典（游戏原本的样式）。手机、背包和 Exiled 系列模组的按钮会换上新图标。HudIconColours 和 HudButtonExtras 可以进一步调整。[/*]
 [*][b]手机应用整齐排列[/b]：模组加到手机上的应用放进底部的程序栏，排在游戏自带应用之后，每行四个。[/*]
+[*][b]暂停菜单总能放下[/b]：模组加到暂停菜单和标题画面的按钮与游戏自带的按钮外观一致。按钮多到放不下时，菜单的按钮和文字会缩小到刚好能放下，「保存并退出」始终留在屏幕上。[/*]
 [*][b]模组窗口可放大缩小[/b]：UiScale 设置可以把模组的窗口、面板和通知按 75% 到 200% 显示。改动立即生效，无需重启。放大后会超出屏幕的窗口，会以能完整显示的最大尺寸显示。[/*]
 [/list]
 

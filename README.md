@@ -2,7 +2,7 @@
 
 A shared library for my Survival Log mods. On its own it does nothing you can see. Install it when another mod says it needs it.
 
-Right now the Toolkit gives mods seven things. The first is toasts. A toast is a short notice that appears next to the phone, defense and other tool buttons, stays a few seconds, and goes away by itself. Mods that use the Toolkit show their messages this way instead of each drawing their own. The second is live settings: mods can apply a changed setting while you play, so a change in the Mod Manager works without restarting the game. The third is the inventory's "Mods" dropdown, one button in the inventory toolbar that holds the actions mods add there. The fourth keeps the HUD's tool buttons tidy: once mods have added enough buttons that the column would run past four, they are laid out in columns of four instead. The fifth tidies the phone: apps that mods add go into the dock at the bottom, after the game's own apps. The sixth is the UI size: one setting draws the windows and panels of every mod that supports it bigger or smaller. The seventh keeps your typing out of the game: while you type in a mod's text box, the keys do not open panels or move the camera.
+Right now the Toolkit gives mods eight things. The first is toasts. A toast is a short notice that appears next to the phone, defense and other tool buttons, stays a few seconds, and goes away by itself. Mods that use the Toolkit show their messages this way instead of each drawing their own. The second is live settings: mods can apply a changed setting while you play, so a change in the Mod Manager works without restarting the game. The third is the inventory's "Mods" dropdown, one button in the inventory toolbar that holds the actions mods add there. The fourth keeps the HUD's tool buttons tidy: once mods have added enough buttons that the column would run past four, they are laid out in columns of four instead. The fifth tidies the phone: apps that mods add go into the dock at the bottom, after the game's own apps. The sixth is the UI size: one setting draws the windows and panels of every mod that supports it bigger or smaller. The seventh keeps your typing out of the game: while you type in a mod's text box, the keys do not open panels or move the camera. The eighth is buttons in the game's pause menu and title screen: mods add them through the Toolkit, and the menu shrinks its buttons and text just enough to keep every one on the screen.
 
 ## Features
 
@@ -20,6 +20,7 @@ Right now the Toolkit gives mods seven things. The first is toasts. A toast is a
 - **Smaller or bigger tool buttons**: `HudButtonSize` draws the HUD's tool buttons from 50% to 150% of the game's size, 80% unless you change it.
 - **A new look for the tool buttons**: `HudButtonStyle` draws the HUD's tool buttons, the mods' and the game's phone and bag, as Lamplight (dark brown, each tool's icon in its own colour), FieldKit (olive canvas that presses like a key), Signal (each tool lit in its own colour) or Classic (the game's own). The phone, the bag and the buttons of Trap Hub, Package Bank, Field Guide, Farm Hub, Defense Manager, Machines, Power Manager and Storage Hub get new icons. `HudIconColours` and `HudButtonExtras` fine-tune it. A change shows at once.
 - **Typing stays in the box**: while a text box in any mod's window has the keyboard, the game's hotkeys and the camera keys are off, so typing "p" in a search box does not take a photo and WASD does not move the camera. Click the world, or anywhere outside the box, to give the keys back to the game.
+- **Pause menu that always fits**: buttons mods add to the pause (Esc) menu and the title screen look like the game's own. When there are more than the screen has room for, the whole menu's buttons, gaps and text shrink just enough that Save & Exit stays on screen, down to half size; past that the button list scrolls. A menu that already fits keeps the game's size.
 - **Survives reloads**: if the game's web interface reloads, the toasts on screen come back with the time they had left.
 
 The Toolkit adds nothing to your save and does not edit game files.
@@ -177,6 +178,31 @@ ModsMenu.Add(new ModsMenuEntry("mymod.sortall", "Sort all", SortAll)
 - `IsShown` is asked on the main thread a few times a second; leave it out to always list the entry. One that throws counts as hidden and is logged once. The dropdown itself shows only on the inventory's item tab.
 - The click action runs on the main thread after the menu has closed. One that throws is logged to `BepInEx\exiled-toolkit.log`.
 - While the menu is open the game's hotkeys are held back, and Esc closes the menu.
+
+### Pause menu and title screen
+
+`GameMenu` puts a button in the game's pause (Esc) menu or on its title screen, drawn like the game's own. The Toolkit keeps it there when the game redraws the menu and shrinks the menu's buttons, gaps and text to fit the screen however many buttons mods add (to half size at most; past that the list scrolls).
+
+```csharp
+using ExiledToolkit;
+
+GameMenu.Add(new GameMenuButton("mymod.backup", "Back up now", GameMenuPlace.PauseBottom, BackUpNow)
+{
+    ChineseLabel = "立即备份",
+    Order = 200,
+    Accent = "#8fc7bf",
+    IsShown = () => IsInRun(),
+});
+```
+
+- `PauseTop` goes right after the game's Settings, `PauseBottom` at the bottom just above Restart (when the game shows it) and Save & Exit, and `Title` right before the title screen's Exit.
+- The id is unique across mods: 1 to 64 letters, digits, `.`, `_` or `-`. Adding a button with an id already in use replaces it; `GameMenu.Remove(id)` takes it out.
+- The label shows in the game's language; empty Chinese text shows the English.
+- Buttons in one place sort by `Order`, then id. Mod Manager uses 100 on the title screen and at the top, Save Backups 200 and 210 at the bottom, and New Loop Plus 900, so its button sits last above Save & Exit.
+- `Accent` colours the button's left edge (the bar, on the title screen) as `#rgb` or `#rrggbb`; leave it empty for the game's.
+- `IsShown` is asked on the main thread a few times a second; leave it out to always show the button. One that throws counts as hidden and is logged once.
+- The click action runs on the main thread, with the menu still open. On the title screen it runs after the game's own click animation. One that throws is logged to `BepInEx\exiled-toolkit.log`.
+- Never add your own nodes to these two menus: they would not count when the Toolkit fits the menu.
 
 ### HUD buttons
 

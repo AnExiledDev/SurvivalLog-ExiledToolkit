@@ -28,6 +28,9 @@ public sealed class ToastTicker : MonoBehaviour
     /// <summary>The typing watch runs in the root document as well, so it is put back with the toasts.</summary>
     internal static WebPage? Typing;
     internal static MenuRunner? Menu;
+
+    /// <summary>The pause menu and title screen buttons, which need neither the toasts nor a run.</summary>
+    internal static GameMenuRunner? GameMenu;
     internal static Action<string> Log = _ => { };
 
     private static readonly HashSet<string> ReportedFailures = new();
@@ -83,6 +86,7 @@ public sealed class ToastTicker : MonoBehaviour
         try
         {
             Menu?.Tick(Time.realtimeSinceStartup);
+            GameMenu?.Tick(Time.realtimeSinceStartup);
         }
         catch (Exception ex)
         {

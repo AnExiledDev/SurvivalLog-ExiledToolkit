@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.14.0
+
+- Fixed: with several mods adding buttons to the pause (Esc) menu, the bottom buttons, Save & Exit among them, ran off the screen. The menu now shrinks its buttons, gaps and text just enough that every button fits, down to half size; past that the button list scrolls. A menu that already fits keeps the game's size.
+- Mods now add their pause menu and title screen buttons through the Toolkit, so they all fit together and look like the game's own.
+- Made for Survival Log 1.1.20151.
+
 ## 0.13.1
 
 - The HUD's tool buttons sit a little higher, so the bottom row no longer covers the quick actions bar above the action queue. This holds at every `HudButtonSize`.

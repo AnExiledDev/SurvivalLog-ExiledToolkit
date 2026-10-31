@@ -15,7 +15,7 @@ public sealed class Plugin : BasePlugin
 {
     /// <summary>For <c>[BepInDependency(ExiledToolkit.Plugin.Guid)]</c> in a mod that shows toasts.</summary>
     public const string Guid = "com.dev.survivallog.exiledtoolkit";
-    public const string Version = "0.13.1";
+    public const string Version = "0.14.0";
 
     public override void Load()
     {
@@ -41,6 +41,7 @@ public sealed class Plugin : BasePlugin
         ToastTicker.Ui = new UiSizePage(new WebPage(log.Write, "ExiledToolkit.ui.js", "", "UI size"));
         ToastTicker.Typing = new WebPage(log.Write, "ExiledToolkit.typing.js", "", "typing watch");
         ToastTicker.Menu = new MenuRunner(new WebPage(log.Write, "ExiledToolkit.menu.js", MenuScript.Probe, "Mods menu"), log.Write);
+        ToastTicker.GameMenu = new GameMenuRunner(new WebPage(log.Write, "ExiledToolkit.gamemenu.js", GameMenuScript.Probe, "game menu buttons"), log.Write);
         ToastTicker.Log = log.Write;
 
         AddComponent<ToastTicker>();
