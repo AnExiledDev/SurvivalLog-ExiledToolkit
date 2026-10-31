@@ -205,6 +205,33 @@ function fitOf(doc) {
   return parseFloat(doc.documentElement.style.getPropertyValue('--slet-fit')) || 1;
 }
 
+// The game animates its buttons' sizes (the pause buttons have `transition: all 0.2s`, the title bars
+// `transition: all 0.3s`), so right after the fit changes, a button still measures the size it was drawn at on the
+// last frame, as Chromium's do, unless a style the page added turns transitions off for it. frame() draws a frame.
+function buttonFitOf(el) {
+  var doc = el.ownerDocument;
+
+  if (doc.drawnFit === undefined || transitionsOff(el)) return fitOf(doc);
+
+  return doc.drawnFit;
+}
+
+function transitionsOff(el) {
+  var style = el.ownerDocument.getElementById('slet-gm-style');
+
+  if (!style || !/\.slet-measure \*\{transition:none/.test(style.textContent)) return false;
+
+  for (var node = el.parentNode; node && node.classList; node = node.parentNode) {
+    if (has(node, 'slet-measure')) return true;
+  }
+
+  return false;
+}
+
+function frame() {
+  docs.forEach(function (doc) { doc.drawnFit = fitOf(doc); });
+}
+
 function has(el, name) {
   return el.classList.contains(name);
 }
@@ -243,10 +270,10 @@ function heightOf(el) {
   var f = fitOf(el.ownerDocument);
 
   if (!isShown(el)) return 0;
-  if (has(el, 'main-btn')) return Math.ceil(60 * f);
+  if (has(el, 'main-btn')) return Math.ceil(60 * buttonFitOf(el));
   if (has(el, 'menu-header')) return Math.ceil(106 * f);
   if (has(el, 'icon-bar')) return Math.ceil(25 * f) + 46;
-  if (has(el, 'menu-item')) return Math.ceil(34 * f) + 10;
+  if (has(el, 'menu-item')) return Math.ceil(34 * buttonFitOf(el)) + 10;
   if (has(el, 'header')) return Math.ceil(196 * f);
   if (has(el, 'menu-list') || has(el, 'menu')) return grownHeight(el);
 
@@ -318,6 +345,8 @@ Object.defineProperty(Element.prototype, 'offsetTop', {
 
 // How tall the panel's content is at the current fit, as a person looking at the screen would see it.
 function drawnHeight(panel) {
+  frame();
+
   var last = panel.lastElementChild;
   var reads = layoutReads;
   var height = last.offsetTop + last.offsetHeight + padOf(panel);

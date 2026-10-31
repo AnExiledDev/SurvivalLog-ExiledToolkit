@@ -20,7 +20,8 @@
 
   // Every size the menu is drawn with, times --slet-fit. At 1 each is the game's own value, so a menu that already
   // fits looks exactly like the game's. slet-measure stops the button list from stretching to the bottom while the
-  // fit measures how tall the menu wants to be; slet-scroll is the last resort, when even half size does not fit.
+  // fit measures how tall the menu wants to be, and stops the game's size animations, which would otherwise have the
+  // fit measure the sizes from before it changed them; slet-scroll is the last resort, when even half size does not fit.
   // slet-sink takes the game's "sit at the bottom" spacing from Restart or Save & Exit, so the mod buttons placed
   // just above those sit at the bottom with them.
   var PAUSE_CSS = [
@@ -33,6 +34,7 @@
     '.wishlist-container{margin:calc(20px * var(--slet-fit)) 0}',
     '.btn-exit{margin-bottom:calc(20px * var(--slet-fit))}',
     '.icon-bar{padding-top:calc(25px * var(--slet-fit))}',
+    '.slet-measure *{transition:none!important}',
     '.slet-measure .menu-list{flex-grow:0}',
     '.slet-scroll .menu-list{overflow-y:auto;min-height:0;flex-shrink:1}',
     '.menu-list .slet-sink{margin-top:auto}',
@@ -53,6 +55,7 @@
     '.bar{height:calc(34px * var(--slet-fit))}',
     '.menu-item.primary .bar{height:calc(44px * var(--slet-fit))}',
     '.menu-item.locked .bar, .menu-item.locked:hover .bar{height:calc(34px * var(--slet-fit))}',
+    '.slet-measure *{transition:none!important}',
     '.slet-scroll .menu{overflow-y:auto;min-height:0;flex-shrink:1}',
     '.slet-gm .menu-text{white-space:nowrap}',
     '.menu-item.slet-accent .bar{background:var(--slet-accent)}'
@@ -355,6 +358,8 @@
     var size = 1;
     var isTooTall = false;
 
+    // A list left scrolling from the last fit is only as tall as the screen, so it would measure as fitting.
+    panel.classList.remove('slet-scroll');
     panel.classList.add('slet-measure');
     setFit(doc, 1);
 
@@ -380,8 +385,10 @@
       }
     }
 
-    panel.classList.remove('slet-measure');
+    // The size is laid out before the animations come back, so they have no change left to animate.
     setFit(doc, size);
+    natural(panel, win);
+    panel.classList.remove('slet-measure');
     setClass(panel, 'slet-scroll', isTooTall);
   }
 

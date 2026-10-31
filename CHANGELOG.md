@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.14.1
+
+- Fixed: the pause (Esc) menu could still run off the bottom of the screen. When a button came or went, or the window changed size, the menu could go back to full size. It now stays fitted every time.
+- Made for Survival Log 1.1.20151.
+
 ## 0.14.0
 
 - Fixed: with several mods adding buttons to the pause (Esc) menu, the bottom buttons, Save & Exit among them, ran off the screen. The menu now shrinks its buttons, gaps and text just enough that every button fits, down to half size; past that the button list scrolls. A menu that already fits keeps the game's size.

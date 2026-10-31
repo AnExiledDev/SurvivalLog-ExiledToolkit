@@ -188,6 +188,7 @@ public class GameMenuPageTests
         var size = Number("fit(menu)");
 
         Assert.InRange(size, 0.5, 0.99);
+        Assert.False(Is("menu.querySelector('.left-panel').classList.contains('slet-scroll')"), "8 buttons fit without scrolling");
         Assert.True(Number("drawnHeight(menu.querySelector('.left-panel'))") <= 1080, "every button should be on screen");
 
         // Just enough: a step bigger would not fit.
@@ -236,6 +237,52 @@ public class GameMenuPageTests
 
         Assert.True(Number("fit(menu)") < 1);
         Assert.True(Number("drawnHeight(menu.querySelector('.left-panel'))") <= 720);
+    }
+
+    // The game animates its buttons' sizes, so a fit that measured them mid-animation saw the shrunk menu as full
+    // size and put it back to full size, running Save & Exit off the screen.
+    [Fact]
+    public void A_menu_already_shrunk_still_fits_when_it_is_fitted_again()
+    {
+        Run("var menu = pauseMenu(false, 864);");
+        Run(GameMenuScript.Set(Enumerable.Range(0, 10).Select(i => Row("mod.b" + i, i < 1 ? "top" : "bottom", i))));
+        Run("frame();");
+        Run(GameMenuScript.Set(Enumerable.Range(0, 9).Select(i => Row("mod.b" + i, i < 1 ? "top" : "bottom", i))));
+
+        Assert.InRange(Number("fit(menu)"), 0.5, 0.99);
+        Assert.False(Is("menu.querySelector('.left-panel').classList.contains('slet-scroll')"), "9 buttons fit without scrolling");
+        Assert.True(Number("drawnHeight(menu.querySelector('.left-panel'))") <= 864, "every button should be on screen");
+    }
+
+    // A list scrolling from the last fit is only as tall as the screen, and measured that way it looked like it fit at
+    // full size.
+    [Fact]
+    public void A_menu_left_scrolling_stays_on_screen_when_it_is_fitted_again()
+    {
+        Run("var menu = pauseMenu(false, 864);");
+        Run(GameMenuScript.Set(Enumerable.Range(0, 14).Select(i => Row("mod.b" + i, i < 1 ? "top" : "bottom", i))));
+        Run("frame();");
+        Run(GameMenuScript.Set(Enumerable.Range(0, 13).Select(i => Row("mod.b" + i, i < 1 ? "top" : "bottom", i))));
+
+        Assert.Equal(0.5, Number("fit(menu)"));
+        Assert.True(Is("menu.querySelector('.left-panel').classList.contains('slet-scroll')"), "13 buttons still need the list to scroll");
+        Assert.True(Number("drawnHeight(menu.querySelector('.left-panel'))") <= 864, "the menu should stay on screen");
+    }
+
+    [Fact]
+    public void A_title_screen_already_shrunk_still_fits_when_it_is_fitted_again()
+    {
+        Run("var title = titleScreen(700);");
+        Set(Row("mm.mods", "title"));
+        Run("frame(); resize(title, 500);");
+
+        var size = Number("fit(title)");
+
+        Assert.True(Number("drawnHeight(title.querySelector('.container'))") <= 500, "every item should be on screen");
+
+        // Just enough: a step bigger would not fit.
+        Run($"title.documentElement.style.setProperty('--slet-fit', {size + 0.04});");
+        Assert.True(Number("drawnHeight(title.querySelector('.container'))") > 500, "the fit should not shrink more than it has to");
     }
 
     [Fact]
