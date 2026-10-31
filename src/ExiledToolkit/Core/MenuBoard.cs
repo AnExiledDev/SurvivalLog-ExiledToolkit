@@ -6,10 +6,10 @@ using System.Text.RegularExpressions;
 namespace ExiledToolkit.Core;
 
 /// <summary>One Mods menu entry as the page draws it, in both of the game's languages. Empty Chinese text falls back to the English.</summary>
-internal sealed record MenuItem(string Id, string Label, string ChineseLabel, string Title, string ChineseTitle, string Icon, int Order);
+internal sealed record MenuItem(string Id, string Label, string ChineseLabel, string Title, string ChineseTitle, string Icon, int Order, string Hotkey = "", bool Stations = false);
 
 /// <summary>A row as sent to the page: the text in the game's current language, and whether its mod wants it shown now.</summary>
-internal sealed record MenuRow(string Id, string Label, string Title, string Icon, int Order, bool IsWanted);
+internal sealed record MenuRow(string Id, string Label, string Title, string Icon, int Order, bool IsWanted, string Hotkey = "", bool Stations = false);
 
 /// <summary>
 /// The Mods menu entries mods registered, and what the page was last sent. The page gets the whole list again only
@@ -55,7 +55,7 @@ internal sealed class MenuBoard
         _items.Values
             .OrderBy(item => item.Order)
             .ThenBy(item => item.Id, StringComparer.Ordinal)
-            .Select(item => new MenuRow(item.Id, Pick(isChinese, item.ChineseLabel, item.Label), Pick(isChinese, item.ChineseTitle, item.Title), item.Icon, item.Order, isWanted(item.Id)))
+            .Select(item => new MenuRow(item.Id, Pick(isChinese, item.ChineseLabel, item.Label), Pick(isChinese, item.ChineseTitle, item.Title), item.Icon, item.Order, isWanted(item.Id), item.Hotkey, item.Stations))
             .ToList();
 
     private static string Pick(bool isChinese, string chinese, string english) => isChinese && chinese.Length > 0 ? chinese : english;

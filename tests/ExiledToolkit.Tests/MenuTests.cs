@@ -78,6 +78,29 @@ public class MenuTests
     }
 
     [Fact]
+    public void The_hotkey_and_the_station_screens_travel_to_the_page_and_a_new_key_resends_the_list()
+    {
+        _board.Put(Unpack with { Hotkey = "F7", Stations = true });
+        var first = _board.Pending(false, _ => true)!;
+        _board.Shown(first);
+
+        _board.Put(Unpack with { Hotkey = "F8", Stations = true });
+        var rekeyed = _board.Pending(false, _ => true);
+
+        Assert.Contains("\"hotkey\":\"F7\",\"stations\":true", first);
+        Assert.NotNull(rekeyed);
+        Assert.Contains("\"hotkey\":\"F8\"", rekeyed);
+    }
+
+    [Fact]
+    public void An_entry_that_does_not_say_stations_is_sent_as_inventory_only()
+    {
+        _board.Put(Loot);
+
+        Assert.Contains("\"hotkey\":\"\",\"stations\":false", _board.Pending(false, _ => true));
+    }
+
+    [Fact]
     public void A_reloaded_page_gets_the_whole_list_again()
     {
         _board.Put(Loot);

@@ -35,6 +35,15 @@ public sealed class ModsMenuEntry
     /// <summary>Rows sort by this, then by id. Storage Hub uses 100s, Unpack All 200.</summary>
     public int Order { get; init; } = 500;
 
+    /// <summary>The key shown at the right of the row, as given ("F7"); empty shows none. Add the entry again to change it.</summary>
+    public string Hotkey { get; init; } = "";
+
+    /// <summary>
+    /// Also list the entry in the Mods button of the station screens' bag panel (workbench, stove, drone hub and the
+    /// rest), not only on the inventory's item tab. IsShown still decides both.
+    /// </summary>
+    public bool Stations { get; init; }
+
     /// <summary>
     /// Asked on the main thread a few times a second; the entry is listed only while it returns true. Null lists it
     /// always. One that throws counts as false and is logged once. The menu itself only shows on the inventory's item tab.
@@ -63,7 +72,7 @@ public static class ModsMenu
 
         lock (Gate)
         {
-            Board.Put(new MenuItem(entry.Id, entry.Label, entry.ChineseLabel, entry.Title, entry.ChineseTitle, entry.Icon, entry.Order));
+            Board.Put(new MenuItem(entry.Id, entry.Label, entry.ChineseLabel, entry.Title, entry.ChineseTitle, entry.Icon, entry.Order, entry.Hotkey ?? "", entry.Stations));
             Entries[entry.Id] = entry;
         }
     }

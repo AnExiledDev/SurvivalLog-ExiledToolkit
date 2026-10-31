@@ -16,7 +16,7 @@
   // higher VERSION takes it over and keeps every entry and watcher; a lower or equal one only registers. A new version
   // may add methods and entry fields, never drop or change one, and its retire() keeps returning { entries, watchers }
   // in this shape. The game sends the page no keys, so each plugin calls window.__slmodmenu.close() itself on Esc.
-  // Carried by sl-exiled-toolkit, sl-storage-hub and sl-unpack-all.
+  // Carried by sl-exiled-toolkit; Storage Hub before 0.17.0 and Unpack All before 0.9.0 carry it too.
   //
   //   slmodMenu.add(entry)                  adds or replaces the entry with entry.id; false without an id or run
   //   slmodMenu.update(id, changes)         changes some of an entry's fields; false for an unknown id
@@ -521,8 +521,8 @@
   }
 
   // The whole list every time, so an entry the plugin dropped leaves the menu here too. The plugin's rule decides
-  // each entry, sent as wanted; the plugin sends the list again whenever that changes. These entries stay on the
-  // inventory screen, as they do not say stations.
+  // each entry, sent as wanted; the plugin sends the list again whenever that changes. An entry that says stations is
+  // also listed on the station screens' bag panel.
   function set(list) {
     var next = {};
 
@@ -530,7 +530,7 @@
       if (!row || typeof row.id !== 'string' || !row.id) return;
 
       next[row.id] = row;
-      slmodMenu.add({ id: row.id, label: String(row.label || ''), title: String(row.title || ''), icon: String(row.icon || ''), hotkey: '', order: Number(row.order) || 0, wanted: row.wanted === true, run: runner(row.id) });
+      slmodMenu.add({ id: row.id, label: String(row.label || ''), title: String(row.title || ''), icon: String(row.icon || ''), hotkey: String(row.hotkey || ''), order: Number(row.order) || 0, wanted: row.wanted === true, stations: row.stations === true, run: runner(row.id) });
     });
 
     Object.keys(rows).forEach(function (id) {

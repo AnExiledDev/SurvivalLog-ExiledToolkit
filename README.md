@@ -56,7 +56,7 @@ Settings live in `BepInEx\config\com.dev.survivallog.exiledtoolkit.cfg`, created
 
 Tested on Survival Log 1.1.20151 with BepInEx `6.0.0-be.788`.
 
-Check `BepInEx\LogOutput.log` for `===== Exiled's Toolkit 0.14.1 started`. A few lines below it, `toasts shown ...` tells you whether toasts are shown, where they appear, how long they stay and how many show at once; it is written again whenever one of those settings changes. `mod windows drawn at ...%` gives the UI size and `HUD buttons drawn at ...%` the button size, both written again on every change. A mod with its own UI size writes `<mod> windows drawn at ...%` when it sets it. Once the game's interface is up, `toast script sent to the web UI` means toasts can appear. The same lines are in `BepInEx\exiled-toolkit.log`, which survives restarts.
+Check `BepInEx\LogOutput.log` for `===== Exiled's Toolkit 0.15.0 started`. A few lines below it, `toasts shown ...` tells you whether toasts are shown, where they appear, how long they stay and how many show at once; it is written again whenever one of those settings changes. `mod windows drawn at ...%` gives the UI size and `HUD buttons drawn at ...%` the button size, both written again on every change. A mod with its own UI size writes `<mod> windows drawn at ...%` when it sets it. Once the game's interface is up, `toast script sent to the web UI` means toasts can appear. The same lines are in `BepInEx\exiled-toolkit.log`, which survives restarts.
 
 If no toasts appear, check that `Enabled` is `true` in the config, then look in `BepInEx\exiled-toolkit.log` for a line starting with `could not`.
 
@@ -156,7 +156,7 @@ kit.Value = ItemValues.FormatCounts(new[] { new ItemCount(1203, 10) });
 
 ### Mods menu
 
-`ModsMenu` puts an entry in the inventory toolbar's "Mods" dropdown, between the game's discard and sort buttons. Every mod's entries share the one button, and the button only shows while at least one entry wants to be listed. The same button also sits in the bag panel of the workbench, stove, ration press, greenhouse, drone hub, brewing barrel, dye vat, rat cage, material rack and shop screens (not the shredder or the drone trade), but it lists only page-script entries added with `stations: true`; `ModsMenu` entries stay on the inventory.
+`ModsMenu` puts an entry in the inventory toolbar's "Mods" dropdown, between the game's discard and sort buttons. Every mod's entries share the one button, and the button only shows while at least one entry wants to be listed. The same button also sits in the bag panel of the workbench, stove, ration press, greenhouse, drone hub, brewing barrel, dye vat, rat cage, material rack and shop screens (not the shredder or the drone trade), but it lists only the entries that set `Stations = true`; the rest stay on the inventory.
 
 ```csharp
 using ExiledToolkit;
@@ -168,6 +168,8 @@ ModsMenu.Add(new ModsMenuEntry("mymod.sortall", "Sort all", SortAll)
     ChineseTitle = "整理背包里的所有物品",
     Icon = "M4 6h16v2H4zM4 11h12v2H4zM4 16h8v2H4z",
     Order = 300,
+    Hotkey = "F7",
+    Stations = true,
     IsShown = () => IsBeforeDisaster(),
 });
 ```
@@ -175,7 +177,9 @@ ModsMenu.Add(new ModsMenuEntry("mymod.sortall", "Sort all", SortAll)
 - The id is unique across mods: 1 to 64 letters, digits, `.`, `_` or `-`. Adding an entry with an id already in use replaces it; `ModsMenu.Remove(id)` takes it out.
 - The label and tooltip show in the game's language; empty Chinese text shows the English. `Icon` is the `d` of an SVG path on a 24-unit grid.
 - Rows sort by `Order`, then id. Storage Hub uses the 100s and Unpack All 200.
-- `IsShown` is asked on the main thread a few times a second; leave it out to always list the entry. One that throws counts as hidden and is logged once. The dropdown itself shows only on the inventory's item tab.
+- `IsShown` is asked on the main thread a few times a second; leave it out to always list the entry. One that throws counts as hidden and is logged once. The dropdown itself shows only on the inventory's item tab and the station screens.
+- `Hotkey` is shown at the right of the row as given; leave it empty for none. To change it, add the entry again with the same id.
+- `Stations = true` also lists the entry on the station screens' bag panel (since 0.15.0).
 - The click action runs on the main thread after the menu has closed. One that throws is logged to `BepInEx\exiled-toolkit.log`.
 - While the menu is open the game's hotkeys are held back, and Esc closes the menu.
 

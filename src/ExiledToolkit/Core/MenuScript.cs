@@ -21,5 +21,6 @@ internal static class MenuScript
 
     private static string RowJson(MenuRow row) =>
         $"{{\"id\":{ToastScript.Str(row.Id)},\"label\":{ToastScript.Str(row.Label)},\"title\":{ToastScript.Str(row.Title)},\"icon\":{ToastScript.Str(row.Icon)}," +
-        $"\"order\":{row.Order.ToString(CultureInfo.InvariantCulture)},\"wanted\":{(row.IsWanted ? "true" : "false")}}}";
+        $"\"order\":{row.Order.ToString(CultureInfo.InvariantCulture)},\"wanted\":{(row.IsWanted ? "true" : "false")}," +
+        $"\"hotkey\":{ToastScript.Str(row.Hotkey)},\"stations\":{(row.Stations ? "true" : "false")}}}";
 }

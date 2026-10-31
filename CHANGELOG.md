@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.15.0
+
+- Mods that add to the inventory's Mods menu can now also list their entries on the station screens (workbench, stove, drone hub and the rest) and show a hotkey next to an entry. Storage Hub and Unpack All now add their entries this way.
+- Made for Survival Log 1.1.20151.
+
 ## 0.14.1
 
 - Fixed: the pause (Esc) menu could still run off the bottom of the screen. When a button came or went, or the window changed size, the menu could go back to full size. It now stays fitted every time.

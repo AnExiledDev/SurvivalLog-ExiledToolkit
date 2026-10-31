@@ -73,6 +73,33 @@ public class MenuPollTests
         Assert.False(Is("!!inv.querySelector('.slmm-wrap')"));
     }
 
+    /// <summary>The workbench's bag toolbar, as the game draws it: a filter, then the sort button.</summary>
+    private const string Workbench = "var station = page('ToolTable'); var bar = el(el(station, 'div.bag-panel'), 'div#bagToolbar'); el(bar, 'input.filter'); el(bar, 'button#btn-sort-bag.action-btn.unity-interactive');";
+
+    [Fact]
+    public void A_station_screen_lists_only_the_entries_that_say_stations()
+    {
+        Run(Workbench + "__exiledtoolkitmenu.set([{ id: 'hub.putaway', label: 'Put away', order: 100, wanted: true, stations: true }, { id: 'hub.home', label: 'Home', order: 90, wanted: true }]); click(station.querySelector('.slmm-btn'));");
+
+        Assert.Equal("Put away", _engine.Evaluate("rows(station)").AsString());
+    }
+
+    [Fact]
+    public void The_inventory_lists_station_entries_too()
+    {
+        Run("var inv = inventory(0); __exiledtoolkitmenu.set([{ id: 'hub.putaway', label: 'Put away', order: 100, wanted: true, stations: true }, { id: 'hub.home', label: 'Home', order: 90, wanted: true }]); click(inv.querySelector('.slmm-btn'));");
+
+        Assert.Equal("Home,Put away", _engine.Evaluate("rows(inv)").AsString());
+    }
+
+    [Fact]
+    public void A_row_shows_the_hotkey_it_was_sent()
+    {
+        Run("var inv = inventory(0); __exiledtoolkitmenu.set([{ id: 'unpack.run', label: 'Unpack all', order: 200, wanted: true, hotkey: 'F7' }]); click(inv.querySelector('.slmm-btn'));");
+
+        Assert.Equal("F7", _engine.Evaluate("inv.querySelector('.slmm-key').textContent").AsString());
+    }
+
     private static string Resource(string name)
     {
         using var stream = typeof(MenuPollTests).Assembly.GetManifestResourceStream(name) ?? throw new InvalidOperationException(name + " is not embedded in the test assembly");
