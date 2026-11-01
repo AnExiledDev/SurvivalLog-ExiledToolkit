@@ -83,9 +83,18 @@ public sealed class ToastTicker : MonoBehaviour
 
     private static void RunMenu()
     {
+        // Each on its own, so a failing Mods menu never stops the pause and title screen buttons.
         try
         {
             Menu?.Tick(Time.realtimeSinceStartup);
+        }
+        catch (Exception ex)
+        {
+            ReportOnce(ex);
+        }
+
+        try
+        {
             GameMenu?.Tick(Time.realtimeSinceStartup);
         }
         catch (Exception ex)

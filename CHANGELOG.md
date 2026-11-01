@@ -2,7 +2,7 @@
 
 ## 0.15.0
 
-- Mods that add to the inventory's Mods menu can now also list their entries on the station screens (workbench, stove, drone hub and the rest) and show a hotkey next to an entry. Storage Hub and Unpack All now add their entries this way.
+- Mods that add to the inventory's Mods menu can now also list their entries on the station screens (workbench, stove, drone hub and the rest) and show a hotkey next to an entry. Unpack All 0.9.0 adds its entries this way.
 - Made for Survival Log 1.1.20151.
 
 ## 0.14.1
