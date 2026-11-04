@@ -17,7 +17,7 @@ internal enum RuleKind
 }
 
 /// <summary>
-/// How a world rule's value is stored in a save: bool as 0 or 1, int as is, float times 1000, a choice as its index,
+/// How a world rule's value is stored in a save: bool as 0 or 1, int as is, float or double times 1000, a choice as its index,
 /// and a text setting without a list of choices as the number it holds, times 1000. Works on the serialized text BepInEx writes to the cfg, so it needs none of the config types.
 /// </summary>
 internal sealed class RuleCodec
@@ -45,7 +45,7 @@ internal sealed class RuleCodec
     {
         if (type == typeof(bool)) return new RuleCodec(RuleKind.Bool, Array.Empty<string>());
         if (type == typeof(int)) return new RuleCodec(RuleKind.Int, Array.Empty<string>());
-        if (type == typeof(float)) return new RuleCodec(RuleKind.Float, Array.Empty<string>());
+        if (type == typeof(float) || type == typeof(double)) return new RuleCodec(RuleKind.Float, Array.Empty<string>());
         if (type.IsEnum && !type.IsDefined(typeof(FlagsAttribute), false)) return new RuleCodec(RuleKind.Choice, Enum.GetNames(type));
         if (type == typeof(string) && textChoices != null && textChoices.Count > 0) return new RuleCodec(RuleKind.Choice, textChoices.ToArray());
         if (type == typeof(string)) return new RuleCodec(RuleKind.NumberText, Array.Empty<string>());

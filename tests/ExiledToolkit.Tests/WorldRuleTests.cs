@@ -317,7 +317,18 @@ public class WorldRuleTests
     public void Flags_and_other_types_cannot_be_world_rules()
     {
         Assert.Null(RuleCodec.For(typeof(Parts), null));
-        Assert.Null(RuleCodec.For(typeof(double), null));
+    }
+
+    [Fact]
+    public void A_double_is_stored_like_a_float()
+    {
+        var codec = RuleCodec.For(typeof(double), null)!;
+
+        Assert.Equal(RuleKind.Float, codec.Kind);
+        Assert.True(codec.TryEncode("0.05", out var stored));
+        Assert.Equal(50, stored);
+        Assert.True(codec.TryDecode(2500, out var serialized));
+        Assert.Equal("2.5", serialized);
     }
 
     [Fact]

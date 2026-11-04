@@ -2,7 +2,7 @@
 
 ## 0.17.0
 
-- A text setting that holds a number can now be a world rule too. Customizable Difficulty uses this so a world can keep its own difficulty values, set from the Mod Manager.
+- A text setting that holds a number, or a decimal setting, can now be a world rule too. Customizable Difficulty uses this so a world can keep its own difficulty values, set from the Mod Manager.
 - Made for Survival Log 1.1.20151.
 
 ## 0.16.0
