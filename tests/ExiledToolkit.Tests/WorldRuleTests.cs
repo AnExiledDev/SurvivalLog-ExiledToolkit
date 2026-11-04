@@ -314,12 +314,24 @@ public class WorldRuleTests
     }
 
     [Fact]
-    public void Free_text_flags_and_other_types_cannot_be_world_rules()
+    public void Flags_and_other_types_cannot_be_world_rules()
     {
-        Assert.Null(RuleCodec.For(typeof(string), null));
-        Assert.Null(RuleCodec.For(typeof(string), Array.Empty<string>()));
         Assert.Null(RuleCodec.For(typeof(Parts), null));
         Assert.Null(RuleCodec.For(typeof(double), null));
+    }
+
+    [Fact]
+    public void Text_without_choices_holds_a_number()
+    {
+        var codec = RuleCodec.For(typeof(string), null)!;
+
+        Assert.Equal(RuleKind.NumberText, RuleCodec.For(typeof(string), Array.Empty<string>())!.Kind);
+        Assert.True(codec.TryEncode(" 2.5 ", out var stored));
+        Assert.Equal(2500, stored);
+        Assert.True(codec.TryDecode(-1500, out var serialized));
+        Assert.Equal("-1.5", serialized);
+        Assert.False(codec.TryEncode("", out _));
+        Assert.False(codec.TryEncode("Default", out _));
     }
 
     [Fact]

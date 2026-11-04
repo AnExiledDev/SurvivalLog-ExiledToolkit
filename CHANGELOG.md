@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.17.0
+
+- A text setting that holds a number can now be a world rule too. Customizable Difficulty uses this so a world can keep its own difficulty values, set from the Mod Manager.
+- Made for Survival Log 1.1.20151.
+
 ## 0.16.0
 
 - Mods can now let a world set its own value for a setting, while other worlds and the settings file keep the global one. Customizable Difficulty uses this for the world rules of installed mods.

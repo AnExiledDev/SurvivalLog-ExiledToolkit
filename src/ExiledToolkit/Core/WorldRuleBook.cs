@@ -11,11 +11,14 @@ internal enum RuleKind
     Int,
     Float,
     Choice,
+
+    /// <summary>A text setting that holds a number; stored like a float.</summary>
+    NumberText,
 }
 
 /// <summary>
-/// How a world rule's value is stored in a save: bool as 0 or 1, int as is, float times 1000, a choice as its index.
-/// Works on the serialized text BepInEx writes to the cfg, so it needs none of the config types.
+/// How a world rule's value is stored in a save: bool as 0 or 1, int as is, float times 1000, a choice as its index,
+/// and a text setting without a list of choices as the number it holds, times 1000. Works on the serialized text BepInEx writes to the cfg, so it needs none of the config types.
 /// </summary>
 internal sealed class RuleCodec
 {
@@ -34,8 +37,9 @@ internal sealed class RuleCodec
     public IReadOnlyList<string> Choices => _choices;
 
     /// <summary>
-    /// The codec for a setting of this type, or null when the type cannot be a world rule (text without a fixed list
-    /// of choices, flags, anything else). <paramref name="textChoices"/> is the list a text setting accepts, if any.
+    /// The codec for a setting of this type, or null when the type cannot be a world rule (flags, anything else). Text
+    /// with a list of choices is a choice; text without one holds a number. <paramref name="textChoices"/> is the list
+    /// a text setting accepts, if any.
     /// </summary>
     public static RuleCodec? For(Type type, IReadOnlyList<string>? textChoices)
     {
@@ -44,6 +48,7 @@ internal sealed class RuleCodec
         if (type == typeof(float)) return new RuleCodec(RuleKind.Float, Array.Empty<string>());
         if (type.IsEnum && !type.IsDefined(typeof(FlagsAttribute), false)) return new RuleCodec(RuleKind.Choice, Enum.GetNames(type));
         if (type == typeof(string) && textChoices != null && textChoices.Count > 0) return new RuleCodec(RuleKind.Choice, textChoices.ToArray());
+        if (type == typeof(string)) return new RuleCodec(RuleKind.NumberText, Array.Empty<string>());
 
         return null;
     }
@@ -62,6 +67,7 @@ internal sealed class RuleCodec
             case RuleKind.Int:
                 return int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out stored);
             case RuleKind.Float:
+            case RuleKind.NumberText:
                 if (!float.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var number) || float.IsNaN(number) || float.IsInfinity(number)) return false;
                 var scaled = Math.Round((double)number * FloatScale);
                 if (scaled > int.MaxValue || scaled < int.MinValue) return false;
@@ -90,6 +96,7 @@ internal sealed class RuleCodec
                 serialized = stored.ToString(CultureInfo.InvariantCulture);
                 return true;
             case RuleKind.Float:
+            case RuleKind.NumberText:
                 serialized = ((float)((double)stored / FloatScale)).ToString(CultureInfo.InvariantCulture);
                 return true;
             default:
