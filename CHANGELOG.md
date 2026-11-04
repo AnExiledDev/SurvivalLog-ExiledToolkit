@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.16.0
+
+- Mods can now let a world set its own value for a setting, while other worlds and the settings file keep the global one. Customizable Difficulty uses this for the world rules of installed mods.
+- Made for Survival Log 1.1.20151.
+
 ## 0.15.0
 
 - Mods that add to the inventory's Mods menu can now also list their entries on the station screens (workbench, stove, drone hub and the rest) and show a hotkey next to an entry. Unpack All 0.9.0 adds its entries this way.

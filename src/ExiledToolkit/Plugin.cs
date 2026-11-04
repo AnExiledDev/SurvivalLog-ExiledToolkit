@@ -15,7 +15,7 @@ public sealed class Plugin : BasePlugin
 {
     /// <summary>For <c>[BepInDependency(ExiledToolkit.Plugin.Guid)]</c> in a mod that shows toasts.</summary>
     public const string Guid = "com.dev.survivallog.exiledtoolkit";
-    public const string Version = "0.15.0";
+    public const string Version = "0.16.0";
 
     public override void Load()
     {
@@ -33,6 +33,7 @@ public sealed class Plugin : BasePlugin
         ClickRouting.Apply(harmony, log.Write);
         HotkeyGate.Apply(harmony, log.Write);
         TypingGate.Apply(harmony, log.Write);
+        WorldRules.Apply(harmony, log.Write);
 
         Toasts.Center = center;
         ToastTicker.Page = new WebPage(log.Write, "ExiledToolkit.toasts.js", ToastScript.Probe, "toast");

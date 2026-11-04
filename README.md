@@ -56,7 +56,7 @@ Settings live in `BepInEx\config\com.dev.survivallog.exiledtoolkit.cfg`, created
 
 Tested on Survival Log 1.1.20151 with BepInEx `6.0.0-be.788`.
 
-Check `BepInEx\LogOutput.log` for `===== Exiled's Toolkit 0.15.0 started`. A few lines below it, `toasts shown ...` tells you whether toasts are shown, where they appear, how long they stay and how many show at once; it is written again whenever one of those settings changes. `mod windows drawn at ...%` gives the UI size and `HUD buttons drawn at ...%` the button size, both written again on every change. A mod with its own UI size writes `<mod> windows drawn at ...%` when it sets it. Once the game's interface is up, `toast script sent to the web UI` means toasts can appear. The same lines are in `BepInEx\exiled-toolkit.log`, which survives restarts.
+Check `BepInEx\LogOutput.log` for `===== Exiled's Toolkit 0.16.0 started`. A few lines below it, `toasts shown ...` tells you whether toasts are shown, where they appear, how long they stay and how many show at once; it is written again whenever one of those settings changes. `mod windows drawn at ...%` gives the UI size and `HUD buttons drawn at ...%` the button size, both written again on every change. A mod with its own UI size writes `<mod> windows drawn at ...%` when it sets it. Once the game's interface is up, `toast script sent to the web UI` means toasts can appear. The same lines are in `BepInEx\exiled-toolkit.log`, which survives restarts.
 
 If no toasts appear, check that `Enabled` is `true` in the config, then look in `BepInEx\exiled-toolkit.log` for a line starting with `could not`.
 
@@ -133,6 +133,21 @@ LiveSettings.Watch(() => Panel.Resize(width.Value, height.Value), width, height)
 - An apply that sets one of its own watched settings runs again at the next frame, not in a loop inside one frame.
 
 Without the Toolkit, a setting can say how it applies with a tag the Mod Manager reads; see the Mod Manager's README, "For mod authors".
+
+### World rules
+
+A setting can be a world rule: a world (a save) sets its own value, and every other world, and the cfg, keep the global one. Tag the setting with the plain string `ModManager.WorldRule` and watch it with `LiveSettings`; that is all a mod does. No reference to anything else is needed, so the tag is harmless when nothing uses it.
+
+```csharp
+var days = Config.Bind("Restock", "Days", 3, new ConfigDescription("...", null, "ModManager.WorldRule"));
+LiveSettings.Watch(days, value => Restock.Days = value);
+```
+
+- Only bool, int, float, enum (not flags) and text settings with a fixed list of choices can be world rules. A tagged setting of another type, or one not watched live, is not a rule; the first is named in the log.
+- When a world starts, each rule it sets takes the world's value, and your watcher runs as for any change. When it closes, the global value comes back. The cfg always holds the global value, so a crash mid-world leaves nothing to clean up.
+- While a world sets a rule, a change to it from anywhere (the Mod Manager, your mod) is a change to that world's value.
+- The world's values are kept by the mod that starts the worlds (Customizable Difficulty keeps them in the save). It calls `WorldRules.Begin(values)` at a world start and `WorldRules.End()` at its close, and stores what `WorldRules.WorldValueChanged` reports. A world stores each value as a whole number: bool as 0 or 1, int as is, float times 1000, a choice as its place in the list; `TryEncode` and `TryDecode` convert.
+- For a settings screen: `IsRule`, `IsSetByWorld`, `GlobalValue`, `SetWorld`, `ClearWorld` and `SetGlobal`. Values are serialized as in the cfg.
 
 ### Item settings
 
