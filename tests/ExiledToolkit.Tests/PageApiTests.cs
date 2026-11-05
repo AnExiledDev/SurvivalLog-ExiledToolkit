@@ -46,6 +46,16 @@ public class PageApiTests
     }
 
     [Fact]
+    public void A_mod_that_queued_before_the_toolkit_can_watch_pages_and_add_a_hud_button_once_it_loads()
+    {
+        Run($"var made = []; {WhenReady}(function (etk) {{ made.push(typeof etk.watchPages(/CoreUI1\\.html/, function () {{}}).stop); made.push(typeof etk.addHudButton({{ id: 'early-btn', title: 'Early' }}).remove); }});");
+
+        LoadApi();
+
+        Assert.Equal("function,function", Text("made.join(',')"));
+    }
+
+    [Fact]
     public void A_panel_sized_before_the_ui_script_waits_for_it_and_one_sized_after_goes_straight_to_ExiledUi()
     {
         LoadApi();

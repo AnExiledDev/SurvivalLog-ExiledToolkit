@@ -29,9 +29,6 @@
 
   var api = { version: 1, send: send, addStyle: addStyle, watchPages: watchPages, addHudButton: addHudButton, size: size };
 
-  window.ExiledToolkit = api;
-  takeWaiting();
-
   // ===== UI size =====
 
   // ExiledUi.size(el, options) whichever of api.js and ui.js the game ran first: before ui.js the panel waits in
@@ -488,4 +485,8 @@
 
     return node;
   }
+
+  // Last, so the waiting mods find every watcher list and button table already set up.
+  window.ExiledToolkit = api;
+  takeWaiting();
 })();
