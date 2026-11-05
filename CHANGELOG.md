@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.18.0
+
+- Other mods can now draw their own panels and bars in your HUD button style. Vital Signs 0.8.0 uses this to match its bars and tips to the style you pick.
+- Made for Survival Log 1.1.20151.
+
 ## 0.17.0
 
 - A text setting that holds a number, or a decimal setting, can now be a world rule too. Customizable Difficulty uses this so a world can keep its own difficulty values, set from the Mod Manager.

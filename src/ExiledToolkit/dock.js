@@ -356,6 +356,50 @@
     ].join('\n');
   }
 
+  // The look named on each HUD page's <html> for other mods: data-etk-look is classic, lamplight, fieldkit or signal,
+  // and data-etk-tips is paper when tips wear Field kit's paper tags, dark otherwise. The page's stylesheet turns them
+  // into colour variables a mod can draw its own panels with, each with a fallback for a page without the Toolkit:
+  // --etk-accent (and --etk-accent-rgb as "r,g,b"), --etk-panel, --etk-edge, --etk-text, --etk-muted, --etk-track
+  // (an empty bar), --etk-radius, and --etk-tip-bg, --etk-tip-edge, --etk-tip-text, --etk-tip-muted for tips.
+  var LOOK_ATTR = 'data-etk-look';
+  var TIPS_ATTR = 'data-etk-tips';
+  var LOOK_NAMES = { 'etk-st-lamplight': 'lamplight', 'etk-st-fieldkit': 'fieldkit', 'etk-st-signal': 'signal' };
+  var PAGE_COLOURS = {
+    lamplight: ['#f5b82e', '#221a13', 'rgba(245,184,46,.4)', '#ece3d2', '#bfb29b', '#120d08', '7px'],
+    fieldkit: ['#f2c230', '#3e3d28', '#1f1e15', '#f1e9cf', '#c9c1a3', '#1a1910', '4px'],
+    signal: ['#f5b82e', 'rgba(18,15,12,.97)', 'rgba(255,255,255,.12)', '#eeeeee', '#bdb4a6', '#110e0b', '9px']
+  };
+
+  function pageColoursCss() {
+    var rules = [];
+
+    for (var name in PAGE_COLOURS) {
+      var c = PAGE_COLOURS[name];
+
+      rules.push('html[' + LOOK_ATTR + '="' + name + '"]{--etk-accent:' + c[0] + ';--etk-accent-rgb:' + rgbOf(c[0]).join(',') +
+        ';--etk-panel:' + c[1] + ';--etk-edge:' + c[2] + ';--etk-text:' + c[3] + ';--etk-muted:' + c[4] + ';--etk-track:' + c[5] +
+        ';--etk-radius:' + c[6] + ';--etk-tip-bg:' + c[1] + ';--etk-tip-edge:' + c[2] + ';--etk-tip-text:' + c[3] + ';--etk-tip-muted:' + c[4] + '}');
+    }
+
+    rules.push('html[' + TIPS_ATTR + '="paper"]{--etk-tip-bg:#e6dab8;--etk-tip-edge:#b9ab84;--etk-tip-text:#2a261a;--etk-tip-muted:#4e4835}');
+
+    return rules.join('\n');
+  }
+
+  // The column's page named in the current look. Only changed values are written, so a page's own watchers see
+  // nothing when the look stays.
+  function markPage(doc) {
+    var root = doc && doc.documentElement;
+
+    if (!root || !root.setAttribute) return;
+
+    var name = LOOK_NAMES[look.cls] || 'classic';
+    var tips = name === 'fieldkit' || (name !== 'classic' && look.extras) ? 'paper' : 'dark';
+
+    if (root.getAttribute(LOOK_ATTR) !== name) root.setAttribute(LOOK_ATTR, name);
+    if (root.getAttribute(TIPS_ATTR) !== tips) root.setAttribute(TIPS_ATTR, tips);
+  }
+
   var themeText = null;
 
   // Built once, the first time a HUD page needs it.
@@ -367,6 +411,7 @@
         lamplightCss(),
         fieldKitCss(),
         signalCss(),
+        pageColoursCss(),
         // The game stills its own ring on low quality; the styles' rings and tape do the same.
         'html.quality-low .vertical-tools .ui-btn.has-unread::after{animation:none;opacity:.55}',
         'html.quality-low .vertical-tools.etk-x .ui-btn.has-unread::after,html.quality-low .vertical-tools.etk-st-fieldkit .ui-btn.has-unread::after{opacity:1}'
@@ -462,6 +507,7 @@
 
     setClass(column, MONO_CLASS, !!cls && look.mono);
     setClass(column, EXTRAS_CLASS, !!cls && look.extras);
+    markPage(column.ownerDocument);
 
     if (!cls && !column.etkDressed) return;
 

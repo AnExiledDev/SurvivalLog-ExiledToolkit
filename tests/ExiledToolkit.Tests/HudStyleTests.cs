@@ -232,6 +232,35 @@ public class HudStyleTests
         Assert.False(ColumnHas("etk-x"));
     }
 
+    /// <summary>Other mods draw their own panels in the player's style from what the page's root says.</summary>
+    [Theory]
+    [InlineData("Lamplight", false, "lamplight", "dark")]
+    [InlineData("Lamplight", true, "lamplight", "paper")]
+    [InlineData("Signal", false, "signal", "dark")]
+    [InlineData("FieldKit", false, "fieldkit", "paper")]
+    [InlineData("Classic", true, "classic", "dark")]
+    public void The_page_root_names_the_look_and_whether_tips_are_paper(string style, bool extras, string name, string tips)
+    {
+        Run($"look('Signal', false, {(!extras).ToString().ToLowerInvariant()}); look('{style}', false, {extras.ToString().ToLowerInvariant()});");
+
+        Assert.Equal(name, Text("page.documentElement.getAttribute('data-etk-look')"));
+        Assert.Equal(tips, Text("page.documentElement.getAttribute('data-etk-tips')"));
+    }
+
+    [Fact]
+    public void Each_look_gives_the_page_its_colours_and_paper_tips_their_own()
+    {
+        var css = Css();
+
+        Assert.Contains("html[data-etk-look=\"lamplight\"]{--etk-accent:#f5b82e;--etk-accent-rgb:245,184,46;--etk-panel:#221a13;", css);
+        Assert.Contains("html[data-etk-look=\"fieldkit\"]{--etk-accent:#f2c230;", css);
+        Assert.Contains("html[data-etk-look=\"signal\"]{--etk-accent:#f5b82e;", css);
+        Assert.Contains("html[data-etk-tips=\"paper\"]{--etk-tip-bg:#e6dab8;", css);
+        Assert.DoesNotContain("html[data-etk-look=\"classic\"]", css);
+        // Paper comes after the looks, so it wins over a look's dark tips.
+        Assert.True(css.IndexOf("html[data-etk-tips=\"paper\"]", StringComparison.Ordinal) > css.IndexOf("html[data-etk-look=\"signal\"]", StringComparison.Ordinal));
+    }
+
     [Fact]
     public void One_icon_colour_is_amber_in_Lamplight_and_bone_in_Field_kit_and_Signal_keeps_its_colours()
     {

@@ -56,7 +56,7 @@ Settings live in `BepInEx\config\com.dev.survivallog.exiledtoolkit.cfg`, created
 
 Tested on Survival Log 1.1.20151 with BepInEx `6.0.0-be.788`.
 
-Check `BepInEx\LogOutput.log` for `===== Exiled's Toolkit 0.17.0 started`. A few lines below it, `toasts shown ...` tells you whether toasts are shown, where they appear, how long they stay and how many show at once; it is written again whenever one of those settings changes. `mod windows drawn at ...%` gives the UI size and `HUD buttons drawn at ...%` the button size, both written again on every change. A mod with its own UI size writes `<mod> windows drawn at ...%` when it sets it. Once the game's interface is up, `toast script sent to the web UI` means toasts can appear. The same lines are in `BepInEx\exiled-toolkit.log`, which survives restarts.
+Check `BepInEx\LogOutput.log` for `===== Exiled's Toolkit 0.18.0 started`. A few lines below it, `toasts shown ...` tells you whether toasts are shown, where they appear, how long they stay and how many show at once; it is written again whenever one of those settings changes. `mod windows drawn at ...%` gives the UI size and `HUD buttons drawn at ...%` the button size, both written again on every change. A mod with its own UI size writes `<mod> windows drawn at ...%` when it sets it. Once the game's interface is up, `toast script sent to the web UI` means toasts can appear. The same lines are in `BepInEx\exiled-toolkit.log`, which survives restarts.
 
 If no toasts appear, check that `Enabled` is `true` in the config, then look in `BepInEx\exiled-toolkit.log` for a line starting with `could not`.
 
@@ -232,6 +232,8 @@ Nothing else is needed, and the mark does nothing without the Toolkit, so a mod 
 The player's `HudButtonSize` zooms the whole column, the game's buttons with the mods', so a button needs nothing more to follow it.
 
 The player's `HudButtonStyle` restyles every `.ui-btn` in the column, so a button that uses the game's `ui-btn icon-sq` classes takes the style with nothing more. The Toolkit marks the buttons it has an icon for with `data-etk-ic="<tool>"`, hides their `svg.icon-svg` and adds its own `svg.etk-ic` beside it; it knows the buttons by their classes (`th-hud-btn`, `pb-hud-btn`, `fg-hud-btn`, `fh-hud-btn`, `dm-hud-btn`, `mso-hud-btn`, `pm-hud-btn`, `sh-hud-btn`). Any other button keeps its own svg, filled with the style's amber, so keep its fill at `currentColor`. Badges named `th-hud-badge`, `fh-hud-badge`, `mso-hud-needs` and `mso-hud-working` take the stamped look of the extras.
+
+To draw anything else in the player's style, read the HUD page's `<html>`: `data-etk-look` is `classic`, `lamplight`, `fieldkit` or `signal`, and `data-etk-tips` is `paper` when tips wear Field kit's paper tags, `dark` otherwise. In every style but Classic the page also has these colour variables: `--etk-accent` (and `--etk-accent-rgb` as `r,g,b`), `--etk-panel`, `--etk-edge`, `--etk-text`, `--etk-muted`, `--etk-track` (an empty bar), `--etk-radius`, and `--etk-tip-bg`, `--etk-tip-edge`, `--etk-tip-text`, `--etk-tip-muted` for tips. Always give a fallback, `var(--etk-panel, #111)`, for Classic and for players without the Toolkit.
 
 ### Phone apps
 
