@@ -27,10 +27,27 @@
     '.' + HUD_CLASS + ' .' + BADGE_CLASS + '{position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#e53935;color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center;pointer-events:none;box-shadow:0 1px 4px rgba(0,0,0,.6)}'
   ].join('\n');
 
-  var api = { version: 1, send: send, addStyle: addStyle, watchPages: watchPages, addHudButton: addHudButton };
+  var api = { version: 1, send: send, addStyle: addStyle, watchPages: watchPages, addHudButton: addHudButton, size: size };
 
   window.ExiledToolkit = api;
   takeWaiting();
+
+  // ===== UI size =====
+
+  // ExiledUi.size(el, options) whichever of api.js and ui.js the game ran first: before ui.js the panel waits in
+  // window.__exiledUiWait, which ui.js takes when it starts (the queue mods' own uiSize wrappers used).
+  function size(el, options) {
+    var ui = window.ExiledUi;
+
+    if (ui && typeof ui.size === 'function') {
+      ui.size(el, options);
+      return;
+    }
+
+    var waiting = window.__exiledUiWait = window.__exiledUiWait || [];
+    waiting.push([el, options]);
+    if (waiting.length > 32) waiting.shift();
+  }
 
   // ===== Load order =====
 

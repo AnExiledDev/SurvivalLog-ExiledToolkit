@@ -46,6 +46,21 @@ public class PageApiTests
     }
 
     [Fact]
+    public void A_panel_sized_before_the_ui_script_waits_for_it_and_one_sized_after_goes_straight_to_ExiledUi()
+    {
+        LoadApi();
+        Run("window.ExiledUi = undefined; window.__exiledUiWait = undefined; var early = {}; ExiledToolkit.size(early, { fit: false });");
+
+        Assert.Equal(1, Number("window.__exiledUiWait.length"));
+        Assert.True(IsTrue("window.__exiledUiWait[0][0] === early && window.__exiledUiWait[0][1].fit === false"));
+
+        Run("var sized = []; var late = {}; window.ExiledUi = { size: function (el, o) { sized.push(el === late && o.mod === 'X'); } }; ExiledToolkit.size(late, { mod: 'X' });");
+
+        Assert.Equal("true", Text("sized.join(',')"));
+        Assert.Equal(1, Number("window.__exiledUiWait.length"));
+    }
+
+    [Fact]
     public void A_mod_script_that_runs_after_the_toolkit_starts_at_once_with_the_api()
     {
         LoadApi();

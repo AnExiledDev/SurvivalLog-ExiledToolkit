@@ -469,6 +469,8 @@ etk.addStyle(document, 'fh-style', CSS);
 etk.addStyle(hudDoc, 'fh-hud-style', HUD_CSS);
 ```
 
+`size(el, options)` is `ExiledUi.size` (see UI size) whichever of the Toolkit's scripts the game ran first: a panel handed over before the UI size script starts waits for it. Use it instead of carrying the `uiSize` wrapper: `etk.size(root, { mod: 'FarmHub' })`.
+
 `watchPages(pattern, fn, options)` hands each game page whose iframe address matches `pattern` to `fn(doc, frame)`: once for each document the frame loads, from one check every 250 ms that every mod shares. A page already shown when you start watching is handed over at once. The empty document a new iframe holds first is never handed over.
 
 ```js
