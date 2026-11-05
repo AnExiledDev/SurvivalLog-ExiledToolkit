@@ -41,6 +41,7 @@ public sealed class Plugin : BasePlugin
         ToastTicker.Phone = new WebPage(log.Write, "ExiledToolkit.phone.js", "", "phone apps");
         ToastTicker.Ui = new UiSizePage(new WebPage(log.Write, "ExiledToolkit.ui.js", "", "UI size"));
         ToastTicker.Typing = new WebPage(log.Write, "ExiledToolkit.typing.js", "", "typing watch");
+        ToastTicker.Api = new WebPage(log.Write, "ExiledToolkit.api.js", "", "page API");
         ToastTicker.Menu = new MenuRunner(new WebPage(log.Write, "ExiledToolkit.menu.js", MenuScript.Probe, "Mods menu"), log.Write);
         ToastTicker.GameMenu = new GameMenuRunner(new WebPage(log.Write, "ExiledToolkit.gamemenu.js", GameMenuScript.Probe, "game menu buttons"), log.Write);
         ToastTicker.Log = log.Write;

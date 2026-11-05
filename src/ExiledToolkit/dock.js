@@ -245,7 +245,7 @@
   var TIP_TITLES = ['.entry-tip-title', '.ability-tip-title', '.tip-name'];
   var TIP_BODIES = ['.entry-tip-body', '.ability-tip-body', '.tip-desc'];
   var TIP_KEYS = ['.entry-tip-key'];
-  var BADGES = ['.phone-badge', '.bag-badge', '.th-hud-badge', '.fh-hud-badge', '.mso-hud-needs'];
+  var BADGES = ['.phone-badge', '.bag-badge', '.etk-hud-badge', '.th-hud-badge', '.fh-hud-badge', '.mso-hud-needs'];
   var NOISE = 'url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'64\' height=\'64\'><filter id=\'n\'><feTurbulence type=\'fractalNoise\' baseFrequency=\'1.1\' numOctaves=\'2\' stitchTiles=\'stitch\'/><feColorMatrix values=\'0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.45 0\'/></filter><rect width=\'100%\' height=\'100%\' filter=\'url(%23n)\'/></svg>")';
 
   // Field kit's extras, which Lamplight and Signal wear with HudButtonExtras on and Field kit always: hazard tape on a

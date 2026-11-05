@@ -27,6 +27,9 @@ public sealed class ToastTicker : MonoBehaviour
 
     /// <summary>The typing watch runs in the root document as well, so it is put back with the toasts.</summary>
     internal static WebPage? Typing;
+
+    /// <summary>The page API mods' page scripts call (api.js); it goes in first, so a mod waiting for it starts soonest.</summary>
+    internal static WebPage? Api;
     internal static MenuRunner? Menu;
 
     /// <summary>The pause menu and title screen buttons, which need neither the toasts nor a run.</summary>
@@ -125,6 +128,7 @@ public sealed class ToastTicker : MonoBehaviour
                 break;
             case PageCommand.NoScript:
                 Area.Forget();
+                Api?.Install();
                 Ui?.Install();
                 page.Install();
                 Dock?.Install();
