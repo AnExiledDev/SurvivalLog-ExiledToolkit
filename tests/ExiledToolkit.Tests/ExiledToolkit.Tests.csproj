@@ -31,6 +31,8 @@
     <EmbeddedResource Include="GameMenuFake.js" LogicalName="ExiledToolkit.Tests.GameMenuFake.js" />
     <EmbeddedResource Include="..\..\src\ExiledToolkit\typing.js" LogicalName="ExiledToolkit.typing.js" Link="typing.js" />
     <EmbeddedResource Include="TypingFake.js" LogicalName="ExiledToolkit.Tests.TypingFake.js" />
+    <EmbeddedResource Include="..\..\src\ExiledToolkit\api.js" LogicalName="ExiledToolkit.api.js" Link="api.js" />
+    <EmbeddedResource Include="ApiFake.js" LogicalName="ExiledToolkit.Tests.ApiFake.js" />
   </ItemGroup>
 
   <ItemGroup>

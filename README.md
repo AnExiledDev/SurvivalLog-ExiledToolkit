@@ -447,6 +447,81 @@ if (Input.GetKeyDown(Key) && !(IsToolkitLoaded && IsTypingUnguarded())) Toggle()
 - A box counts while it has focus: a textarea, a contenteditable element, or an input of type text, search, number, email, password, url or tel that is not disabled or read-only. Checkboxes, sliders and buttons do not count.
 - A box that is removed or hidden stops counting within a quarter of a second. A click on the world (not on any UI) takes the keyboard from the box.
 
+### Page API
+
+A page script run in the game's root document (where `vuplex` and every page's iframe are) can use the Toolkit's helpers on `window.ExiledToolkit` instead of carrying its own copies (Toolkit 0.19.0 and newer). The game can run your script before the Toolkit's, so start through the ready queue; the same line works whichever ran first:
+
+```js
+(window.ExiledToolkitReady = window.ExiledToolkitReady || []).push(function (etk) {
+  etk.send('fh|', 'ready');
+});
+```
+
+- A function pushed before the Toolkit's script loads runs when it loads, in the order pushed; one pushed after runs at once. Each gets the API as its argument. One that throws does not stop the others.
+- `etk.version` is 1 in Toolkit 0.19.0.
+
+`send(prefix, message)` posts `prefix + message` to your C# side through `window.vuplex`. It returns `false`, and never throws, while the bridge is not there.
+
+`addStyle(doc, id, css)` puts a `<style id="...">` with that text in `doc` (head, or body when there is no head) and returns it. Called again with the same id it adds nothing, and writes the text only when it differs. The element is kept on the document, so a call with it still in place searches nothing. It returns `null` for a document with neither head nor body yet.
+
+```js
+etk.addStyle(document, 'fh-style', CSS);
+etk.addStyle(hudDoc, 'fh-hud-style', HUD_CSS);
+```
+
+`watchPages(pattern, fn, options)` hands each game page whose iframe address matches `pattern` to `fn(doc, frame)`: once for each document the frame loads, from one check every 250 ms that every mod shares. A page already shown when you start watching is handed over at once. The empty document a new iframe holds first is never handed over.
+
+```js
+var watch = etk.watchPages(/ToolTable\.html/, function (doc, frame) {
+  var list = doc.querySelector('.recipe-list');
+  if (!list) return false;   // not drawn yet: asked again at the next check
+  patchList(doc, list);
+});
+
+watch.refresh();   // your own state changed: hand over every page shown now again
+watch.stop();
+```
+
+- Return `false` to be asked again at the next check, say until the game has drawn what you look for. Anything else means done with that document until the frame loads another.
+- `{ everyCheck: true }` hands the page over at every check, for a mod that keeps something in a page the game redraws. Keep `fn` cheap then: keep what you found on the document and check it is still `isConnected` before you search (see perf.md).
+- A `fn` that throws is asked again at the next check and does not stop other mods' watchers.
+- `pattern` is a RegExp tested against the iframe's `src`; leave off the `g` flag.
+
+`addHudButton(options)` puts a button in the HUD's tool column, drawn like the game's bag button (`ui-btn icon-sq`, an `svg.icon-svg`, the hover tip), marked with `data-etk-dock` so the dock places it. The Toolkit puts it back when the HUD page reloads or the game draws its column again, and a check that finds it in place searches nothing.
+
+```js
+var hud = etk.addHudButton({
+  id: 'fh-hud-btn',
+  order: 30,
+  icon: SPROUT_PATH,
+  title: 'Farm Hub',
+  tip: say('tip'),
+  key: 'F6',
+  shown: false,
+  onClick: function () { etk.send('fh|', 'toggle'); },
+});
+
+hud.update({ shown: isLive, key: key });
+hud.update({ badge: count });
+hud.remove();
+```
+
+| Option | What it does |
+| --- | --- |
+| `id` | The button's class, unique across mods; a class name. Adding a button with an id in use replaces it, and a button with that class an older copy of your script left in the page is taken out. Keep the class the dock knows (`th-hud-btn`, `fh-hud-btn`, ...) so the button keeps its styled icon. |
+| `order` | Its `data-etk-dock` order (see HUD buttons). |
+| `icon` | The `d` of an svg path on a 24-unit grid. `evenOdd: true` fills it even-odd. |
+| `title`, `tip` | The tip's title and text. |
+| `key` | Shown as a keycap after the title; empty for none. |
+| `badge` | A count drawn on the button's corner (`99+` past 99), or a short text; 0 or empty for none. It has the class `etk-hud-badge`, which the button styles' extras stamp; `badgeClass` adds one of your own. |
+| `shown` | `false` keeps the button out of the column, say outside a game. Default `true`. |
+| `onClick(event)` | Runs on a click. The click is stopped there, so the game's own handlers never see it. One that throws is skipped. |
+| `onPlace(node, doc)` | Runs each time the button goes into a page, say to add something of your own to it. |
+| `pages` | Which HUD pages get the button. Default `/CoreUI1\.html/`; `/CoreUI[01]\.html/` adds it before the disaster too, in CoreUI0's `tooltip-wrapper` with its tip beside it. That tip has no keycap, so name the key in `tip` there. |
+
+- `update(fields)` takes any of `title`, `tip`, `key`, `badge`, `shown` and `onClick`, and writes them into every button shown, in place: only the parts that changed, never a new button.
+- `remove()` takes the button out of every page for good.
+
 ## Build
 
 This is a BepInEx 6 IL2CPP plugin. It compiles against BepInEx and the game's IL2CPP interop assemblies, so a game install with BepInEx set up and started once is required. Those assemblies come from the game and are not part of this repo. The .NET 8 SDK is required.
