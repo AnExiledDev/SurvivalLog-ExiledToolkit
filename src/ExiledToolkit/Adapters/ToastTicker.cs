@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using ExiledToolkit.Core;
+using ExiledToolkit.Game;
+using ExiledToolkit.Web;
 using UnityEngine;
 
 namespace ExiledToolkit.Adapters;
@@ -55,7 +57,8 @@ public sealed class ToastTicker : MonoBehaviour
         // Before the toast checks: live settings apply even when the toasts cannot run.
         LiveSettings.Run(Log);
 
-        // Before the toast checks too: the Mods menu does not need the toasts.
+        // Before the toast checks too: mods' page messages and the Mods menu do not need the toasts.
+        DeliverPageMessages();
         RunMenu();
         RunTypingGate();
 
@@ -74,6 +77,18 @@ public sealed class ToastTicker : MonoBehaviour
             if (!page.HasWebView) Area.Forget();
 
             ClickRouting.SetArea(Area.At(now));
+        }
+        catch (Exception ex)
+        {
+            ReportOnce(ex);
+        }
+    }
+
+    private static void DeliverPageMessages()
+    {
+        try
+        {
+            PageInbox.Deliver();
         }
         catch (Exception ex)
         {

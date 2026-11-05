@@ -1,12 +1,17 @@
+using ExiledToolkit.Game;
 using GameCore.HotUpdate.ReduxUI;
+using GameCore.Scripts;
 
-namespace ExiledToolkit.Adapters;
+namespace ExiledToolkit.Web;
 
 /// <summary>
 /// Sends the keyboard to the web UI while a page text field has focus, the way the game's own crafting search does,
-/// and gives it back as it was found.
+/// and gives it back as it was found. The game keeps the system's input method (for typing Chinese) off while playing
+/// and turns it on only while one of its own text boxes has focus (Reducer_Web_ToolTable.RA_SearchFocus), so a page
+/// field turns it on too, and off again when it lets go. One per window. Main thread only. Toolkit 0.19.0 and newer
+/// (Mod Manager used it before).
 /// </summary>
-internal sealed class WebKeyboard
+public sealed class WebKeyboard
 {
     private bool? _wasEnabled;
 
@@ -21,6 +26,7 @@ internal sealed class WebKeyboard
 
         _wasEnabled ??= layer.IsKeyboardEnabled;
         layer.SetKeyboardEnabled(true);
+        ImeGuard.SetEnabled(true);
     }
 
     public void Release()
@@ -29,5 +35,6 @@ internal sealed class WebKeyboard
 
         _wasEnabled = null;
         GameSingleton.Existing<ReduxUISystem>()?.GetWebUILayer()?.SetKeyboardEnabled(wasEnabled);
+        ImeGuard.SetEnabled(false);
     }
 }

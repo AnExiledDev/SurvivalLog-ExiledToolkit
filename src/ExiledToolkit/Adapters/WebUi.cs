@@ -1,10 +1,14 @@
 using System;
+using ExiledToolkit.Game;
 using GameCore.HotUpdate.ReduxUI;
 
-namespace ExiledToolkit.Adapters;
+namespace ExiledToolkit.Web;
 
-/// <summary>Runs script in the root document of the game's one web view, where every game page sits as an iframe.</summary>
-internal static class WebUi
+/// <summary>
+/// Runs script in the root document of the game's one web view, where every game page sits as an iframe. Main thread
+/// only. Toolkit 0.19.0 and newer (Mod Manager used it before).
+/// </summary>
+public static class WebUi
 {
     /// <summary>False when there is no web view yet; a script error is the caller's to report, so it is passed back.</summary>
     public static bool TryRun(string javaScript, out Exception? failure)

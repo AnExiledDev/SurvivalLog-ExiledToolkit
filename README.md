@@ -169,6 +169,168 @@ kit.Value = ItemValues.FormatCounts(new[] { new ItemCount(1203, 10) });
 - Parsing never throws. An entry that is not a whole number of 0 or more, or an amount under 1, is skipped, so a .cfg edited by hand cannot break your mod.
 - `FormatList` and `FormatCounts` write the plain form the Mod Manager saves, leaving out negative ids, amounts under 1 and repeats.
 
+### Shared helpers (C#)
+
+Toolkit 0.19.0 and newer. The plumbing most mods used to carry their own copy of, in three namespaces: `ExiledToolkit.Web` (the game's web view), `ExiledToolkit.Game` (game reads, hooks, keys and clicks) and `ExiledToolkit.Kit` (plain helpers). They sit outside `ExiledToolkit` so a mod that still has its own copy of a helper keeps compiling until it deletes it. Everything here is for the game's main thread unless it says otherwise.
+
+#### Page messages
+
+`PageInbox` catches the messages your page script sends (`vuplex.postMessage("slmod|farmhub|open")`) before the game sees them. The Toolkit has the one Harmony hook on the game's message handler; don't hook `HandleMessageEmitted` yourself.
+
+```csharp
+using ExiledToolkit.Web;
+
+var mailbox = PageInbox.Listen("slmod|farmhub|");                       // drain it yourself each frame
+while (mailbox.TryTake(out var message)) Handle(PageCommand.Parse(message));
+
+PageInbox.Listen("slmod|vitals|tab|", "slmod|vitals|hud|");             // one mailbox, two prefixes
+PageInbox.Listen("slmod|machines|timer|", message => TimerPage.AskInstall());   // a handler, called on the main thread
+```
+
+- A message goes to the mailbox with the longest prefix it starts with, whichever mod listened first; a message no mailbox takes goes on to the game. The message you get is whole, prefix included.
+- `Listen` with a prefix that already has a mailbox gives that mailbox. Several prefixes make one mailbox; prefixes that already belong to two different mailboxes are refused (`ArgumentException`), and so is an empty prefix.
+- A handler runs on the main thread in the Toolkit's update of the frame after the message came. One that throws is logged once and does not stop the others. A later handler for the mailbox replaces the earlier one.
+- `TryTake(out message, out arrivedAt)` also gives when it arrived, a `Stopwatch.GetTimestamp()` reading taken on the web view's thread. `HasWaiting` says whether anything waits (any thread). `PageInbox.IsListening` is false when the hook could not go in.
+
+#### Page script
+
+`WebPage` keeps your embedded page.js in the game's web UI. `WebUi.TryRun(js, out failure)` runs one script in the root document, false when there is no web view yet.
+
+```csharp
+using ExiledToolkit.Kit;
+using ExiledToolkit.Web;
+
+var page = new WebPage(typeof(Plugin).Assembly, "FarmHub.page.js", "window.__slfarmhub", "slmod|farmhub|noscript", log.Write)
+{
+    Words = isChinese => PageWords.Script(isChinese),   // optional
+    CheckOffset = 0.6,                                    // optional
+};
+
+page.KeepInstalled(Clock.Now);       // every frame: probes every 2 seconds
+page.Install();                      // when your page answers "noscript": the web view reloaded
+page.Call("open(" + viewJson + ")"); // window.__slfarmhub.open(...), or "noscript" when the script is missing
+page.Run("window.__slfarmhub&&window.__slfarmhub.close()");
+```
+
+- The probe (`Probe`) is silent while `global` exists and sends your noscript message when it does not. Send it with `KeepInstalled(now)`, any clock in seconds; it probes on a steady beat of `CheckSeconds` (2), starting `CheckOffset` seconds after the first call, and a long stall starts the beat again.
+- `Install()` sends the resource, then each of `ExtraResources` after it (`"\n;"` between them), and logs `page script sent to the web UI` (`Name` replaces "page"). It throws `InvalidOperationException` when a resource is not embedded.
+- With `Words` set, a `Call` sends the words first whenever the page lacks them or holds the other language's: after `Install`, after `ForgetWords()` (call it when the page says it installed itself afresh), and when the game's language changes. Words that did not reach the page go with the next call.
+- `Call` and `Run` return false when there is no web view or the script failed; a failure is logged once, as `could not run the page script in the web UI (reported once): ...`. `HasWebView` is whether the last run found the web view. `Global` and `NoScriptReply` are there for calls you build yourself.
+- `JsText.Literal(text)` turns any text into a JavaScript string literal that cannot break out of the script (null is `""`).
+
+#### Mod log
+
+`ModLog` writes each line to the BepInEx log (a `could not hook` line as an error) and to your own file under the BepInEx folder, which survives restarts. A Toolkit worker thread writes every mod's file, so logging never waits on the disk; the lines still waiting are written when the game closes. Any thread.
+
+```csharp
+using ExiledToolkit.Kit;
+
+var log = new ModLog(Log, "farm-hub.log") { MaxFileBytes = 2_000_000 };
+LiveSettings.Watch(diagnostics, isOn => log.IsFileOn = isOn);
+log.Write("loaded");
+log.WriteFileOnly("a detail too many for the console");
+```
+
+- `IsFileOn` (default on) turns the file copy off; the BepInEx log still gets every `Write`. `MaxFileBytes` above 0 moves a full file to `<name>.1` and starts it again. `Flush()` writes the waiting lines now, on your thread. `Path` is the file's full path.
+- `LogLines` is the queue behind it, if you write a file of your own: `Add(atUtc, message)` from any thread (true when the writer needs waking), `Take()` on one writer thread gives every waiting line, stamped in local time, or null.
+
+#### Hook failures
+
+`HookFailure.Prefix` is `could not hook`. Start every log line about a hook that could not be placed with it: the Mod Manager reads those lines as a sign the mod may need an update after a game update. `HookFailure.Is(line)` checks one.
+
+`PatchKit` places your own hooks with that wording, and logs failures from inside a hook without flooding the log:
+
+```csharp
+using ExiledToolkit.Game;
+
+var hooks = new PatchKit(harmony, log.Write);   // maxLoggedFailures: 1 by default
+hooks.Patch(typeof(CropHooks), typeof(Plant), "Grow", postfix: nameof(CropHooks.AfterGrow), done: "crops grow faster", consequence: "crops grow at the game's speed");
+// in the hook's catch:
+hooks.Fail("speeding up a crop", ex);
+```
+
+- `Patch(hooks, type, method, parameters, prefix, postfix, finalizer, done, consequence)` returns whether the hook went in, and logs `done` or `could not hook Type.Method, consequence: why`. Give `parameters` to pick one overload. `PatchOrThrow` does the same without logging and throws instead.
+- `Fail(doing, ex)` logs `failed <doing> (reported once): ...`, or `(logged 2 of 3)` with a higher `maxLoggedFailures`, then stays quiet for that `doing`. Any thread; never throws.
+
+#### Window keys and clicks
+
+The Toolkit has the one hook on the game's hotkeys (`HotKeyManager.Update`) and the one on where clicks go (`WebUILayer.ValidateRaycast`); don't patch either yourself.
+
+```csharp
+using ExiledToolkit.Game;
+using ExiledToolkit.Web;
+
+InputGate.Opened("FarmHub.window");   // hotkeys held back, every click to the web UI
+InputGate.Closed("FarmHub.window");   // both let go; hotkeys stay off through the next frame, so the closing Esc is not seen twice
+
+HotkeyGate.Hold("FarmHub.menu");      // only the keys, say for a dropdown
+HotkeyGate.Release("FarmHub.menu");
+ClickRouting.Capture("FarmHub.picker", true);
+
+var keyboard = new WebKeyboard();     // one per window
+keyboard.Claim();                     // your page says a text field took focus
+keyboard.Release();                   // and that it let go
+```
+
+- Each holder holds and lets go under its own name, so two mods never release each other's hold; holding twice under one name is one hold. `HotkeyGate.IsHeld` and `ClickRouting.IsCapturing` say whether anyone holds now.
+- `WebKeyboard.Claim` sends the keyboard to the web UI and turns on the system's input method, so Chinese can be typed; `Release` gives the keyboard back as it was found and turns the input method off. `IsClaimed` is true in between. The Toolkit already keeps the game's keys off while any text box has the keyboard (see Typing).
+
+#### Hotkeys
+
+```csharp
+using ExiledToolkit.Kit;
+
+var key = Config.Bind("Keys", "PanelKey", KeyCode.None, "...");   // a key with a button too starts unbound: Hotkey.DefaultKey
+if (Hotkey.Fires(key.Value != KeyCode.None, () => Input.GetKeyDown(key.Value), () => Typing.IsActive)) Toggle();
+if (KeyGate.Fires(key.Value, KeyCode.None, Input.GetKeyDown, () => Typing.IsActive)) Toggle();
+```
+
+Both ask for the press only for a bound key and for typing only on a press. `KeyGate.Fires(isBound, isPressed, isTyping)` takes the press already read.
+
+#### Game reads
+
+```csharp
+using ExiledToolkit.Game;
+
+var config = GameSingleton.Existing<ConfigManager>();     // null until the game made it
+if (!GameSingleton.IsCreated<GameSaveManager>()) return;   // allocates nothing
+var isChinese = GameLanguage.IsChinese();                  // false (English) when unknown
+var name = GameNames.ItemName(config, 1203) ?? "Item 1203";
+var save = SaveSlot.CurrentKey();                          // the save's file name, or null
+var frame = UnityFrame.Count();                            // Time.frameCount without boxing
+```
+
+- `GameSingleton.Existing<T>()` never makes a singleton: one read before the game makes it would be built too early and answer the game's events twice for the rest of the session. `Pointer<T>()` is its native address, zero before; a new address means a new one.
+- `GameLanguage.Key()` is the game's language key, empty when unknown, for caches of names read from its tables.
+- `GameNames.ItemName(config, item)` and `ItemName(config, configId)` give an item's name as the game shows it: the text for its name key, else its local name, else the key; null when it has none. By id it reads the table itself, since the game's own getter logs an error for every id it lacks. `Translate(config, key)` is the game's text for any key in the language it shows, and `Translate(config, key, language)` in the one you pick; both null when the table has no text for it. `NonEmpty(text)` is null for blank text. None of them throws.
+- `RawDictionary` (a game `Dictionary<long, reference>`) and `RawList` (a game `List<reference>`) read a big collection straight from its memory for a hot walk: `Learn(class)` once, then `TryOpen(object, ...)` every walk, and fall back to the interop path when it returns false. The pointers are good only within that frame.
+
+#### Web icons
+
+```csharp
+using ExiledToolkit.Web;
+
+_iconScan = WebIcons.StartScan();                                    // once, at load, on the main thread
+if (_iconScan.IsCompleted) log.Write(_iconScan.Result.Note);         // later, from the main thread
+var src = WebIcons.Icons.Resolve(item.WebIcon) ?? WebIcons.Icons.Resolve(item.Icon);   // "Res/Food/x.png", or null
+```
+
+- The game's web icon folder (about 1800 files) is walked once for every mod, on a worker; every `StartScan` gets the same task, which never fails. `Icons` is `IconIndex.Empty` until it is done (`IsReady`), so show letters meanwhile.
+- `IconIndex.Resolve(named)` matches on the file name, whatever path the table gives; of several files with that name, the one whose folder the table names wins. `IconIndex.Build(paths)` indexes paths of your own.
+
+#### UI size setting
+
+`ModUiSize.Bind(Config, "FarmHub")` binds your Interface > UiScale setting (0 to 200, default 0) with the standard description, applies it live and calls `ModUiSize.Set` for you. The description names the mod by splitting the name ("Farm Hub"); pass `displayName` when that reads wrong, or a whole `description` (English, `\n`, Chinese) when your panels are not windows. Nothing is sent while the setting stays 0.
+
+#### Small helpers
+
+All in `ExiledToolkit.Kit`:
+
+- `Phrase(En, Zh)`: `Pick(isChinese)`, `Say(isChinese, args)` (numbers written the same in every culture), `Phrase.FromGame(line)`. `Counted(One, Many).Say(isChinese, count, more)` picks One only for 1, with the count as `{0}`.
+- `SlicedJob(steps)`: a long job as an `IEnumerable<bool>`; `Advance(isSliceSpent)` runs steps until a step yields false, the slice is spent or the job ends, at least one step per call, and returns `IsDone`.
+- `Clock.Now`: seconds as a `double`, any thread, without the boxing Unity's clocks cost.
+- `ReplySlot`: `Open()` numbers a call to the page, `Offer(call, reply)` (any thread) keeps only the answer to the newest call, `Take()` hands it over once.
+
 ### Mods menu
 
 `ModsMenu` puts an entry in the inventory toolbar's "Mods" dropdown, between the game's discard and sort buttons. Every mod's entries share the one button, and the button only shows while at least one entry wants to be listed. The same button also sits in the bag panel of the workbench, stove, ration press, greenhouse, drone hub, brewing barrel, dye vat, rat cage, material rack and shop screens (not the shredder or the drone trade), but it lists only the entries that set `Stations = true`; the rest stay on the inventory.

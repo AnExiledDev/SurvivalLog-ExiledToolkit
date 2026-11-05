@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using ExiledToolkit.Core;
+using ExiledToolkit.Game;
+using ExiledToolkit.Web;
 using UnityEngine;
 
 namespace ExiledToolkit.Adapters;

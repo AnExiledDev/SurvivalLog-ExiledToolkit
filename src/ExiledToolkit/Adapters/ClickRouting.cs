@@ -5,23 +5,27 @@ using GameCore.HotUpdate.ReduxUI;
 using HarmonyLib;
 using UnityEngine;
 
-namespace ExiledToolkit.Adapters;
+namespace ExiledToolkit.Game;
 
 /// <summary>
 /// Lets clicks and hovering over a toast reach the web view. The game sends the pointer to its web UI only where one of
 /// its pages reported a button, so everywhere else, toast boxes included, the click would go to the world below. The
 /// page reports where its boxes are; this answers yes for those points and leaves every other answer to the game.
-/// A mod window that covers the whole screen captures every click while it is open. Static because a Harmony postfix
-/// has nowhere else to look.
+/// A mod window that covers the whole screen captures every click while it is open. One hook on
+/// WebUILayer.ValidateRaycast serves every mod. Static because a Harmony postfix has nowhere else to look. Toolkit
+/// 0.19.0 and newer (Mod Manager used it before).
 /// </summary>
-internal static class ClickRouting
+public static class ClickRouting
 {
     private static readonly HashSet<string> Capturers = new();
     private static volatile HitArea _area = HitArea.Empty;
     private static Action<string> _log = _ => { };
     private static bool _hasReportedFailure;
 
-    public static void Apply(Harmony harmony, Action<string> log)
+    /// <summary>Whether any mod window captures every click now.</summary>
+    public static bool IsCapturing => Capturers.Count > 0;
+
+    internal static void Apply(Harmony harmony, Action<string> log)
     {
         _log = log;
 
@@ -36,11 +40,16 @@ internal static class ClickRouting
         }
     }
 
-    public static void SetArea(HitArea area) => _area = area;
+    internal static void SetArea(HitArea area) => _area = area;
 
-    /// <summary>Main thread only, like the raycasts that read it.</summary>
+    /// <summary>
+    /// While <paramref name="isCapturing"/>, every click and hover goes to the web UI, as a window that covers the whole
+    /// screen needs; each window captures and lets go under its own name. Main thread only, like the raycasts that read it.
+    /// </summary>
     public static void Capture(string window, bool isCapturing)
     {
+        if (window == null) throw new ArgumentNullException(nameof(window));
+
         if (isCapturing) Capturers.Add(window);
         else Capturers.Remove(window);
     }

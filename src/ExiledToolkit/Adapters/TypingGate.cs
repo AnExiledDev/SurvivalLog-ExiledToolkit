@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using ExiledToolkit.Core;
+using ExiledToolkit.Game;
+using ExiledToolkit.Web;
 using GameCore.HotUpdate.Battle.Show;
 using HarmonyLib;
 using UnityEngine;

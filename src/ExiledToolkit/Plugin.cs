@@ -6,6 +6,8 @@ using BepInEx.Configuration;
 using BepInEx.Unity.IL2CPP;
 using ExiledToolkit.Adapters;
 using ExiledToolkit.Core;
+using ExiledToolkit.Game;
+using ExiledToolkit.Web;
 using HarmonyLib;
 
 namespace ExiledToolkit;
@@ -29,6 +31,8 @@ public sealed class Plugin : BasePlugin
         var center = new ToastCenter(entries.Read(), new ToastClock(() => clock.ElapsedMilliseconds, () => DateTime.UtcNow), ToastTicker.IsMainThread, log.Write);
 
         log.Write($"===== Exiled's Toolkit {Version} started");
+        WebPage.DefaultRunner = WebUi.TryRun;
+        WebPage.DefaultIsChinese = GameLanguage.IsChinese;
         PageInbox.Apply(harmony, log.Write);
         ClickRouting.Apply(harmony, log.Write);
         HotkeyGate.Apply(harmony, log.Write);

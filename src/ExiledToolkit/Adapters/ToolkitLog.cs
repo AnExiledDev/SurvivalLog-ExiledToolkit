@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 using BepInEx.Logging;
-using ExiledToolkit.Core;
+using ExiledToolkit.Game;
 
 namespace ExiledToolkit.Adapters;
 

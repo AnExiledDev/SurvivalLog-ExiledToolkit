@@ -1,22 +1,30 @@
 using System;
-using System.Collections.Generic;
 using GameCore.HotUpdate.Battle.Show;
 using HarmonyLib;
-using UnityEngine;
 
-namespace ExiledToolkit.Adapters;
+namespace ExiledToolkit.Game;
 
 /// <summary>
 /// Stops the game's hotkeys while a mod window holds them, so typing "e" in a search box does not also open a menu,
 /// and the Esc that closes the window does not also close what is under it. Each window holds and releases under its
-/// own name. Static because a Harmony prefix has nowhere else to look; main thread only.
+/// own name. One hook on HotKeyManager.Update serves every mod. Static because a Harmony prefix has nowhere else to
+/// look; main thread only. Toolkit 0.19.0 and newer (Mod Manager used it before).
 /// </summary>
-internal static class HotkeyGate
+public static class HotkeyGate
 {
-    private static readonly HashSet<string> Holders = new();
-    private static int _blockedThroughFrame = -1;
+    private static readonly KeyHolds Holds = new();
+    private static readonly Func<int> Frame = UnityFrame.Count;
 
-    public static void Apply(Harmony harmony, Action<string> log)
+    /// <summary>Whether any window holds the hotkeys now.</summary>
+    public static bool IsHeld => Holds.IsHeld;
+
+    /// <summary>Holding twice under one name is one hold.</summary>
+    public static void Hold(string holder) => Holds.Hold(holder);
+
+    /// <summary>Keeps hotkeys stopped through the next frame, so the key that closed the window (Esc) is not seen by the game too. A name that was not holding changes nothing.</summary>
+    public static void Release(string holder) => Holds.Release(holder, Frame);
+
+    internal static void Apply(Harmony harmony, Action<string> log)
     {
         try
         {
@@ -29,15 +37,5 @@ internal static class HotkeyGate
         }
     }
 
-    public static void Hold(string holder) => Holders.Add(holder);
-
-    /// <summary>Keeps hotkeys stopped through the next frame, so the key that closed the window (Esc) is not seen by the game too.</summary>
-    public static void Release(string holder)
-    {
-        if (!Holders.Remove(holder)) return;
-
-        _blockedThroughFrame = Time.frameCount + 1;
-    }
-
-    private static bool SkipWhileHeld() => Holders.Count == 0 && Time.frameCount > _blockedThroughFrame;
+    private static bool SkipWhileHeld() => Holds.LetsGameRun(Frame);
 }

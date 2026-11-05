@@ -1,4 +1,5 @@
 using ExiledToolkit.Core;
+using ExiledToolkit.Web;
 
 namespace ExiledToolkit.Adapters;
 

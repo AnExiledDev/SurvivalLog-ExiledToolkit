@@ -1,4 +1,4 @@
-using ExiledToolkit.Core;
+using ExiledToolkit.Game;
 using Xunit;
 
 namespace ExiledToolkit.Tests;

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Text;
+using ExiledToolkit.Web;
 
 namespace ExiledToolkit.Core;
 
@@ -13,9 +13,6 @@ namespace ExiledToolkit.Core;
 internal static class ToastScript
 {
     public const string Global = "window.__exiledtoolkit";
-
-    private const char LineSeparator = (char)0x2028;
-    private const char ParagraphSeparator = (char)0x2029;
 
     /// <summary>The page's answer when the script is missing, which is how a reloaded web view is noticed.</summary>
     public const string NoScriptReply = "window.vuplex&&window.vuplex.postMessage('" + PageCommand.Prefix + "noscript')";
@@ -29,32 +26,7 @@ internal static class ToastScript
     public static string Json(IEnumerable<PageOp> ops) => "[" + string.Join(",", ops.Select(OpJson)) + "]";
 
     /// <summary>A JavaScript string literal, safe to paste into a script.</summary>
-    public static string Str(string? text)
-    {
-        var literal = new StringBuilder((text?.Length ?? 0) + 2).Append('"');
-
-        foreach (var character in text ?? "")
-        {
-            switch (character)
-            {
-                case '"':
-                    literal.Append('\\').Append('"');
-                    break;
-                case '\\':
-                    literal.Append('\\').Append('\\');
-                    break;
-                // Line and paragraph separators end a line in older JavaScript, and '<' keeps "</script>" inert.
-                case < ' ' or LineSeparator or ParagraphSeparator or '<':
-                    literal.Append('\\').Append('u').Append(((int)character).ToString("x4", CultureInfo.InvariantCulture));
-                    break;
-                default:
-                    literal.Append(character);
-                    break;
-            }
-        }
-
-        return literal.Append('"').ToString();
-    }
+    public static string Str(string? text) => JsText.Literal(text);
 
     /// <summary>A kind this version does not know, say from a newer mod, is drawn as info rather than lost.</summary>
     public static string KindName(ToastKind kind) => kind switch

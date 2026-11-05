@@ -1,6 +1,6 @@
 using System.Runtime.CompilerServices;
 
-// Mod Manager draws a full-screen window with the same web plumbing the toasts use. It reaches those internals
-// directly instead of through a public API, so nothing here is promised to other mods yet. Anything Mod Manager uses
-// is a contract with it: change both together and raise the Toolkit version Mod Manager asks for.
+// Mod Manager still reaches two internals: LiveSettings.IsWatched (whether a setting applies live) and ToolkitLog (its
+// log file). Everything else it uses is the public API since 0.19.0. Anything internal it uses is a contract with it:
+// change both together and raise the Toolkit version Mod Manager asks for.
 [assembly: InternalsVisibleTo("ModManager")]
