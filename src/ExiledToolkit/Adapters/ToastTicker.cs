@@ -51,6 +51,19 @@ public sealed class ToastTicker : MonoBehaviour
     /// <summary>Zero until the first frame, so until then every click action waits for a frame.</summary>
     internal static bool IsMainThread() => Environment.CurrentManagedThreadId == _mainThreadId;
 
+    /// <summary>Every mod's log file gets its last lines; ProcessExit alone may never come in an IL2CPP game.</summary>
+    private void OnApplicationQuit()
+    {
+        try
+        {
+            Kit.LogWriter.WriteAll();
+        }
+        catch (Exception)
+        {
+            // The BepInEx log still has every line.
+        }
+    }
+
     private void Update()
     {
         var center = Toasts.Center;

@@ -174,7 +174,13 @@ internal static class LogWriter
         }
     }
 
-    private static void WriteOnQuit(object? sender, EventArgs e)
+    private static void WriteOnQuit(object? sender, EventArgs e) => WriteAll();
+
+    /// <summary>
+    /// Writes every waiting line now. Called when the game quits (Unity's quit message, and ProcessExit, which an IL2CPP
+    /// game may never raise); a second call finds nothing waiting.
+    /// </summary>
+    public static void WriteAll()
     {
         LogFile[] files;
 
