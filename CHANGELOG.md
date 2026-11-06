@@ -2,6 +2,7 @@
 
 ## 0.19.0
 
+- **Warning:** if you use Mod Manager, update it to 0.14.1 or newer together with the Toolkit. Older Mod Manager versions lose their Mods screen with this Toolkit.
 - Other mods can now use the Toolkit's shared parts instead of carrying their own copies: page messages, page scripts, log files, the hotkey and click locks while a window is open, item names, the game's icons, a per-mod UI size setting, a HUD button that stays in place, and more. One hook now serves page messages for every mod, so the game does less work per message.
 - Typing in Chinese in a mod's text box now works the same in every mod window.
 - Made for Survival Log 1.1.20719.

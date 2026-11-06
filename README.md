@@ -36,6 +36,7 @@ The Toolkit adds nothing to your save and does not edit game files.
 
 - Survival Log 1.1.20719. Built and tested on this version; a game update can break it until the mod is updated.
 - The [BepInEx Pack for Survival Log](https://www.nexusmods.com/survivallog/mods/12), the BepInEx 6 (IL2CPP) build for the game.
+- Using Mod Manager? Update it to 0.14.1 or newer together with this Toolkit. Older Mod Manager versions lose their Mods screen with Toolkit 0.19.0.
 
 ## Install
 

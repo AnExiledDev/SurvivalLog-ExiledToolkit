@@ -41,6 +41,7 @@ Works in English and Chinese.
 [list]
 [*]Survival Log 1.1.20719. A game update can break it until the mod is updated.[/*]
 [*][url=https://www.nexusmods.com/survivallog/mods/12]BepInEx for Survival Log[/url]. Install it first.[/*]
+[*][b]Using Mod Manager?[/b] Update it to 0.14.1 or newer together with this Toolkit. Older Mod Manager versions lose their Mods screen with Toolkit 0.19.0.[/*]
 [/list]
 
 [size=5]Installation[/size]
@@ -103,6 +104,7 @@ Toolkit 不会往存档里写入任何内容，也不会修改游戏文件。
 [list]
 [*]Survival Log 1.1.20719。游戏更新后模组可能暂时失效，直到模组更新为止。[/*]
 [*][url=https://www.nexusmods.com/survivallog/mods/12]BepInEx for Survival Log[/url]，请先安装。[/*]
+[*][b]用了 Mod Manager？[/b]请把它和本 Toolkit 一起更新到 0.14.1 或更新版本。旧版 Mod Manager 配合 Toolkit 0.19.0 时，「模组」界面无法打开。[/*]
 [/list]
 
 [size=5]安装[/size]
