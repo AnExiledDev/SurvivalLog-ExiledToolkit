@@ -2,7 +2,7 @@
 
 A shared library for my Survival Log mods. On its own it does nothing you can see. Install it when another mod says it needs it.
 
-Right now the Toolkit gives mods eight things. The first is toasts. A toast is a short notice that appears next to the phone, defense and other tool buttons, stays a few seconds, and goes away by itself. Mods that use the Toolkit show their messages this way instead of each drawing their own. The second is live settings: mods can apply a changed setting while you play, so a change in the Mod Manager works without restarting the game. The third is the inventory's "Mods" dropdown, one button in the inventory toolbar that holds the actions mods add there. The fourth keeps the HUD's tool buttons tidy: once mods have added enough buttons that the column would run past four, they are laid out in columns of four instead. The fifth tidies the phone: apps that mods add go into the dock at the bottom, after the game's own apps. The sixth is the UI size: one setting draws the windows and panels of every mod that supports it bigger or smaller. The seventh keeps your typing out of the game: while you type in a mod's text box, the keys do not open panels or move the camera. The eighth is buttons in the game's pause menu and title screen: mods add them through the Toolkit, and the menu shrinks its buttons and text just enough to keep every one on the screen.
+Right now the Toolkit gives mods eight things. The first is toasts. A toast is a short notice that appears next to the phone, defense and other tool buttons, stays a few seconds, and goes away by itself. Mods that use the Toolkit show their messages this way instead of each drawing their own. The second is live settings: mods can apply a changed setting while you play, so a change in the Mod Manager works without restarting the game. The third is the inventory's "Mods" dropdown, one button in the inventory toolbar that holds the actions mods add there. The fourth keeps the HUD's tool buttons tidy: once mods have added enough buttons that the column would run past four, they are laid out in columns of four instead. The fifth tidies the phone: apps that mods add go into the dock at the bottom, after the game's apps. The sixth is the UI size: one setting draws the windows and panels of every mod that supports it bigger or smaller. The seventh keeps your typing out of the game: while you type in a mod's text box, the keys do not open panels or move the camera. The eighth is buttons in the game's pause menu and title screen: mods add them through the Toolkit, and the menu shrinks its buttons and text just enough to keep every one on the screen.
 
 ## Features
 
@@ -15,12 +15,12 @@ Right now the Toolkit gives mods eight things. The first is toasts. A toast is a
 - **Repeats merge**: the same notice sent again while the first is still showing does not add another box. The first one counts up instead (x2, x3, ...) and its timer starts over.
 - **No pile-ups**: at most 4 toasts show at once by default. The rest wait their turn and appear as earlier ones close. If more than 30 are waiting, the oldest waiting ones are never shown, though mods that keep a list of toasts still get them.
 - **Tidy tool buttons**: the column of buttons on the left of the HUD (the phone, the bag and the buttons mods add there) never gets taller than four buttons. The rest go into a second column to its right, top to bottom, and a third after that. The phone and bag stay where they always are, and toasts move right to clear the extra column.
-- **Tidy phone apps**: apps that mods add to the phone go into the dock at the bottom, after the game's own, in rows of four, instead of stacking in the middle of the home screen.
+- **Tidy phone apps**: apps that mods add to the phone go into the dock at the bottom, after the game's, in rows of four, instead of stacking in the middle of the home screen.
 - **Bigger or smaller mod windows**: `UiScale` draws mod windows, panels and toasts from 75% to 200% of their size. A change shows at once, without a restart. A window that would run off the screen is drawn as big as still fits. A mod with a UI size setting of its own uses that one when it is set.
 - **Smaller or bigger tool buttons**: `HudButtonSize` draws the HUD's tool buttons from 50% to 150% of the game's size, 80% unless you change it.
-- **A new look for the tool buttons**: `HudButtonStyle` draws the HUD's tool buttons, the mods' and the game's phone and bag, as Lamplight (dark brown, each tool's icon in its own colour), FieldKit (olive canvas that presses like a key), Signal (each tool lit in its own colour) or Classic (the game's own). The phone, the bag and the buttons of Trap Hub, Package Bank, Field Guide, Farm Hub, Defense Manager, Machines, Power Manager and Storage Hub get new icons. `HudIconColours` and `HudButtonExtras` fine-tune it. A change shows at once.
+- **A new look for the tool buttons**: `HudButtonStyle` draws the HUD's tool buttons, the mods' and the game's phone and bag, as Lamplight (dark brown, each tool's icon in its own colour), FieldKit (olive canvas that presses like a key), Signal (each tool lit in its own colour) or Classic (the game's). The phone, the bag and the buttons of Trap Hub, Package Bank, Field Guide, Farm Hub, Defense Manager, Machines, Power Manager and Storage Hub get new icons. `HudIconColours` and `HudButtonExtras` fine-tune it. A change shows at once.
 - **Typing stays in the box**: while a text box in any mod's window has the keyboard, the game's hotkeys and the camera keys are off, so typing "p" in a search box does not take a photo and WASD does not move the camera. Click the world, or anywhere outside the box, to give the keys back to the game.
-- **Pause menu that always fits**: buttons mods add to the pause (Esc) menu and the title screen look like the game's own. When there are more than the screen has room for, the whole menu's buttons, gaps and text shrink just enough that Save & Exit stays on screen, down to half size; past that the button list scrolls. A menu that already fits keeps the game's size.
+- **Pause menu that always fits**: buttons mods add to the pause (Esc) menu and the title screen look like the game's. When there are more than the screen has room for, the whole menu's buttons, gaps and text shrink just enough that Save & Exit stays on screen, down to half size; past that the button list scrolls. A menu that already fits keeps the game's size.
 - **Survives reloads**: if the game's web interface reloads, the toasts on screen come back with the time they had left.
 
 The Toolkit adds nothing to your save and does not edit game files.
@@ -30,7 +30,7 @@ The Toolkit adds nothing to your save and does not edit game files.
 - With no window open, a game button under a toast cannot be clicked until the toast goes. Next to the HUD that is empty space. Move the toasts with `Position` if they are in your way.
 - Over an open window a toast cannot be hovered to hold it or clicked, since its clicks go to the window. It runs out on its usual time.
 - A button from a mod the Toolkit does not know keeps its own icon, tinted amber, in the new button styles.
-- `UiScale` changes only what mods draw. The game's own screens keep their size, and a mod's windows follow the setting only once that mod supports it.
+- `UiScale` changes only what mods draw. The game's screens keep their size, and a mod's windows follow the setting only once that mod supports it.
 
 ## Requirements
 
@@ -304,7 +304,7 @@ var frame = UnityFrame.Count();                            // Time.frameCount wi
 
 - `GameSingleton.Existing<T>()` never makes a singleton: one read before the game makes it would be built too early and answer the game's events twice for the rest of the session. `Pointer<T>()` is its native address, zero before; a new address means a new one.
 - `GameLanguage.Key()` is the game's language key, empty when unknown, for caches of names read from its tables.
-- `GameNames.ItemName(config, item)` and `ItemName(config, configId)` give an item's name as the game shows it: the text for its name key, else its local name, else the key; null when it has none. By id it reads the table itself, since the game's own getter logs an error for every id it lacks. `Translate(config, key)` is the game's text for any key in the language it shows, and `Translate(config, key, language)` in the one you pick; both null when the table has no text for it. `NonEmpty(text)` is null for blank text. None of them throws.
+- `GameNames.ItemName(config, item)` and `ItemName(config, configId)` give an item's name as the game shows it: the text for its name key, else its local name, else the key; null when it has none. By id it reads the table itself, since the game's getter logs an error for every id it lacks. `Translate(config, key)` is the game's text for any key in the language it shows, and `Translate(config, key, language)` in the one you pick; both null when the table has no text for it. `NonEmpty(text)` is null for blank text. None of them throws.
 - `RawDictionary` (a game `Dictionary<long, reference>`) and `RawList` (a game `List<reference>`) read a big collection straight from its memory for a hot walk: `Learn(class)` once, then `TryOpen(object, ...)` every walk, and fall back to the interop path when it returns false. The pointers are good only within that frame.
 
 #### Web icons
@@ -364,7 +364,7 @@ ModsMenu.Add(new ModsMenuEntry("mymod.sortall", "Sort all", SortAll)
 
 ### Pause menu and title screen
 
-`GameMenu` puts a button in the game's pause (Esc) menu or on its title screen, drawn like the game's own. The Toolkit keeps it there when the game redraws the menu and shrinks the menu's buttons, gaps and text to fit the screen however many buttons mods add (to half size at most; past that the list scrolls).
+`GameMenu` puts a button in the game's pause (Esc) menu or on its title screen, drawn like the game's. The Toolkit keeps it there when the game redraws the menu and shrinks the menu's buttons, gaps and text to fit the screen however many buttons mods add (to half size at most; past that the list scrolls).
 
 ```csharp
 using ExiledToolkit;
@@ -384,12 +384,12 @@ GameMenu.Add(new GameMenuButton("mymod.backup", "Back up now", GameMenuPlace.Pau
 - Buttons in one place sort by `Order`, then id. Mod Manager uses 100 on the title screen and at the top, Save Backups 200 and 210 at the bottom, and New Loop Plus 900, so its button sits last above Save & Exit.
 - `Accent` colours the button's left edge (the bar, on the title screen) as `#rgb` or `#rrggbb`; leave it empty for the game's.
 - `IsShown` is asked on the main thread a few times a second; leave it out to always show the button. One that throws counts as hidden and is logged once.
-- The click action runs on the main thread, with the menu still open. On the title screen it runs after the game's own click animation. One that throws is logged to `BepInEx\exiled-toolkit.log`.
+- The click action runs on the main thread, with the menu still open. On the title screen it runs after the game's click animation. One that throws is logged to `BepInEx\exiled-toolkit.log`.
 - Never add your own nodes to these two menus: they would not count when the Toolkit fits the menu.
 
 ### HUD buttons
 
-A mod that adds a button to the HUD's tool column (`.vertical-tools` in CoreUI1 or CoreUI0) marks it with `data-etk-dock="<order>"`. Past four shown buttons the Toolkit lays the column out four high: the last four stay in the first column, and the rest fill columns to the right, top to bottom. Marked buttons come first, lowest order first, then the game's own buttons and unmarked ones in page order. Trap Hub uses 10, Package Bank 20, Farm Hub 30 and Defense Manager 40.
+A mod that adds a button to the HUD's tool column (`.vertical-tools` in CoreUI1 or CoreUI0) marks it with `data-etk-dock="<order>"`. Past four shown buttons the Toolkit lays the column out four high: the last four stay in the first column, and the rest fill columns to the right, top to bottom. Marked buttons come first, lowest order first, then the game's buttons and unmarked ones in page order. Trap Hub uses 10, Package Bank 20, Farm Hub 30 and Defense Manager 40.
 
 Nothing else is needed, and the mark does nothing without the Toolkit, so a mod can keep the Toolkit optional.
 
@@ -401,7 +401,7 @@ To draw anything else in the player's style, read the HUD page's `<html>`: `data
 
 ### Phone apps
 
-A mod that adds an app to the phone's home screen (PhoneSMS.html) builds it like the game's own (`.app` with `.app-icon` and `.app-label`), puts it in `.app-grid`, and marks it with `data-etk-phone="<order>"`. The Toolkit moves marked apps into `.app-dock` after the game's apps, lowest order first, and past four shown apps lays the dock out in rows of four. Without the Toolkit the app stays in `.app-grid`. Look the app up by its class anywhere in the document, not only in `.app-grid`, or it is added again once moved. Field Guide uses 10 and Neighbor Basket 20.
+A mod that adds an app to the phone's home screen (PhoneSMS.html) builds it like the game's (`.app` with `.app-icon` and `.app-label`), puts it in `.app-grid`, and marks it with `data-etk-phone="<order>"`. The Toolkit moves marked apps into `.app-dock` after the game's apps, lowest order first, and past four shown apps lays the dock out in rows of four. Without the Toolkit the app stays in `.app-grid`. Look the app up by its class anywhere in the document, not only in `.app-grid`, or it is added again once moved. Field Guide uses 10 and Neighbor Basket 20.
 
 ### UI size
 
@@ -428,7 +428,7 @@ uiSize(column, { fit: page, pageFits: true, onZoom: function () { applyViewportF
 
 - Above 100%, a panel whose box would run past its page's window is zoomed as far as still fits, and never below 100%. `fit` names the element whose box is measured; leave it out to measure the panel itself.
 - `onZoom(zoom)` runs after each new zoom, say to place the panel again. One that throws is skipped and does not stop other panels.
-- `pageFits: true` is for a panel added inside a game page that zooms its own body down when its panels are too big for the window (the workbench and several machine screens do). `fit` is then measured at the page's own size, without that body zoom, so the panel grows only as far as the whole page still shows at full size and the game's own panels keep their size. Have `onZoom` ask the page to fit itself again.
+- `pageFits: true` is for a panel added inside a game page that zooms its own body down when its panels are too big for the window (the workbench and several machine screens do). `fit` is then measured at the page's own size, without that body zoom, so the panel grows only as far as the whole page still shows at full size and the game's panels keep their size. Have `onZoom` ask the page to fit itself again.
 - In a zoomed panel, `getBoundingClientRect` and mouse positions are screen pixels, while `left`, `top`, `width` and `offsetLeft` inside it are the panel's own pixels. Divide screen pixels by `el.currentCSSZoom` before writing them as positions.
 - A panel taken out of its page, or left in a page that reloaded, is let go. Hand it over again when you put it back. Handing the same element twice changes nothing but its options.
 - `ExiledUi.scale` is the size now as a factor (1.25 at 125%).
@@ -519,7 +519,7 @@ hud.remove();
 | `key` | Shown as a keycap after the title; empty for none. |
 | `badge` | A count drawn on the button's corner (`99+` past 99), or a short text; 0 or empty for none. It has the class `etk-hud-badge`, which the button styles' extras stamp; `badgeClass` adds one of your own. |
 | `shown` | `false` keeps the button out of the column, say outside a game. Default `true`. |
-| `onClick(event)` | Runs on a click. The click is stopped there, so the game's own handlers never see it. One that throws is skipped. |
+| `onClick(event)` | Runs on a click. The click is stopped there, so the game's handlers never see it. One that throws is skipped. |
 | `onPlace(node, doc)` | Runs each time the button goes into a page, say to add something of your own to it. |
 | `pages` | Which HUD pages get the button. Default `/CoreUI1\.html/`; `/CoreUI[01]\.html/` adds it before the disaster too, in CoreUI0's `tooltip-wrapper` with its tip beside it. That tip has no keycap, so name the key in `tip` there. |
 

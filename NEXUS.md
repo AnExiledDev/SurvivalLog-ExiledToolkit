@@ -17,9 +17,9 @@ Exiled's Toolkit is the shared part of my Survival Log mods. Right now it gives 
 [*][b]No pile-ups[/b]: at most 4 toasts show at once by default; the rest wait their turn.[/*]
 [*][b]Tidy tool buttons[/b]: the column of buttons on the left of the HUD never gets taller than four. The rest go into a column to its right, top to bottom; the phone and bag stay where they are.[/*]
 [*][b]Smaller or bigger tool buttons[/b]: the HudButtonSize setting draws the HUD's tool buttons from 50% to 150% of the game's size, 80% unless you change it. 100 is the game's size.[/*]
-[*][b]A new look for the tool buttons[/b]: the HudButtonStyle setting draws the HUD's tool buttons, the mods' and the game's phone and bag, as Lamplight (dark brown, each tool's icon in its own colour), FieldKit (olive canvas that presses like a key), Signal (each tool lit in its own colour) or Classic (the game's own). The phone, the bag and the buttons of the Exiled mods get new icons. HudIconColours and HudButtonExtras fine-tune it.[/*]
-[*][b]Tidy phone apps[/b]: apps that mods add to the phone go into the dock at the bottom, after the game's own, in rows of four.[/*]
-[*][b]Pause menu that always fits[/b]: buttons mods add to the pause menu and title screen look like the game's own. With more than fit, the menu's buttons and text shrink just enough that Save & Exit stays on screen.[/*]
+[*][b]A new look for the tool buttons[/b]: the HudButtonStyle setting draws the HUD's tool buttons, the mods' and the game's phone and bag, as Lamplight (dark brown, each tool's icon in its own colour), FieldKit (olive canvas that presses like a key), Signal (each tool lit in its own colour) or Classic (the game's). The phone, the bag and the buttons of the Exiled mods get new icons. HudIconColours and HudButtonExtras fine-tune it.[/*]
+[*][b]Tidy phone apps[/b]: apps that mods add to the phone go into the dock at the bottom, after the game's, in rows of four.[/*]
+[*][b]Pause menu that always fits[/b]: buttons mods add to the pause menu and title screen look like the game's. With more than fit, the menu's buttons and text shrink just enough that Save & Exit stays on screen.[/*]
 [*][b]Bigger or smaller mod windows[/b]: the UiScale setting draws mod windows, panels and toasts from 75% to 200% of their size. A change shows at once, without a restart. A window that would run off the screen is drawn as big as still fits.[/*]
 [/list]
 
@@ -31,7 +31,7 @@ Works in English and Chinese.
 [list]
 [*]With no window open, a game button under a toast cannot be clicked until the toast goes. Move the toasts with the Position setting if they are in your way.[/*]
 [*]Over an open window a toast cannot be hovered or clicked, since its clicks go to the window.[/*]
-[*]UiScale changes only what mods draw. The game's own screens keep their size, and a mod's windows follow the setting only once that mod supports it.[/*]
+[*]UiScale changes only what mods draw. The game's screens keep their size, and a mod's windows follow the setting only once that mod supports it.[/*]
 [/list]
 
 [center][img]https://sldb.core-directive.com/img/mods-banner.jpg[/img]

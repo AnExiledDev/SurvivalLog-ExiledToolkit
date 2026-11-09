@@ -80,7 +80,7 @@ public sealed class Plugin : BasePlugin
 
     private ConfigEntry<int> BindButtonSize() =>
         Config.Bind("Interface", "HudButtonSize", ButtonSize.Default, new ConfigDescription(
-            "How big the buttons in the HUD's tool column are drawn, in percent, from " + ButtonSize.Min + " to " + ButtonSize.Max + ": the buttons mods add there and the game's own phone and bag buttons beside them. 100 is the game's size. A change shows at once. Default: " + ButtonSize.Default + ".\n" +
+            "How big the buttons in the HUD's tool column are drawn, in percent, from " + ButtonSize.Min + " to " + ButtonSize.Max + ": the buttons mods add there and the game's phone and bag buttons beside them. 100 is the game's size. A change shows at once. Default: " + ButtonSize.Default + ".\n" +
             "HUD 工具栏中按钮的显示大小（百分比），范围 " + ButtonSize.Min + " 到 " + ButtonSize.Max + "：包括模组添加的按钮，以及旁边游戏自带的手机和背包按钮。100 为游戏原本的大小。改动会立即生效。默认 " + ButtonSize.Default + "。",
             new AcceptableValueRange<int>(ButtonSize.Min, ButtonSize.Max)));
 

@@ -21,7 +21,7 @@ public static class GameSingleton
 
     /// <summary>
     /// The singleton's native address, or zero before the game makes it; a new address means the game made a new one.
-    /// The game's own IsInstanceCreated only checks this field, but through interop each call boxes its answer, so the
+    /// The game's IsInstanceCreated only checks this field, but through interop each call boxes its answer, so the
     /// field is read directly.
     /// </summary>
     public static unsafe IntPtr Pointer<T>() where T : BaseSingleton<T>, new()

@@ -10,7 +10,7 @@ namespace ExiledToolkit.Web;
 internal delegate bool ScriptRunner(string javaScript, out Exception? failure);
 
 /// <summary>
-/// A script a mod keeps in the game's web UI: its embedded page.js, run in the root document the game's own pages sit
+/// A script a mod keeps in the game's web UI: its embedded page.js, run in the root document the game's pages sit
 /// in, above all of them. The web view can reload at any time and lose the script, so a tiny probe asks every couple
 /// of seconds whether it is still there; the page answers with the mod's "noscript" message when it is not, and the mod
 /// calls <see cref="Install"/> again. Main thread only. Toolkit 0.19.0 and newer.

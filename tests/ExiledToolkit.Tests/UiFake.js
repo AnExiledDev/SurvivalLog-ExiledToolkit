@@ -216,7 +216,7 @@ function panel(width, height, view, parent) {
 }
 
 // A game page that fits itself to its window (createViewportFit, webui-bag.js:1259) with a column a mod adds: the
-// game's own panels, gameWidth across, and the column beside them, in one box the page measures at its own size. When
+// game's panels, gameWidth across, and the column beside them, in one box the page measures at its own size. When
 // the box is too big for the window less 24 px, fit() zooms the page's body down until it fits.
 function selfFittingPage(gameWidth, columnWidth, height) {
   var view = addPage();

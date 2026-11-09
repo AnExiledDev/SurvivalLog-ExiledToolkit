@@ -5,7 +5,7 @@
 //
 // A mod marks its app (the game's .app markup) with data-etk-phone="<order>" and puts it anywhere on the home screen,
 // usually in .app-grid; without the Toolkit it simply stays there. Marked apps follow the game's, lowest order first.
-// With four apps or fewer the game's own dock layout is left untouched.
+// With four apps or fewer the game's dock layout is left untouched.
 (function () {
   if (window.__exiledtoolkitphone) return;
 

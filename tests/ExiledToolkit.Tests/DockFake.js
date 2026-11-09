@@ -73,7 +73,7 @@ function find(name) {
   return column.children.filter(function (el) { return el.name === name; })[0];
 }
 
-// Where a button sits, as "column:row", or "-" when the dock left it to the game's own layout.
+// Where a button sits, as "column:row", or "-" when the dock left it to the game's layout.
 function placeOf(name) {
   var el = find(name);
 

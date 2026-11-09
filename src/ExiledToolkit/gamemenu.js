@@ -1,6 +1,6 @@
-// Exiled's Toolkit's buttons in the game's own menus. Runs in Root.html, the document every game page iframe sits
+// Exiled's Toolkit's buttons in the game's menus. Runs in Root.html, the document every game page iframe sits
 // in. Puts the buttons mods add through ExiledToolkit.GameMenu into the pause (Esc) menu, OutSetting.html, and the
-// title screen, MainUI.html, drawn like the game's own, and keeps them there when Vue redraws the menu. Then it shrinks
+// title screen, MainUI.html, drawn like the game's, and keeps them there when Vue redraws the menu. Then it shrinks
 // the menu's buttons, gaps and text just enough that every button fits on the screen, however many mods add one. The
 // plugin sends the whole list with window.__exiledtoolkitgamemenu.set(rows) whenever it changes; the page says which
 // button was clicked through vuplex.postMessage("slmod|toolkitgamemenu|run|<id>").
@@ -14,11 +14,11 @@
   // Steps down from the worked-out size when text rounding still leaves the menu a pixel too tall.
   var FIT_STEP = 0.03;
   var MAX_FIT_STEPS = 10;
-  // The title screen plays the game's own click animation before the button acts, as the game's items do.
+  // The title screen plays the game's click animation before the button acts, as the game's items do.
   var TITLE_CLICK_MS = 300;
   var TITLE_CLICKED_MS = 450;
 
-  // Every size the menu is drawn with, times --slet-fit. At 1 each is the game's own value, so a menu that already
+  // Every size the menu is drawn with, times --slet-fit. At 1 each is the game's value, so a menu that already
   // fits looks exactly like the game's. slet-measure stops the button list from stretching to the bottom while the
   // fit measures how tall the menu wants to be, and stops the game's size animations, which would otherwise have the
   // fit measure the sizes from before it changed them; slet-scroll is the last resort, when even half size does not fit.
@@ -134,7 +134,7 @@
     return node;
   }
 
-  // Like the game's own pause button. The text sits in a span so a long label ends in "..." instead of wrapping.
+  // Like the game's pause button. The text sits in a span so a long label ends in "..." instead of wrapping.
   function pauseNode(doc, id) {
     var node = doc.createElement('div');
     var text = doc.createElement('span');
@@ -150,7 +150,7 @@
     return node;
   }
 
-  // Like the game's own title item: a bar and a text. It has no data-i18n, as the game's click handler reads that and
+  // Like the game's title item: a bar and a text. It has no data-i18n, as the game's click handler reads that and
   // would run one of its own actions.
   function titleNode(doc, id) {
     var node = doc.createElement('div');
@@ -348,7 +348,7 @@
     return last.offsetTop + last.offsetHeight + padding;
   }
 
-  // Finds the largest size, up to the game's own, at which the whole menu fits the panel. Every size in the menu is
+  // Finds the largest size, up to the game's, at which the whole menu fits the panel. Every size in the menu is
   // a multiple of --slet-fit, so how tall the menu is grows in a straight line with it: measuring at full size and
   // at the smallest gives the line, and the size that fits is read off it. A few steps down cover text rounding.
   // This reads layout after writing styles on purpose; it runs only when the menu's buttons or the window change.

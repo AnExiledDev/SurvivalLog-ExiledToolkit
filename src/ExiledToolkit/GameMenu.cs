@@ -4,7 +4,7 @@ using ExiledToolkit.Core;
 
 namespace ExiledToolkit;
 
-/// <summary>Where a <see cref="GameMenuButton"/> goes in the game's own menus.</summary>
+/// <summary>Where a <see cref="GameMenuButton"/> goes in the game's menus.</summary>
 public enum GameMenuPlace
 {
     /// <summary>The pause (Esc) menu, right after the game's Settings button.</summary>
@@ -18,7 +18,7 @@ public enum GameMenuPlace
 }
 
 /// <summary>
-/// A button in the game's pause menu or on its title screen, drawn like the game's own. Id, label, place and click
+/// A button in the game's pause menu or on its title screen, drawn like the game's. Id, label, place and click
 /// action are required; the rest is optional. Chinese text left empty shows the English.
 /// </summary>
 public sealed class GameMenuButton

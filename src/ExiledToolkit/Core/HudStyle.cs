@@ -24,7 +24,7 @@ internal static class HudStyle
     public const bool DefaultExtras = true;
 
     public const string StyleDescription =
-        "How the buttons in the HUD's tool column look: the buttons mods add there and the game's own phone and bag buttons. " +
+        "How the buttons in the HUD's tool column look: the buttons mods add there and the game's phone and bag buttons. " +
         "Lamplight: dark brown buttons with each tool's icon in its own colour. " +
         "FieldKit: olive canvas buttons with stitching that press down like keys. " +
         "Signal: dark buttons with each tool's icon lit in its own colour. " +
@@ -90,7 +90,7 @@ internal static class HudStyle
         "window.__exiledtoolkitdock&&window.__exiledtoolkitdock.look&&window.__exiledtoolkitdock.look('" +
         KnownStyle(style) + "'," + (KnownIconColours(iconColours) == One ? "true" : "false") + "," + (extras ? "true" : "false") + ")";
 
-    // The three preview buttons: the icon in each style (dim and lit layers, the game's own icon for Classic) and the
+    // The three preview buttons: the icon in each style (dim and lit layers, the game's icon for Classic) and the
     // tool's colour.
     private static readonly (string Hue, string Now, string[] Layers)[] PreviewTools =
     {

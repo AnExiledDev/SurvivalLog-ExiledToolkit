@@ -4,7 +4,7 @@ using System.Globalization;
 namespace ExiledToolkit.Core;
 
 /// <summary>
-/// The size the HUD's tool column is drawn at, mods' buttons and the game's own alike, in percent of the game's size
+/// The size the HUD's tool column is drawn at, mods' buttons and the game's alike, in percent of the game's size
 /// (Interface &gt; HudButtonSize). The page side is dock.js.
 /// </summary>
 internal static class ButtonSize

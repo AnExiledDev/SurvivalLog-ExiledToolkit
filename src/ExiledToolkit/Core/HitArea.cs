@@ -7,7 +7,7 @@ namespace ExiledToolkit.Core;
 /// <summary>A box on the page as fractions of the page's size, top-left origin, the way the game's pages report theirs.</summary>
 internal readonly record struct NormalRect(double X, double Y, double W, double H)
 {
-    /// <summary>Left and top edges count, right and bottom do not, as in the game's own check.</summary>
+    /// <summary>Left and top edges count, right and bottom do not, as in the game's check.</summary>
     public bool Contains(double x, double y) => x >= X && x < X + W && y >= Y && y < Y + H;
 }
 
@@ -29,7 +29,7 @@ internal sealed class HitArea
     public bool IsEmpty => _boxes.Length == 0;
 
     /// <summary>
-    /// A point in the web view's rect transform, as Unity gives it, mapped to page fractions with the game's own
+    /// A point in the web view's rect transform, as Unity gives it, mapped to page fractions with the game's
     /// formula (WebUIVm.IsPointInInteractiveArea): Unity's y grows upward, the page's grows downward.
     /// </summary>
     public bool ContainsLocalPoint(double localX, double localY, double width, double height, double pivotX, double pivotY)

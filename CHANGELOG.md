@@ -35,7 +35,7 @@
 ## 0.14.0
 
 - Fixed: with several mods adding buttons to the pause (Esc) menu, the bottom buttons, Save & Exit among them, ran off the screen. The menu now shrinks its buttons, gaps and text just enough that every button fits, down to half size; past that the button list scrolls. A menu that already fits keeps the game's size.
-- Mods now add their pause menu and title screen buttons through the Toolkit, so they all fit together and look like the game's own.
+- Mods now add their pause menu and title screen buttons through the Toolkit, so they all fit together and look like the game's.
 - Made for Survival Log 1.1.20151.
 
 ## 0.13.1
@@ -45,7 +45,7 @@
 
 ## 0.13.0
 
-- The HUD's tool buttons have a new look: the buttons mods add there and the game's own phone and bag. Pick it with `HudButtonStyle`: Lamplight (dark brown, each tool's icon in its own colour, the default), FieldKit (olive canvas with stitching, buttons press like keys), Signal (each tool lit in its own colour) or Classic (the game's own grey buttons).
+- The HUD's tool buttons have a new look: the buttons mods add there and the game's phone and bag. Pick it with `HudButtonStyle`: Lamplight (dark brown, each tool's icon in its own colour, the default), FieldKit (olive canvas with stitching, buttons press like keys), Signal (each tool lit in its own colour) or Classic (the game's grey buttons).
 - New icons for the phone, the bag and the buttons of Trap Hub, Package Bank, Field Guide, Farm Hub, Defense Manager, Machines, Power Manager and Storage Hub. Other buttons keep their own icon.
 - `HudIconColours` draws every icon in one colour instead of one per tool, and `HudButtonExtras` gives Lamplight and Signal the FieldKit touches: keys that press down, a striped edge on a button that needs you, stamped badges and paper tips.
 - A change to any of the three shows at once.
@@ -77,7 +77,7 @@
 
 ## 0.11.0
 
-- New: the HUD button size setting (`HudButtonSize` under Interface) draws the column of tool buttons on the left of the HUD smaller or bigger, from 50% to 150%. It covers the buttons mods add and the game's own phone and bag. It starts at 80%; set it to 100 for the game's size.
+- New: the HUD button size setting (`HudButtonSize` under Interface) draws the column of tool buttons on the left of the HUD smaller or bigger, from 50% to 150%. It covers the buttons mods add and the game's phone and bag. It starts at 80%; set it to 100 for the game's size.
 - Mods can have a UI size setting of their own, which overrides `UiScale` for that mod's windows. Each mod gets it once it is updated for it.
 - For mod authors: `ModUiSize.Set` and `{ mod: "<name>" }` in `ExiledUi.size`. See "UI size" in the README.
 - Made for Survival Log 1.1.19611.
@@ -109,7 +109,7 @@
 
 ## 0.8.0
 
-- New: mod apps on the phone go into the dock at the bottom, after the game's own apps, instead of stacking in the middle of the home screen over the notifications. Past four apps the dock shows rows of four.
+- New: mod apps on the phone go into the dock at the bottom, after the game's apps, instead of stacking in the middle of the home screen over the notifications. Past four apps the dock shows rows of four.
 - For mod authors: mark a phone app with `data-etk-phone="<order>"` to have it placed in the dock.
 - Made for Survival Log 1.1.19131; works on 1.1.19611.
 

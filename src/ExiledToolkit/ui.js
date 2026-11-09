@@ -39,7 +39,7 @@
   // to its window again. options.mod: the mod's name, so the panel takes that mod's own size when it has one.
   // options.pageFits: true for a panel inside a game page that zooms its own body down when its
   // panels are too big for its window: the fit element is measured at the page's own size, so the panel grows only as
-  // far as the page still shows at full size and the game's own panels keep theirs.
+  // far as the page still shows at full size and the game's panels keep theirs.
   function size(el, options) {
     if (!el || !el.style) return;
 

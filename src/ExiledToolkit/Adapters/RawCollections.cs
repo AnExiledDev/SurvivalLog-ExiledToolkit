@@ -5,7 +5,7 @@ namespace ExiledToolkit.Game;
 
 /// <summary>
 /// Reads a game Dictionary&lt;long, reference&gt; straight from its memory, so walking one makes no interop object per
-/// entry. The layout is checked against the game's own type data once: where the entry array and the entry count sit,
+/// entry. The layout is checked against the game's type data once: where the entry array and the entry count sit,
 /// and that an entry is a hash code, a link, a long key and a reference, 24 bytes in all. Each walk checks the object's
 /// class and the array's class and length before reading, and reports false for anything it does not recognise, so
 /// the caller can fall back to the interop path. Pointers are only good within the frame they were read in. Main
@@ -82,7 +82,7 @@ public sealed unsafe class RawDictionary
 
     public static IntPtr Value(IntPtr entries, int index) => *(IntPtr*)(entries + index * EntrySize + ValueAt);
 
-    /// <summary>The entry is { int hashCode; int next; long key; reference value }, as the game's own type data says.</summary>
+    /// <summary>The entry is { int hashCode; int next; long key; reference value }, as the game's type data says.</summary>
     private static bool IsEntryArray(IntPtr arrayClass)
     {
         if (IL2CPP.il2cpp_array_element_size(arrayClass) != EntrySize) return false;

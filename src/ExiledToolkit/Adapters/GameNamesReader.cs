@@ -53,7 +53,7 @@ public static partial class GameNames
     }
 
     /// <summary>
-    /// The same by config id. A missing id is null: the row is looked up in the table itself, since the game's own
+    /// The same by config id. A missing id is null: the row is looked up in the table itself, since the game's
     /// getter logs an error for every id it lacks.
     /// </summary>
     public static string? ItemName(ConfigManager config, int configId)

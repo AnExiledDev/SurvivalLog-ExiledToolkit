@@ -38,7 +38,7 @@ internal sealed class GameMenuBoard
     private readonly Dictionary<string, GameMenuItem> _items = new(StringComparer.Ordinal);
     private string? _shownOnPage;
 
-    /// <summary>Empty for the game's own colour, or a CSS colour as #rgb or #rrggbb.</summary>
+    /// <summary>Empty for the game's colour, or a CSS colour as #rgb or #rrggbb.</summary>
     public static bool IsValidAccent(string? accent) => accent is not null && (accent.Length == 0 || AccentPattern.IsMatch(accent));
 
     /// <summary>Adds the item, or replaces the one with its id.</summary>

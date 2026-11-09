@@ -28,7 +28,7 @@
     var GONE_CHECK_MS = 400;
     // Four tiles: room for whatever the mods add.
     var MENU_ICON = 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z';
-    // The look comes from the game's own category dropdown on this page (category-dropdown-wrapper, -btn,
+    // The look comes from the game's category dropdown on this page (category-dropdown-wrapper, -btn,
     // category-dropdown, category-option). These rules only open it upwards, as the toolbar is the panel's last row,
     // point the caret the way it opens, lay out a row's icon, label and hotkey, and give the button the spacing the
     // game gives its toolbar buttons beside the robot switches.
@@ -269,7 +269,7 @@
         } catch (err) {}
       }
 
-      // A press anywhere else closes the menu and still does what it would have, as the game's own dropdown does.
+      // A press anywhere else closes the menu and still does what it would have, as the game's dropdown does.
       function onOutsideDown(e) {
         if (openMenu && !openMenu.wrap.contains(e.target)) close();
       }

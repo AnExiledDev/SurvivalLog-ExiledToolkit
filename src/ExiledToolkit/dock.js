@@ -1,18 +1,18 @@
 // Exiled's Toolkit's HUD dock. Runs in Root.html, the document every game page iframe sits in. Mods put their buttons
 // in the HUD's tool column (CoreUI1's, and CoreUI0's before the disaster), above the game's phone and bag. Past four
 // buttons that column climbs the screen, so the dock lays it out as a grid instead: the last four buttons stay in the
-// first column where the column always was, the game's own at the bottom, and the rest fill columns to the right, top
+// first column where the column always was, the game's at the bottom, and the rest fill columns to the right, top
 // to bottom, four to a column.
 //
 // A mod marks its button with data-etk-dock="<order>"; marked buttons come first, lowest order first, so the layout
 // does not depend on which mod happened to load first. Unmarked buttons (the game's, and mods that do not mark theirs)
-// follow in the order the page has them. With four buttons or fewer the game's own layout is left untouched. The whole
+// follow in the order the page has them. With four buttons or fewer the game's layout is left untouched. The whole
 // column, the game's buttons with the mods', is drawn at the player's HUD button size (Interface > HudButtonSize),
 // which the C# side sends through size().
 //
 // The dock also draws every button in the column in the player's button style (Interface > HudButtonStyle, sent
 // through look()): a class on the column picks one stylesheet for the game's buttons and the mods' alike. The phone,
-// the bag and the known mod buttons get a new icon: the game's own svg stays where it is, hidden by the stylesheet,
+// the bag and the known mod buttons get a new icon: the game's svg stays where it is, hidden by the stylesheet,
 // and the dock's svg.etk-ic goes in beside it, so Vue keeps owning its markup. Classic takes all of it off again.
 (function () {
   if (window.__exiledtoolkitdock) return;
@@ -23,7 +23,7 @@
   var STYLE_ID = 'etk-dock-style';
   var ORDER_ATTR = 'data-etk-dock';
   var HUD_PAGES = /CoreUI[01]\.html/;
-  // The HUD button size as a factor, as last sent; 1 is the game's own size.
+  // The HUD button size as a factor, as last sent; 1 is the game's size.
   var buttonZoom = 1;
   // How far above the screen's bottom the column's lowest button sits, in page pixels at every button size. The game
   // pins the column at bottom:90px, but the button size's zoom scales that too (72px at 80%), which drops the bottom
@@ -78,7 +78,7 @@
     return marked.map(function (entry) { return entry.node; }).concat(rest);
   }
 
-  // Writes a style only when it differs, so the game's own watcher of these attributes is not woken for nothing.
+  // Writes a style only when it differs, so the game's watcher of these attributes is not woken for nothing.
   function setStyle(node, name, value) {
     if (node.style[name] !== value) node.style[name] = value;
   }
@@ -267,7 +267,7 @@
     ].join('\n');
   }
 
-  // The rules every restyled column shares: the hues, the icons, and the game's own icons hidden where the dock put one.
+  // The rules every restyled column shares: the hues, the icons, and the game's icons hidden where the dock put one.
   function sharedCss(style, p, monoHue) {
     var rules = [p + tones(style, AMBER)];
 

@@ -168,7 +168,7 @@ public class GameMenuPageTests
         Assert.True(Is("first.classList.contains('slet-accent')"));
     }
 
-    // At 1080 the game's own pause menu has room for about four more buttons; these cases are all about the fit.
+    // At 1080 the game's pause menu has room for about four more buttons; these cases are all about the fit.
 
     [Fact]
     public void A_pause_menu_that_already_fits_keeps_the_games_own_size()

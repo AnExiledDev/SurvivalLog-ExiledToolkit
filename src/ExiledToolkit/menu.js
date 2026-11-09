@@ -59,7 +59,7 @@
       { page: /MaterialRack\.html/, at: '.rack-system > .bag-panel > .header', append: true, down: true },
       { page: /ShopUI\.html/, at: '.left-panel > .panel-title, .left-panel > .bag-tabs', append: true, down: true }
     ];
-    // The look comes from the game's own category dropdown on the inventory page (category-dropdown-wrapper, -btn,
+    // The look comes from the game's category dropdown on the inventory page (category-dropdown-wrapper, -btn,
     // category-dropdown, category-option). These rules only open it upwards there, as the toolbar is the panel's last
     // row, point the caret the way it opens, lay out a row's icon, label and hotkey, and give the button the spacing
     // the game gives its toolbar buttons beside the robot switches. The station pages have no such dropdown, so the
@@ -154,7 +154,7 @@
           .sort(function (a, b) { return a.order - b.order || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0); });
       }
 
-      // The inventory page: its toolbar, on the bag's own item tab only, as the game's own put-all buttons do.
+      // The inventory page: its toolbar, on the bag's own item tab only, as the game's put-all buttons do.
       function place(doc) {
         if (isRetired || !doc) return;
 
@@ -404,7 +404,7 @@
         } catch (err) {}
       }
 
-      // A press anywhere else closes the menu and still does what it would have, as the game's own dropdown does.
+      // A press anywhere else closes the menu and still does what it would have, as the game's dropdown does.
       function onOutsideDown(e) {
         if (openMenu && !openMenu.wrap.contains(e.target)) close();
       }

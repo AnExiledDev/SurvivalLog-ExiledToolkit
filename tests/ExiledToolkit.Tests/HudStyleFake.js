@@ -19,7 +19,7 @@ function addHudHelpers(doc, column) {
     return el;
   };
 
-  // The game's own svg in a button, as Vue draws it: svg.icon-svg holding one path.
+  // The game's svg in a button, as Vue draws it: svg.icon-svg holding one path.
   function gameIcon(path) {
     var svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg');
     var line = doc.createElementNS('http://www.w3.org/2000/svg', 'path');

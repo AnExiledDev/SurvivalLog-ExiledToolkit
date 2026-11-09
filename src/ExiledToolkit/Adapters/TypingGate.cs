@@ -13,7 +13,7 @@ namespace ExiledToolkit.Adapters;
 /// Keeps the game's hotkeys and the camera's keys off while a text box in any page has the keyboard, so typing "p" in a
 /// mod's search box does not take a photo or open a panel, and WASD does not move the camera. typing.js says when a box
 /// takes or loses the keyboard. The camera reads its keys straight from Unity, so its own block is held on for each of
-/// its updates and put back after, which leaves the game's own block (a bench, the codex) as the game set it. Static
+/// its updates and put back after, which leaves the game's block (a bench, the codex) as the game set it. Static
 /// because Harmony patches have nowhere else to look; main thread only.
 /// </summary>
 internal static class TypingGate
