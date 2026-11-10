@@ -236,7 +236,7 @@ log.WriteFileOnly("a detail too many for the console");
 ```
 
 - `IsFileOn` (default on) turns the file copy off; the BepInEx log still gets every `Write`. `MaxFileBytes` above 0 moves a full file to `<name>.1` and starts it again. `Flush()` writes the waiting lines now, on your thread. `Path` is the file's full path.
-- 0.20.0 and newer: `WriteError(message)` logs any line as an error, so the Mod Manager shows the mod red. `StartFresh()`, called once before the first line, moves the old file to `<name>.1` for a log that is only about this game start. `WritesAtOnce = true` writes each line on your thread before `Write` returns, so a crash cannot lose the last lines; it is slower, so keep it for a log that looks for what crashed the game.
+- 0.20.0 and newer: `WriteError(message)` logs any line as an error, so the Mod Manager shows the mod red. `StartFresh()`, called once before the first line, moves the old file to `<name>.1` for a log that is only about this game start (with `MaxFileBytes` set, a rollover later in the same start overwrites that `.1`). `WritesAtOnce = true` writes each line on your thread before `Write` returns, so a crash cannot lose the last lines; it is slower, so keep it for a log that looks for what crashed the game.
 - `LogLines` is the queue behind it, if you write a file of your own: `Add(atUtc, message)` from any thread (true when the writer needs waking), `Take()` on one writer thread gives every waiting line, stamped in local time, or null.
 
 #### Hook failures
@@ -255,7 +255,7 @@ hooks.Fail("speeding up a crop", ex);
 ```
 
 - `Patch(hooks, type, method, parameters, prefix, postfix, finalizer, done, consequence)` returns whether the hook went in, and logs `done` or `could not hook Type.Method, consequence: why`. Give `parameters` to pick one overload. `PatchOrThrow` does the same without logging and throws instead.
-- 0.20.0 and newer: `Patch(hooks, type, method, parameters, priority, ...)` places every hook given at a Harmony priority (`Priority.First`, `Priority.Last` and the rest), for a hook that must run before or after other mods' hooks. `Patch(target, name, hooks, ...)` hooks a `MethodBase` you found yourself (a getter, an overload picked by return type), so you keep it; a null `target` is logged as `could not hook <name>`.
+- 0.20.0 and newer: `Patch(hooks, type, method, parameters, priority, ...)` places every hook given at a Harmony priority (`Priority.First`, `Priority.Last` and the rest), for a hook that must run before or after other mods' hooks. `Patch(target, name, hooks, ...)` hooks a `MethodBase` you found yourself (a getter, an overload picked by return type), and a null `target` is logged as `could not hook <name>`, so a lookup that comes back empty after a game update shows like any other failed hook. Without a priority, a hook's own `[HarmonyPriority]`, `[HarmonyBefore]` and `[HarmonyAfter]` still apply; a priority given replaces them.
 - `Fail(doing, ex)` logs `failed <doing> (reported once): ...`, or `(logged 2 of 3)` with a higher `maxLoggedFailures`, then stays quiet for that `doing`. Any thread; never throws.
 
 #### Window keys and clicks

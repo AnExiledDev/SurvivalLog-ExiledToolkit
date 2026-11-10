@@ -2,7 +2,7 @@
 
 ## 0.20.0
 
-- More shared parts for other mods: running a script in the game's web UI and reading its result, placing a hook before or after other mods' hooks, and log options for error lines, a log file that starts new each game start, and writing each line to disk at once.
+- More shared parts for other mods: running a script in the game's web UI and reading its result, placing a hook before or after other mods' hooks, and log options for error lines, a log file that starts empty each time the game starts, and writing each line to disk at once.
 - Made for Survival Log 1.1.20719.
 
 ## 0.19.0

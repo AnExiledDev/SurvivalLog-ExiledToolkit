@@ -33,7 +33,8 @@ public sealed class PatchKit
 
     /// <summary>
     /// The same with a Harmony <paramref name="priority"/> (<see cref="Priority"/>) for every hook given, for a hook
-    /// that must run before or after other mods' hooks on the method. Toolkit 0.20.0 and newer.
+    /// that must run before or after other mods' hooks on the method. It replaces any [HarmonyPriority], [HarmonyBefore] or [HarmonyAfter] on the
+    /// hooks. Toolkit 0.20.0 and newer.
     /// </summary>
     public bool Patch(Type hooks, Type type, string method, Type[]? parameters, int priority, string? prefix = null, string? postfix = null, string? finalizer = null, string done = "", string consequence = "") =>
         Report(type.Name + "." + method, done, consequence, () => Place(hooks, Find(type, method, parameters), prefix, postfix, finalizer, priority));
@@ -41,14 +42,15 @@ public sealed class PatchKit
     /// <summary>
     /// Hooks a method the mod found itself, such as one picked by its return type or a property getter. A null
     /// <paramref name="target"/> is logged as a failure under <paramref name="name"/>, so a lookup that comes back empty
-    /// after a game update shows in the Mod Manager like any other. Toolkit 0.20.0 and newer.
+    /// after a game update shows in the Mod Manager like any other. Leave <paramref name="priority"/> at -1 to keep the
+    /// hooks' own Harmony attributes. Toolkit 0.20.0 and newer.
     /// </summary>
-    public bool Patch(MethodBase? target, string name, Type hooks, string? prefix = null, string? postfix = null, string? finalizer = null, int priority = Priority.Normal, string done = "", string consequence = "") =>
+    public bool Patch(MethodBase? target, string name, Type hooks, string? prefix = null, string? postfix = null, string? finalizer = null, int priority = NoPriority, string done = "", string consequence = "") =>
         Report(name, done, consequence, () => Place(hooks, target ?? throw new MissingMethodException(name), prefix, postfix, finalizer, priority));
 
     /// <summary>The same without the logging: throws when the method is not there or the hook cannot go in, so the caller can give up on its feature.</summary>
     public void PatchOrThrow(Type hooks, Type type, string method, Type[]? parameters = null, string? prefix = null, string? postfix = null, string? finalizer = null) =>
-        Place(hooks, Find(type, method, parameters), prefix, postfix, finalizer, Priority.Normal);
+        Place(hooks, Find(type, method, parameters), prefix, postfix, finalizer, NoPriority);
 
     private static MethodInfo Find(Type type, string method, Type[]? parameters) =>
         (parameters == null ? AccessTools.Method(type, method) : AccessTools.Method(type, method, parameters))
@@ -81,8 +83,18 @@ public sealed class PatchKit
             finalizer: Hook(hooks, finalizer, priority));
     }
 
-    private static HarmonyMethod? Hook(Type hooks, string? name, int priority) =>
-        name == null ? null : new HarmonyMethod(AccessTools.Method(hooks, name) ?? throw new MissingMethodException(hooks.Name + "." + name), priority);
+    // No priority given: the HarmonyMethod(MethodInfo) constructor keeps the hook's own [HarmonyPriority],
+    // [HarmonyBefore] and [HarmonyAfter]. The constructor that takes a priority overwrites all three.
+    private const int NoPriority = -1;
+
+    private static HarmonyMethod? Hook(Type hooks, string? name, int priority)
+    {
+        if (name == null) return null;
+
+        var method = AccessTools.Method(hooks, name) ?? throw new MissingMethodException(hooks.Name + "." + name);
+
+        return priority == NoPriority ? new HarmonyMethod(method) : new HarmonyMethod(method, priority);
+    }
 
     /// <summary>
     /// For a hook's catch: logs the failure while fewer than the most of its kind were. Give every hook its own
