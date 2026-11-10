@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.20.0
+
+- More shared parts for other mods: running a script in the game's web UI and reading its result, placing a hook before or after other mods' hooks, and log options for error lines, a log file that starts new each game start, and writing each line to disk at once.
+- Made for Survival Log 1.1.20719.
+
 ## 0.19.0
 
 - **Warning:** if you use Mod Manager, update it to 0.14.1 or newer together with the Toolkit. Older Mod Manager versions lose their Mods screen with this Toolkit.

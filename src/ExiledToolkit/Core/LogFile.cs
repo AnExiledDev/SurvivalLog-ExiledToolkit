@@ -34,6 +34,9 @@ internal sealed class LogFile
     /// <summary>The size the file is kept under, in bytes; 0 or less for no limit.</summary>
     public long MaxBytes { get; set; }
 
+    /// <summary>Whether <see cref="Add"/> writes the line itself before it returns, instead of leaving it to the worker.</summary>
+    public volatile bool WritesAtOnce;
+
     /// <summary>Any thread. Never throws.</summary>
     public void Add(DateTime atUtc, string message)
     {
@@ -41,11 +44,33 @@ internal sealed class LogFile
 
         try
         {
-            if (_lines.Add(atUtc, message)) LogWriter.Wake(this);
+            var isFirstWaiting = _lines.Add(atUtc, message);
+
+            if (WritesAtOnce) Flush();
+            else if (isFirstWaiting) LogWriter.Wake(this);
         }
         catch (Exception)
         {
             // A line lost from the file copy costs nothing else.
+        }
+    }
+
+    /// <summary>Moves the file to "&lt;name&gt;.1", replacing an older one, so the next line starts a new file. Never throws.</summary>
+    public void StartFresh()
+    {
+        lock (_writeGate)
+        {
+            try
+            {
+                if (File.Exists(Path)) File.Move(Path, Path + ".1", true);
+
+                _size = 0;
+            }
+            catch (Exception)
+            {
+                // Another program holds the file: the lines go on after what it holds.
+                _size = -1;
+            }
         }
     }
 

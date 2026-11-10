@@ -75,6 +75,50 @@ public sealed class LogFileTests : IDisposable
     }
 
     [Fact]
+    public void A_file_that_writes_at_once_holds_each_line_before_Add_returns()
+    {
+        // A crash right after a line is logged must not lose it, so nothing may wait on the worker.
+        var path = Path.Combine(_folder, "atonce.log");
+        var file = new LogFile(path) { WritesAtOnce = true };
+
+        file.Add(DateTime.UtcNow, "before the crash");
+
+        Assert.EndsWith(" before the crash", File.ReadAllLines(path).Single());
+    }
+
+    [Fact]
+    public void Starting_fresh_keeps_the_last_run_in_dot_1_and_empties_the_file()
+    {
+        var path = Path.Combine(_folder, "fresh.log");
+
+        File.WriteAllText(path, "last game start" + Environment.NewLine);
+        File.WriteAllText(path + ".1", "two starts ago" + Environment.NewLine);
+
+        var file = new LogFile(path);
+
+        file.StartFresh();
+        file.Add(DateTime.UtcNow, "this game start");
+        file.Flush();
+
+        Assert.Equal("last game start", File.ReadAllLines(path + ".1").Single());
+        Assert.EndsWith(" this game start", File.ReadAllLines(path).Single());
+    }
+
+    [Fact]
+    public void Starting_fresh_with_no_file_yet_changes_nothing()
+    {
+        var path = Path.Combine(_folder, "new.log");
+        var file = new LogFile(path);
+
+        file.StartFresh();
+        file.Add(DateTime.UtcNow, "first");
+        file.Flush();
+
+        Assert.False(File.Exists(path + ".1"));
+        Assert.EndsWith(" first", File.ReadAllLines(path).Single());
+    }
+
+    [Fact]
     public void Lines_added_from_many_threads_all_reach_the_file()
     {
         var path = Path.Combine(_folder, "busy.log");

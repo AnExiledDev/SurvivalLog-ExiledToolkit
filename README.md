@@ -36,7 +36,7 @@ The Toolkit adds nothing to your save and does not edit game files.
 
 - Survival Log 1.1.20719. Built and tested on this version; a game update can break it until the mod is updated.
 - The [BepInEx Pack for Survival Log](https://www.nexusmods.com/survivallog/mods/12), the BepInEx 6 (IL2CPP) build for the game.
-- Using Mod Manager? Update it to 0.14.1 or newer together with this Toolkit. Older Mod Manager versions lose their Mods screen with Toolkit 0.19.0.
+- Using Mod Manager? Update it to 0.14.1 or newer together with this Toolkit. Older Mod Manager versions lose their Mods screen with Toolkit 0.19.0 and newer.
 - Optional: [Mod Manager](https://www.nexusmods.com/survivallog/mods/73). With it, you can change every setting in game on its Mods screen and see what each one does, without opening the config file.
 
 ## Install
@@ -58,7 +58,7 @@ Settings live in `BepInEx\config\com.dev.survivallog.exiledtoolkit.cfg`, created
 
 Tested on Survival Log 1.1.20719 with BepInEx `6.0.0-be.788`.
 
-Check `BepInEx\LogOutput.log` for `===== Exiled's Toolkit 0.19.0 started`. A few lines below it, `toasts shown ...` tells you whether toasts are shown, where they appear, how long they stay and how many show at once; it is written again whenever one of those settings changes. `mod windows drawn at ...%` gives the UI size and `HUD buttons drawn at ...%` the button size, both written again on every change. A mod with its own UI size writes `<mod> windows drawn at ...%` when it sets it. Once the game's interface is up, `toast script sent to the web UI` means toasts can appear. The same lines are in `BepInEx\exiled-toolkit.log`, which survives restarts.
+Check `BepInEx\LogOutput.log` for `===== Exiled's Toolkit 0.20.0 started`. A few lines below it, `toasts shown ...` tells you whether toasts are shown, where they appear, how long they stay and how many show at once; it is written again whenever one of those settings changes. `mod windows drawn at ...%` gives the UI size and `HUD buttons drawn at ...%` the button size, both written again on every change. A mod with its own UI size writes `<mod> windows drawn at ...%` when it sets it. Once the game's interface is up, `toast script sent to the web UI` means toasts can appear. The same lines are in `BepInEx\exiled-toolkit.log`, which survives restarts.
 
 If no toasts appear, check that `Enabled` is `true` in the config, then look in `BepInEx\exiled-toolkit.log` for a line starting with `could not`.
 
@@ -198,6 +198,8 @@ PageInbox.Listen("slmod|machines|timer|", message => TimerPage.AskInstall());   
 
 `WebPage` keeps your embedded page.js in the game's web UI. `WebUi.TryRun(js, out failure)` runs one script in the root document, false when there is no web view yet.
 
+To get the script's result back (0.20.0 and newer), pass a `ReplySlot`: `WebUi.TryRun(js, replies, out failure)` opens a call only when the script goes out, and `replies.Take()` on a later frame gives the result (null is `""`). A mod that sends every frame can instead make one `Il2CppSystem.Action<string>` and pass it each time: `WebUi.TryRun(js, onResult, out failure)`. A result comes on the web view's thread, not the main one.
+
 ```csharp
 using ExiledToolkit.Kit;
 using ExiledToolkit.Web;
@@ -234,6 +236,7 @@ log.WriteFileOnly("a detail too many for the console");
 ```
 
 - `IsFileOn` (default on) turns the file copy off; the BepInEx log still gets every `Write`. `MaxFileBytes` above 0 moves a full file to `<name>.1` and starts it again. `Flush()` writes the waiting lines now, on your thread. `Path` is the file's full path.
+- 0.20.0 and newer: `WriteError(message)` logs any line as an error, so the Mod Manager shows the mod red. `StartFresh()`, called once before the first line, moves the old file to `<name>.1` for a log that is only about this game start. `WritesAtOnce = true` writes each line on your thread before `Write` returns, so a crash cannot lose the last lines; it is slower, so keep it for a log that looks for what crashed the game.
 - `LogLines` is the queue behind it, if you write a file of your own: `Add(atUtc, message)` from any thread (true when the writer needs waking), `Take()` on one writer thread gives every waiting line, stamped in local time, or null.
 
 #### Hook failures
@@ -252,6 +255,7 @@ hooks.Fail("speeding up a crop", ex);
 ```
 
 - `Patch(hooks, type, method, parameters, prefix, postfix, finalizer, done, consequence)` returns whether the hook went in, and logs `done` or `could not hook Type.Method, consequence: why`. Give `parameters` to pick one overload. `PatchOrThrow` does the same without logging and throws instead.
+- 0.20.0 and newer: `Patch(hooks, type, method, parameters, priority, ...)` places every hook given at a Harmony priority (`Priority.First`, `Priority.Last` and the rest), for a hook that must run before or after other mods' hooks. `Patch(target, name, hooks, ...)` hooks a `MethodBase` you found yourself (a getter, an overload picked by return type), so you keep it; a null `target` is logged as `could not hook <name>`.
 - `Fail(doing, ex)` logs `failed <doing> (reported once): ...`, or `(logged 2 of 3)` with a higher `maxLoggedFailures`, then stays quiet for that `doing`. Any thread; never throws.
 
 #### Window keys and clicks
@@ -460,7 +464,7 @@ A page script run in the game's root document (where `vuplex` and every page's i
 ```
 
 - A function pushed before the Toolkit's script loads runs when it loads, in the order pushed; one pushed after runs at once. Each gets the API as its argument. One that throws does not stop the others.
-- `etk.version` is 1 in Toolkit 0.19.0.
+- `etk.version` is 1 in Toolkit 0.19.0 and 0.20.0.
 
 `send(prefix, message)` posts `prefix + message` to your C# side through `window.vuplex`. It returns `false`, and never throws, while the bridge is not there.
 

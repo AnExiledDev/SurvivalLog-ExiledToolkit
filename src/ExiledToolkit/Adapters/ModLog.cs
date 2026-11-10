@@ -39,12 +39,37 @@ public sealed class ModLog
         set => _file.MaxBytes = value;
     }
 
+    /// <summary>
+    /// Whether each line is written to the file on the thread that logs it, before the call returns, instead of by the
+    /// worker. Slower, but a crash cannot lose the last lines; for a mod that logs to find out why the game crashed.
+    /// Default: off. Toolkit 0.20.0 and newer.
+    /// </summary>
+    public bool WritesAtOnce
+    {
+        get => _file.WritesAtOnce;
+        set => _file.WritesAtOnce = value;
+    }
+
     /// <summary>Never throws: a logger that can fail would take down whatever it was asked to report on.</summary>
-    public void Write(string message)
+    public void Write(string message) => Write(message, HookFailure.Is(message));
+
+    /// <summary>The same, as an error in the BepInEx log whatever the line says, so the Mod Manager shows the mod red. Never throws. Toolkit 0.20.0 and newer.</summary>
+    public void WriteError(string message) => Write(message, true);
+
+    /// <summary>For lines too many for the BepInEx console: they go to the file alone (while <see cref="IsFileOn"/>). Never throws.</summary>
+    public void WriteFileOnly(string message) => _file.Add(DateTime.UtcNow, message);
+
+    /// <summary>
+    /// Moves what the file holds to "&lt;name&gt;.1" so it starts empty, for a log that is only about the current game
+    /// start. Call it once, before the first line. Never throws. Toolkit 0.20.0 and newer.
+    /// </summary>
+    public void StartFresh() => _file.StartFresh();
+
+    private void Write(string message, bool isError)
     {
         try
         {
-            if (HookFailure.Is(message)) _bepinex.LogError(message);
+            if (isError) _bepinex.LogError(message);
             else _bepinex.LogInfo(message);
         }
         catch (Exception)
@@ -54,9 +79,6 @@ public sealed class ModLog
 
         _file.Add(DateTime.UtcNow, message);
     }
-
-    /// <summary>For lines too many for the BepInEx console: they go to the file alone (while <see cref="IsFileOn"/>). Never throws.</summary>
-    public void WriteFileOnly(string message) => _file.Add(DateTime.UtcNow, message);
 
     /// <summary>Writes the waiting lines now, on this thread, say before a crash-prone step. The Toolkit also does it when the game closes.</summary>
     public void Flush() => _file.Flush();
