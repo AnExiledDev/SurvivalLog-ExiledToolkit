@@ -491,7 +491,7 @@ A page script run in the game's root document (where `vuplex` and every page's i
 ```
 
 - A function pushed before the Toolkit's script loads runs when it loads, in the order pushed. One pushed after it loads runs right away. Each gets the API as its argument. One that throws does not stop the others.
-- `etk.version` is 1 in Toolkit 0.19.0 and 0.20.0.
+- `etk.version` is 1 in Toolkit 0.19.0 and newer.
 
 `send(prefix, message)` posts `prefix + message` to your C# side through `window.vuplex`. It returns `false`, and never throws, while the bridge is not there.
 
