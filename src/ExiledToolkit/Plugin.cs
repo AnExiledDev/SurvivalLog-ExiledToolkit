@@ -17,7 +17,7 @@ public sealed class Plugin : BasePlugin
 {
     /// <summary>For <c>[BepInDependency(ExiledToolkit.Plugin.Guid)]</c> in a mod that shows toasts.</summary>
     public const string Guid = "com.dev.survivallog.exiledtoolkit";
-    public const string Version = "0.20.1";
+    public const string Version = "0.21.0";
 
     public override void Load()
     {

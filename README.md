@@ -67,7 +67,7 @@ Settings live in `BepInEx\config\com.dev.survivallog.exiledtoolkit.cfg`, created
 
 Tested on Survival Log 1.1.20719 with BepInEx `6.0.0-be.788`.
 
-Check `BepInEx\LogOutput.log` for `===== Exiled's Toolkit 0.20.1 started`. A few lines below it, `toasts shown ...` tells you whether toasts are shown, where they appear, how long they stay and how many show at once. That line is written again whenever one of those settings changes. `mod windows drawn at ...%` gives the UI size and `HUD buttons drawn at ...%` gives the button size. Both are written again on every change. A mod with its own UI size writes `<mod> windows drawn at ...%` when it sets it. Once the game's interface is up, `toast script sent to the web UI` means toasts can appear. The same lines are in `BepInEx\exiled-toolkit.log`, which survives restarts.
+Check `BepInEx\LogOutput.log` for `===== Exiled's Toolkit 0.21.0 started`. A few lines below it, `toasts shown ...` tells you whether toasts are shown, where they appear, how long they stay and how many show at once. That line is written again whenever one of those settings changes. `mod windows drawn at ...%` gives the UI size and `HUD buttons drawn at ...%` gives the button size. Both are written again on every change. A mod with its own UI size writes `<mod> windows drawn at ...%` when it sets it. Once the game's interface is up, `toast script sent to the web UI` means toasts can appear. The same lines are in `BepInEx\exiled-toolkit.log`, which survives restarts.
 
 If no toasts appear, check that `Enabled` is `true` in the config, then look in `BepInEx\exiled-toolkit.log` for a line starting with `could not`.
 
@@ -336,6 +336,24 @@ var src = WebIcons.Icons.Resolve(item.WebIcon) ?? WebIcons.Icons.Resolve(item.Ic
 #### UI size setting
 
 `ModUiSize.Bind(Config, "FarmHub")` binds your Interface > UiScale setting (0 to 200, default 0) with the standard description, applies it live and calls `ModUiSize.Set` for you. The description names the mod by splitting the name ("Farm Hub"). Pass `displayName` when that reads wrong, or a whole `description` (English, `\n`, Chinese) when your panels are not windows. Nothing is sent while the setting stays 0.
+
+#### Share codes
+
+0.21.0 and newer. `ShareCodec` turns any text into one short line a player can paste in a chat or a link, and reads it back. It is the format Mod Manager's `SLMM1-` profile codes use, so those keep working.
+
+```csharp
+using ExiledToolkit.Kit;
+
+var code = ShareCodec.Pack("SLCD1-", text);   // "SLCD1-" and the text, compressed, in base64 with "-" and "_"
+var (read, problem) = ShareCodec.Unpack(pasted, "SLCD1-", maxPastedLength: 200_000, maxUnpackedBytes: 1_000_000);
+if (problem is ShareProblem.TooBig) Show(Words.TooBig);
+```
+
+- `Unpack` finds the first code with your prefix anywhere in the pasted text, so words around it are fine. Spaces and line breaks are taken out first, since chat apps break long lines. Because of that, words right after the code join it, even with a space between, and can break it. A full stop or a comma after the code stops that, and a code at the end of the message always reads.
+- Pasted text longer than `maxPastedLength` is refused before anything is decoded. A code that unpacks to more than `maxUnpackedBytes` is refused as soon as it passes the limit, so a pasted code cannot fill the memory.
+- `problem` is null when it read. Otherwise it is `Empty` (nothing pasted), `NotACode` (no code with your prefix), `Broken` (cut off or changed) or `TooBig`. The words the player sees are yours to write.
+- The prefix must match exactly, upper case included. Put a version number in it (`SLCD1-`) so a later format can use a new one.
+- What goes inside is up to you. If you write lines of tab-separated fields, `ShareCodec.EscapeField(value)` writes `%`, tabs and line breaks as `%25`, `%09`, `%0A` and `%0D` so no field can split a line, and `UnescapeField` undoes it. Count your lines in a last line, as Mod Manager does, if a code cut short in a chat must be refused rather than read in part.
 
 #### Small helpers
 

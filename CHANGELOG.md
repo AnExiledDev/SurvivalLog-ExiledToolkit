@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.21.0
+
+- Other mods can now use the Toolkit to turn their settings into a short code you can paste in a chat, the same kind of code Mod Manager uses for profiles. Profile codes you already shared keep working.
+- Made for Survival Log 1.1.20719.
+
 ## 0.20.1
 
 - The setting descriptions and the Mod Manager description are clearer and easier to read. The note about holding a toast now says its time stops for up to 15 seconds.
