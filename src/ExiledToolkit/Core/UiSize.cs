@@ -57,8 +57,8 @@ internal static class UiSize
 
     /// <summary>The description of a mod's own Interface &gt; UiScale setting, English then Chinese.</summary>
     public static string ModDescription(string displayName) =>
-        $"How big {displayName}'s own windows, panels and messages are drawn, in percent, from {Min} to {Max}. At 0 they follow the UI size set in Exiled's Toolkit (its UiScale).\n" +
-        $"{displayName} 自己的窗口、面板和提示的显示大小（百分比），范围 {Min} 到 {Max}。设为 0 时跟随 Exiled's Toolkit 的界面大小设置（它的 UiScale）。";
+        $"How big {displayName}'s windows, panels and messages are, in percent, from {Min} to {Max}. Set it to 0 to use the UiScale setting from Exiled's Toolkit instead.\n" +
+        $"{displayName} 的窗口、面板和提示的大小（百分比），范围 {Min} 到 {Max}。设为 0 时改用 Exiled's Toolkit 的 UiScale 设置。";
 
     private static string Factor(int percent) => (percent / 100.0).ToString(CultureInfo.InvariantCulture);
 }

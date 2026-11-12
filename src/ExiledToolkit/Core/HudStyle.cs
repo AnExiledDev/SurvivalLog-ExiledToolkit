@@ -24,29 +24,31 @@ internal static class HudStyle
     public const bool DefaultExtras = true;
 
     public const string StyleDescription =
-        "How the buttons in the HUD's tool column look: the buttons mods add there and the game's phone and bag buttons. " +
+        "How the tool buttons on the left of the HUD look, including the buttons mods add there and the game's phone and bag buttons. " +
         "Lamplight: dark brown buttons with each tool's icon in its own colour. " +
         "FieldKit: olive canvas buttons with stitching that press down like keys. " +
-        "Signal: dark buttons with each tool's icon lit in its own colour. " +
-        "Classic: the game's normal grey buttons and icons. A change shows at once. Default: Lamplight.\n" +
-        "HUD 工具栏中按钮的样式：包括模组添加的按钮，以及游戏自带的手机和背包按钮。" +
+        "Signal: dark buttons with each tool's icon lit up in its own colour. " +
+        "Classic: the game's normal grey buttons and icons. Changes show right away. Default: Lamplight.\n" +
+        "HUD 左侧工具按钮的样式，包括模组加在那里的按钮，以及游戏的手机和背包按钮。" +
         "灯火：深棕色按钮，每个工具的图标各有颜色。" +
         "野外装备：带缝线的橄榄色帆布按钮，按下时像键盘按键一样下沉。" +
         "信号灯：深色按钮，每个工具的图标以各自的颜色发光。" +
-        "经典：游戏原本的灰色按钮和图标。改动会立即生效。默认「灯火」。";
+        "经典：游戏默认的灰色按钮和图标。改动会立即生效。默认「灯火」。";
 
     public const string IconColoursDescription =
+        "The colour of the icons on the tool buttons. " +
         "PerTool: each tool's icon has its own colour, so you can find a tool by its colour. " +
         "One: every icon is amber in Lamplight and bone white in FieldKit. " +
-        "Signal always gives each tool its own colour, and Classic keeps the game's icons. A change shows at once. Default: PerTool.\n" +
+        "Signal always gives each tool its own colour, and Classic always shows the game's normal icons. Changes show right away. Default: PerTool.\n" +
+        "工具按钮上图标的颜色。" +
         "按工具区分：每个工具的图标各有颜色，可以凭颜色找到工具。" +
         "统一颜色：「灯火」中所有图标为琥珀色，「野外装备」中为骨白色。" +
-        "「信号灯」始终按工具区分颜色，「经典」保留游戏原本的图标。改动会立即生效。默认「按工具区分」。";
+        "「信号灯」始终按工具区分颜色，「经典」始终显示游戏默认的图标。改动会立即生效。默认「按工具区分」。";
 
     public const string ExtrasDescription =
-        "Adds the touches of the FieldKit style to Lamplight and Signal: buttons that press down like keys, a striped edge on a button that needs you, stamped number badges and paper tags for the tips. " +
-        "FieldKit always has them and Classic never does. A change shows at once. Default: on.\n" +
-        "为「灯火」和「信号灯」加上「野外装备」样式的细节：按下时像键盘按键一样下沉的按钮、需要你处理的按钮底部的条纹、盖章样式的数字角标，以及纸签样式的提示。" +
+        "Gives Lamplight and Signal the extra details of the FieldKit style: buttons that press down like keys, a moving striped bar on a button with something new, stamped number badges and tooltips that look like paper tags. " +
+        "FieldKit always has them and Classic never does. Changes show right away. Default: on.\n" +
+        "为「灯火」和「信号灯」加上「野外装备」样式的细节：按下时像键盘按键一样下沉的按钮、有新内容的按钮底部会动的条纹、盖章样式的数字角标，以及纸签样式的提示。" +
         "「野外装备」始终带有这些细节，「经典」从不带有。改动会立即生效。默认开启。";
 
     public static readonly object[] IconColourTags =

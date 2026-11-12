@@ -116,7 +116,7 @@ public class SharedHelperTests
 
         var description = UiSize.ModDescription("Farm Hub");
 
-        Assert.StartsWith("How big Farm Hub's own windows, panels and messages are drawn, in percent, from 75 to 200. At 0 they follow the UI size set in Exiled's Toolkit (its UiScale).\n", description);
-        Assert.EndsWith("\nFarm Hub 自己的窗口、面板和提示的显示大小（百分比），范围 75 到 200。设为 0 时跟随 Exiled's Toolkit 的界面大小设置（它的 UiScale）。", description);
+        Assert.StartsWith("How big Farm Hub's windows, panels and messages are, in percent, from 75 to 200. Set it to 0 to use the UiScale setting from Exiled's Toolkit instead.\n", description);
+        Assert.EndsWith("\nFarm Hub 的窗口、面板和提示的大小（百分比），范围 75 到 200。设为 0 时改用 Exiled's Toolkit 的 UiScale 设置。", description);
     }
 }

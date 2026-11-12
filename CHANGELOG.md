@@ -1,8 +1,13 @@
 # Changelog
 
+## 0.20.1
+
+- The setting descriptions and the Mod Manager description are clearer and easier to read. The note about holding a toast now says its time stops for up to 15 seconds.
+- Made for Survival Log 1.1.20719.
+
 ## 0.20.0
 
-- More shared parts for other mods: running a script in the game's web UI and reading its result, placing a hook before or after other mods' hooks, and log options for error lines, a log file that starts empty each time the game starts, and writing each line to disk at once.
+- More shared parts for other mods: running a script in the game's web UI and reading its result, placing a hook before or after other mods' hooks, and log options for error lines, a log file that starts empty each time the game starts, and writing each line to disk right away.
 - Made for Survival Log 1.1.20719.
 
 ## 0.19.0
@@ -39,7 +44,7 @@
 
 ## 0.14.0
 
-- Fixed: with several mods adding buttons to the pause (Esc) menu, the bottom buttons, Save & Exit among them, ran off the screen. The menu now shrinks its buttons, gaps and text just enough that every button fits, down to half size; past that the button list scrolls. A menu that already fits keeps the game's size.
+- Fixed: with several mods adding buttons to the pause (Esc) menu, the bottom buttons, Save & Exit among them, ran off the screen. The menu now shrinks its buttons, gaps and text just enough that every button fits, down to half size. Past that, the button list scrolls. A menu that already fits stays at its normal size.
 - Mods now add their pause menu and title screen buttons through the Toolkit, so they all fit together and look like the game's.
 - Made for Survival Log 1.1.20151.
 
@@ -50,15 +55,15 @@
 
 ## 0.13.0
 
-- The HUD's tool buttons have a new look: the buttons mods add there and the game's phone and bag. Pick it with `HudButtonStyle`: Lamplight (dark brown, each tool's icon in its own colour, the default), FieldKit (olive canvas with stitching, buttons press like keys), Signal (each tool lit in its own colour) or Classic (the game's grey buttons).
+- The HUD's tool buttons have a new look. That covers the buttons mods add there and the game's phone and bag. Pick it with `HudButtonStyle`: Lamplight (dark brown, each tool's icon in its own colour, the default), FieldKit (olive canvas with stitching, buttons that press down like keys), Signal (each tool lit up in its own colour) or Classic (the game's grey buttons).
 - New icons for the phone, the bag and the buttons of Trap Hub, Package Bank, Field Guide, Farm Hub, Defense Manager, Machines, Power Manager and Storage Hub. Other buttons keep their own icon.
-- `HudIconColours` draws every icon in one colour instead of one per tool, and `HudButtonExtras` gives Lamplight and Signal the FieldKit touches: keys that press down, a striped edge on a button that needs you, stamped badges and paper tips.
-- A change to any of the three shows at once.
+- `HudIconColours` draws every icon in one colour instead of one per tool, and `HudButtonExtras` gives Lamplight and Signal the extra details of FieldKit: buttons that press down like keys, a striped edge on a button with something new, stamped number badges and tooltips that look like paper tags.
+- Changes to any of these three settings show right away.
 - Made for Survival Log 1.1.20151.
 
 ## 0.12.0
 
-- While you type in a mod's text box, such as a search box, the keys no longer reach the game: letters no longer open panels or take a photo, and WASD no longer moves the camera. This works for every mod's boxes without the mod doing anything. Clicking the world leaves the box.
+- While you type in a mod's text box, such as a search box, the keys no longer reach the game: letters no longer open panels or take a photo, and WASD no longer moves the camera. This works for every mod's boxes without the mod doing anything. Click the world to leave the box.
 - Mods can ask the Toolkit whether you are typing, to skip their own hotkeys while you are.
 - Made for Survival Log 1.1.20151.
 
@@ -82,14 +87,14 @@
 
 ## 0.11.0
 
-- New: the HUD button size setting (`HudButtonSize` under Interface) draws the column of tool buttons on the left of the HUD smaller or bigger, from 50% to 150%. It covers the buttons mods add and the game's phone and bag. It starts at 80%; set it to 100 for the game's size.
+- New: the HUD button size setting (`HudButtonSize` under Interface) draws the column of tool buttons on the left of the HUD smaller or bigger, from 50% to 150%. It covers the buttons mods add and the game's phone and bag. It starts at 80%. Set it to 100 for the game's normal size.
 - Mods can have a UI size setting of their own, which overrides `UiScale` for that mod's windows. Each mod gets it once it is updated for it.
 - For mod authors: `ModUiSize.Set` and `{ mod: "<name>" }` in `ExiledUi.size`. See "UI size" in the README.
 - Made for Survival Log 1.1.19611.
 
 ## 0.10.0
 
-- New: the UI size setting (`UiScale` under Interface) draws mod windows, panels and toasts bigger or smaller, from 75% to 200%. A change shows at once, without restarting the game.
+- New: the UI size setting (`UiScale` under Interface) draws mod windows, panels and toasts bigger or smaller, from 75% to 200%. Changes show right away, without restarting the game.
 - A mod window that would run off the screen at a bigger size is drawn as big as still fits.
 - Toasts follow the UI size now. Each other mod's windows follow it once that mod is updated for it.
 - For mod authors: hand a panel your page script draws to `ExiledUi.size` and it follows the player's UI size, and `ExiledUi.zoomAt` gives the size a tooltip should take to match the panel under it. See "UI size" in the README.
@@ -108,7 +113,7 @@
 
 ## 0.9.0
 
-- The Mods button is now also in the bag panel of the workbench, stove, ration press, greenhouse, drone hub, brewing barrel, dye vat, rat cage, material rack and shop screens, not just the inventory. It lists the actions that work there. The shredder and the drone trade are left out.
+- The Mods button is now in the bag panel of the workbench, stove, ration press, greenhouse, drone hub, brewing barrel, dye vat, rat cage, material rack and shop screens, as well as the inventory. It lists the actions that work there. The shredder and the drone trade are left out.
 - For mod authors: page-script entries in the shared menu can ask to be listed on those screens too (`stations: true`). Entries added with `ModsMenu` stay on the inventory.
 - Made for Survival Log 1.1.19611.
 
@@ -116,7 +121,7 @@
 
 - New: mod apps on the phone go into the dock at the bottom, after the game's apps, instead of stacking in the middle of the home screen over the notifications. Past four apps the dock shows rows of four.
 - For mod authors: mark a phone app with `data-etk-phone="<order>"` to have it placed in the dock.
-- Made for Survival Log 1.1.19131; works on 1.1.19611.
+- Made for Survival Log 1.1.19131. Also works on 1.1.19611.
 
 ## 0.7.0
 
@@ -126,16 +131,16 @@
 
 ## 0.6.0
 
-- New: the HUD's tool buttons stay four high. When mods add enough buttons that the column on the left would grow past four, the rest go into a second column to its right, filled top to bottom. The phone and bag stay in place, and toasts move right to clear the wider column.
+- New: the HUD's tool buttons stay four high. When mods add enough buttons that the column on the left would grow past four, the rest go into a second column to its right, filled top to bottom. The phone and bag stay in place, and toasts move right to make room for the wider column.
 - For mod authors: mark a HUD button with `data-etk-dock="<order>"` to set its place in the layout.
-- After a game update, Mod Manager can tell you if this mod may need an update.
+- After a game update, Mod Manager can now tell you when this mod might need an update.
 - Made for Survival Log 1.1.19131.
 
 ## 0.5.0
 
-- New: the inventory's "Mods" dropdown. Mods that need it, such as Loot All Pre-Disaster, add their entries to it through the Toolkit. It shares the one button with Storage Hub's and Unpack All's own entries.
+- New: the inventory's "Mods" dropdown. Mods that need it, such as Loot All Pre-Disaster, add their entries to it through the Toolkit. Storage Hub and Unpack All put their entries under the same button.
 - For mod authors: `ModsMenu.Add` puts an entry in the dropdown, with English and Chinese text, an icon, and a rule for when it shows.
-- Toast settings apply at once when changed in the Mod Manager: the position, the time on screen, how many show at once, and the off switch.
+- Toast settings apply right away when changed in the Mod Manager: the position, the time on screen, how many show at once, and the off switch.
 - The Mod Manager shows the Toolkit with its name in Chinese, a description and its GitHub page, in the Libraries group.
 
 ## 0.4.0
@@ -150,6 +155,5 @@
 ## 0.2.2
 
 - First release.
-- A shared library for my Survival Log mods.
-- It shows their short notices (toasts) beside the HUD.
+- A shared library for my Survival Log mods that shows their short notices (toasts) next to the HUD.
 - On its own it does nothing you can see. Install it when another mod says it needs it.
