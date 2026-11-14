@@ -67,7 +67,7 @@ Settings live in `BepInEx\config\com.dev.survivallog.exiledtoolkit.cfg`, created
 
 Tested on Survival Log 1.1.20719 with BepInEx `6.0.0-be.788`.
 
-Check `BepInEx\LogOutput.log` for `===== Exiled's Toolkit 0.21.0 started`. A few lines below it, `toasts shown ...` tells you whether toasts are shown, where they appear, how long they stay and how many show at once. That line is written again whenever one of those settings changes. `mod windows drawn at ...%` gives the UI size and `HUD buttons drawn at ...%` gives the button size. Both are written again on every change. A mod with its own UI size writes `<mod> windows drawn at ...%` when it sets it. Once the game's interface is up, `toast script sent to the web UI` means toasts can appear. The same lines are in `BepInEx\exiled-toolkit.log`, which survives restarts.
+Check `BepInEx\LogOutput.log` for `===== Exiled's Toolkit 0.22.0 started`. A few lines below it, `toasts shown ...` tells you whether toasts are shown, where they appear, how long they stay and how many show at once. That line is written again whenever one of those settings changes. `mod windows drawn at ...%` gives the UI size and `HUD buttons drawn at ...%` gives the button size. Both are written again on every change. A mod with its own UI size writes `<mod> windows drawn at ...%` when it sets it. Once the game's interface is up, `toast script sent to the web UI` means toasts can appear. The same lines are in `BepInEx\exiled-toolkit.log`, which survives restarts.
 
 If no toasts appear, check that `Enabled` is `true` in the config, then look in `BepInEx\exiled-toolkit.log` for a line starting with `could not`.
 
@@ -354,6 +354,32 @@ if (problem is ShareProblem.TooBig) Show(Words.TooBig);
 - `problem` is null when it read. Otherwise it is `Empty` (nothing pasted), `NotACode` (no code with your prefix), `Broken` (cut off or changed) or `TooBig`. The words the player sees are yours to write.
 - The prefix must match exactly, upper case included. Put a version number in it (`SLCD1-`) so a later format can use a new one.
 - What goes inside is up to you. If you write lines of tab-separated fields, `ShareCodec.EscapeField(value)` writes `%`, tabs and line breaks as `%25`, `%09`, `%0A` and `%0D` so no field can split a line, and `UnescapeField` undoes it. Count your lines in a last line, as Mod Manager does, if a code cut short in a chat must be refused rather than read in part.
+
+#### Other players
+
+0.22.0 and newer. `OtherPlayers` says whether other people play in this game, for a mod that pauses the game or changes its speed on its own. Multiplayer reports to it every frame while a game is shared. With no report, every value is the one for a game played alone.
+
+```csharp
+using ExiledToolkit.Game;
+
+if (OtherPlayers.IsGuest) return;                  // this copy joined someone else's game; the host sets time and speed
+var isBusy = IsMyCharacterBusy() || OtherPlayers.IsAnyBusy;
+if (OtherPlayers.Count > 0) { /* someone else plays here: don't pause because this window lost focus */ }
+```
+
+- `Count` is how many other people play in this game, 0 when alone. A guest always counts the host.
+- `IsAnyBusy` is true when another player has an order waiting or running.
+- `Report(count, isGuest, isAnyBusy)` and `Clear()` are for the multiplayer mod. Nothing else should call them.
+
+#### Holding a speed
+
+0.22.0 and newer. `TimeScale.Hold(time, scale)` makes the game run at `scale`, for a speed the speed buttons don't have. It makes the same writes the game's speed buttons make, so the clock, the page's timers and the progress bars all follow it. Pressing a speed button sets the speed back to that button's.
+
+```csharp
+using ExiledToolkit.Game;
+
+if (GameSingleton.Existing<BattleLogicWorld>()?._GameTimeManager is { } time) TimeScale.Hold(time, 1.5f);
+```
 
 #### Small helpers
 

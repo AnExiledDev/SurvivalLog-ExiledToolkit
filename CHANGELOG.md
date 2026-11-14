@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.22.0
+
+- Mods can now tell when other people play in the same game. Multiplayer 0.7.0 reports them, and Time Control 0.11.0 uses it so it doesn't pause a game someone else is playing in.
+- Mods can now hold a speed the speed buttons don't have. Time Control and Multiplayer both use it.
+- Made for Survival Log 1.1.21271.
+
 ## 0.21.0
 
 - Other mods can now use the Toolkit to turn their settings into a short code you can paste in a chat, the same kind of code Mod Manager uses for profiles. Profile codes you already shared keep working.
