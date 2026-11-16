@@ -21,29 +21,51 @@ internal sealed class ToastRelay
 
     private readonly object _gate = new();
     private readonly Func<ToastRequest?, ToastId> _showHere;
+    private readonly Func<bool> _isMainThread;
     private readonly Action<string> _log;
     private readonly Dictionary<long, (long Owner, Action Action)> _clicks = new();
     private readonly Queue<long> _clickOrder = new();
     private long _lastClick;
 
-    public ToastRelay(Func<ToastRequest?, ToastId> showHere, Action<string> log)
+    public ToastRelay(Func<ToastRequest?, ToastId> showHere, Func<bool> isMainThread, Action<string> log)
     {
         _showHere = showHere;
+        _isMainThread = isMainThread;
         _log = log;
     }
 
     /// <summary>Starts listening for toasts from the host and clicks from friends. Dispose what it returns to stop.</summary>
     public IDisposable Listen() => new Both(OtherPlayers.Listen(ToastChannel, Heard), OtherPlayers.Listen(ClickChannel, Clicked));
 
+    /// <summary>
+    /// Shows a toast, or sends it to the friend the host is acting for. Who the host acts for is only known on the main
+    /// thread, so a toast from any other thread shows here. If sending fails with an error, the toast shows here too.
+    /// </summary>
     public ToastId Show(ToastRequest? request)
     {
-        if (request == null || !OtherPlayers.IsHost || OtherPlayers.ActingFor is not { } friend) return _showHere(request);
+        if (request == null || !_isMainThread()) return _showHere(request);
 
+        try
+        {
+            if (!OtherPlayers.IsHost || OtherPlayers.ActingFor is not { } friend) return _showHere(request);
+
+            SendTo(friend, request);
+
+            return ToastId.None;
+        }
+        catch (Exception ex)
+        {
+            _log($"a toast could not be sent to a friend, so it shows here: {ex}");
+
+            return _showHere(request);
+        }
+    }
+
+    private void SendTo(long friend, ToastRequest request)
+    {
         var click = Keep(friend, request.OnClick);
 
         if (!OtherPlayers.SendTo(friend, ToastChannel, Write(request, click))) _log($"a toast for player {friend} could not be sent, so nobody sees it: {request.Title}");
-
-        return ToastId.None;
     }
 
     private long Keep(long friend, Action? onClick)
@@ -165,6 +187,10 @@ internal sealed class ToastRelay
             return false;
         }
         catch (IOException)
+        {
+            return false;
+        }
+        catch (FormatException)
         {
             return false;
         }

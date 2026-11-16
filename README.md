@@ -43,7 +43,7 @@ The Toolkit adds nothing to your save and does not edit game files.
 
 ## Requirements
 
-- Survival Log 1.1.20719. Built and tested on this version. A game update can break it until the mod is updated.
+- Survival Log 1.1.21271. Built and tested on this version. A game update can break it until the mod is updated.
 - The [BepInEx Pack for Survival Log](https://www.nexusmods.com/survivallog/mods/12), the BepInEx 6 (IL2CPP) build for the game.
 - Using Mod Manager? Update it to 0.14.1 or newer together with this Toolkit. Older Mod Manager versions lose their Mods screen with Toolkit 0.19.0 and newer.
 - Optional: [Mod Manager](https://www.nexusmods.com/survivallog/mods/73). With it, you can change every setting in game on its Mods screen and see what each one does, without opening the config file.
@@ -65,9 +65,9 @@ Settings live in `BepInEx\config\com.dev.survivallog.exiledtoolkit.cfg`, created
 
 ## Troubleshooting
 
-Tested on Survival Log 1.1.20719 with BepInEx `6.0.0-be.788`.
+Tested on Survival Log 1.1.21271 with BepInEx `6.0.0-be.788`.
 
-Check `BepInEx\LogOutput.log` for `===== Exiled's Toolkit 0.23.0 started`. A few lines below it, `toasts shown ...` tells you whether toasts are shown, where they appear, how long they stay and how many show at once. That line is written again whenever one of those settings changes. `mod windows drawn at ...%` gives the UI size and `HUD buttons drawn at ...%` gives the button size. Both are written again on every change. A mod with its own UI size writes `<mod> windows drawn at ...%` when it sets it. Once the game's interface is up, `toast script sent to the web UI` means toasts can appear. The same lines are in `BepInEx\exiled-toolkit.log`, which survives restarts.
+Check `BepInEx\LogOutput.log` for `===== Exiled's Toolkit 0.23.1 started`. A few lines below it, `toasts shown ...` tells you whether toasts are shown, where they appear, how long they stay and how many show at once. That line is written again whenever one of those settings changes. `mod windows drawn at ...%` gives the UI size and `HUD buttons drawn at ...%` gives the button size. Both are written again on every change. A mod with its own UI size writes `<mod> windows drawn at ...%` when it sets it. Once the game's interface is up, `toast script sent to the web UI` means toasts can appear. The same lines are in `BepInEx\exiled-toolkit.log`, which survives restarts.
 
 If no toasts appear, check that `Enabled` is `true` in the config, then look in `BepInEx\exiled-toolkit.log` for a line starting with `could not`.
 
@@ -406,7 +406,7 @@ listening.Dispose(); // stop listening
 
 #### Holding a speed
 
-0.22.0 and newer. `TimeScale.Hold(time, scale)` makes the game run at `scale`, for a speed the speed buttons don't have. It makes the same writes the game's speed buttons make, so the clock, the page's timers and the progress bars all follow it. Pressing a speed button sets the speed back to that button's.
+0.22.0 and newer. `TimeScale.Hold(time, scale)` makes the game run at `scale`, for a speed the speed buttons don't have. It sets the speed the same way the game's speed buttons do, so the clock, the page's timers and the progress bars all follow it. Pressing a speed button sets the speed back to that button's. It doesn't cancel the game's temporary speed changes: the temporary speed-up, the idle slowdown and the hold boost. When one of those ends, the game can put its old speed back over yours, so check for them and hold again if you need to.
 
 ```csharp
 using ExiledToolkit.Game;

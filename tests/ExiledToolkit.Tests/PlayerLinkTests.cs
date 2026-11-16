@@ -59,8 +59,11 @@ internal sealed class FakeLink : IPlayerLink
         return null;
     }
 
+    public Exception? SendFails { get; set; }
+
     private bool Record(long? to, string channel, byte[] body)
     {
+        if (SendFails != null) throw SendFails;
         if (!IsConnected) return false;
 
         Sent.Add((to, channel, body));
@@ -285,6 +288,7 @@ public sealed class ToastRelayTests : IDisposable
 {
     private readonly FakeLink _link = new();
     private readonly List<ToastRequest> _shownHere = new();
+    private bool _onMainThread = true;
     private readonly ToastRelay _relay;
     private readonly IDisposable _listening;
 
@@ -296,7 +300,7 @@ public sealed class ToastRelayTests : IDisposable
             _shownHere.Add(request!);
 
             return new ToastId(_shownHere.Count);
-        }, _ => { });
+        }, () => _onMainThread, _ => { });
         _listening = _relay.Listen();
     }
 
@@ -314,6 +318,41 @@ public sealed class ToastRelayTests : IDisposable
 
         Assert.Equal(new ToastId(1), id);
         Assert.Single(_shownHere);
+    }
+
+    [Fact]
+    public void A_toast_from_another_thread_shows_here_even_while_the_host_acts_for_a_friend()
+    {
+        BeHost();
+        _link.ActingFor = FakeLink.Friend;
+        _onMainThread = false;
+
+        var id = _relay.Show(Harness.Stamina());
+
+        Assert.Equal(new ToastId(1), id);
+        Assert.Single(_shownHere);
+        Assert.Empty(_link.Sent);
+    }
+
+    [Fact]
+    public void A_toast_the_link_fails_to_send_shows_here_instead_of_throwing_into_the_mod()
+    {
+        BeHost();
+        _link.ActingFor = FakeLink.Friend;
+        _link.SendFails = new InvalidOperationException("collection was modified");
+
+        var id = _relay.Show(Harness.Stamina());
+
+        Assert.Equal(new ToastId(1), id);
+        Assert.Single(_shownHere);
+    }
+
+    [Fact]
+    public void A_toast_with_a_broken_string_length_is_not_read()
+    {
+        var body = new byte[] { 1, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+
+        Assert.False(ToastRelay.TryRead(body, out _, out _));
     }
 
     [Fact]

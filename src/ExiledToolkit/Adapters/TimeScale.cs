@@ -10,7 +10,9 @@ public static class TimeScale
     /// The same writes the game's speed change makes: the scale it reads back, the scale Unity runs at, and the
     /// message that tells the page's timers and progress bars the new pace. The longest frame step is set the way the
     /// game's custom speed sets it, so a fast speed is not cut short by the step the game allows at its high speed;
-    /// for the game's speeds and slower that is the step it already uses.
+    /// for the game's speeds and slower that is the step it already uses. Unlike the game's speed change, it does not
+    /// cancel the temporary speed-up, the idle slowdown or the hold boost; when one of those ends, the game can put its
+    /// old speed back.
     /// </summary>
     public static void Hold(GameTimeManager time, float scale)
     {

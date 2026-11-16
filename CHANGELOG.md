@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.23.1
+
+- Fixed: in a shared game, a toast a mod showed from outside the game's main loop could go to the wrong player. It now shows on the host's screen.
+- Fixed: if a toast for a friend can't be sent, it now shows on the host's screen instead of causing an error in the mod that showed it.
+- Made for Survival Log 1.1.21271.
+
 ## 0.23.0
 
 - For mod makers: mods can now work in a shared game. A mod can tell whether this copy is the host, send messages between its copies on each player's game, do something on the host as a friend's character, and turn item and agent ids between a friend's copy and the host's. It also hears when a friend joins or leaves. Multiplayer 0.9.0 connects this. Multiplayer is still in development and isn't out yet. Without it every call acts as if you play alone.

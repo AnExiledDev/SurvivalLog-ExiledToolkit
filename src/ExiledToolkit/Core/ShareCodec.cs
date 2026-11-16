@@ -51,8 +51,9 @@ public static class ShareCodec
 
     /// <summary>
     /// The text in the first code with <paramref name="prefix"/> anywhere in <paramref name="pasted"/>, or the problem
-    /// that stopped it. Words around the code are fine. Chat apps break long lines, so every space and line break is
-    /// taken out before the code is looked for. Pasted text longer than <paramref name="maxPastedLength"/> characters
+    /// that stopped it. Words before the code are fine. Chat apps break long lines, so every space and line break is
+    /// taken out before the code is looked for, which means a word right after the code joins it and can break it.
+    /// A full stop or a comma after the code stops that. Pasted text longer than <paramref name="maxPastedLength"/> characters
     /// is refused before anything is decoded, and reading stops as soon as the code unpacks to more than
     /// <paramref name="maxUnpackedBytes"/> bytes.
     /// </summary>
