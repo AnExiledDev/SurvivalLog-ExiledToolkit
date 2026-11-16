@@ -13,6 +13,9 @@ public static class Toasts
 {
     internal static volatile ToastCenter? Center;
 
+    /// <summary>Sends a toast to the friend the host acts for instead of showing it here.</summary>
+    internal static volatile ToastRelay? Relay;
+
     /// <summary>
     /// Fires on the game's main thread for every toast trigger, shown or not, so a mod can keep a history. A trigger
     /// that merged into a toast still up carries that toast's id, the new count, and IsMerge true. A listener that
@@ -24,8 +27,11 @@ public static class Toasts
     /// Shows a toast. Safe from any thread; it appears from the next frame. Returns the id the toast goes by: when an
     /// identical toast is still on screen or waiting, that toast's id, since the two merge into one with a count.
     /// Returns <see cref="ToastId.None"/> when the Toolkit has not started.
+    /// In a shared game, on the host while <see cref="Game.OtherPlayers.ActingFor"/> is another player, the toast goes
+    /// to that player's screen instead (Toolkit 0.23.0 and newer). It then returns <see cref="ToastId.None"/>, and
+    /// <see cref="Raised"/> fires on their copy, not here. Their click runs <c>OnClick</c> here, as them.
     /// </summary>
-    public static ToastId Show(ToastRequest request) => Center?.Show(request) ?? ToastId.None;
+    public static ToastId Show(ToastRequest request) => Relay?.Show(request) ?? Center?.Show(request) ?? ToastId.None;
 
     /// <summary>
     /// Runs a toast's click action, as if the player clicked it, on the game's main thread. Works after the toast has

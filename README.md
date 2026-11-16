@@ -67,7 +67,7 @@ Settings live in `BepInEx\config\com.dev.survivallog.exiledtoolkit.cfg`, created
 
 Tested on Survival Log 1.1.20719 with BepInEx `6.0.0-be.788`.
 
-Check `BepInEx\LogOutput.log` for `===== Exiled's Toolkit 0.22.0 started`. A few lines below it, `toasts shown ...` tells you whether toasts are shown, where they appear, how long they stay and how many show at once. That line is written again whenever one of those settings changes. `mod windows drawn at ...%` gives the UI size and `HUD buttons drawn at ...%` gives the button size. Both are written again on every change. A mod with its own UI size writes `<mod> windows drawn at ...%` when it sets it. Once the game's interface is up, `toast script sent to the web UI` means toasts can appear. The same lines are in `BepInEx\exiled-toolkit.log`, which survives restarts.
+Check `BepInEx\LogOutput.log` for `===== Exiled's Toolkit 0.23.0 started`. A few lines below it, `toasts shown ...` tells you whether toasts are shown, where they appear, how long they stay and how many show at once. That line is written again whenever one of those settings changes. `mod windows drawn at ...%` gives the UI size and `HUD buttons drawn at ...%` gives the button size. Both are written again on every change. A mod with its own UI size writes `<mod> windows drawn at ...%` when it sets it. Once the game's interface is up, `toast script sent to the web UI` means toasts can appear. The same lines are in `BepInEx\exiled-toolkit.log`, which survives restarts.
 
 If no toasts appear, check that `Enabled` is `true` in the config, then look in `BepInEx\exiled-toolkit.log` for a line starting with `could not`.
 
@@ -370,6 +370,39 @@ if (OtherPlayers.Count > 0) { /* someone else plays here: don't pause because th
 - `Count` is how many other people play in this game, 0 when alone. A guest always counts the host.
 - `IsAnyBusy` is true when another player has an order waiting or running.
 - `Report(count, isGuest, isAnyBusy)` and `Clear()` are for the multiplayer mod. Nothing else should call them.
+
+In a shared game the world runs only on the host. A friend's copy shows a copy of the host's world. So a mod that changes the world (moves items, gives items, changes a machine) does it on the host, for the friend's character, and sends what it shows to that friend. 0.23.0 and newer adds what that takes. With no multiplayer mod, every call acts as if this copy plays alone: sends return `false`, `ActingFor` is `null`, `RunFor` just runs, and ids stay the same.
+
+```csharp
+using ExiledToolkit.Game;
+
+const string Channel = "com.me.mymod.sort";
+
+// Both copies listen. Listeners run on the main thread.
+var listening = OtherPlayers.Listen(Channel, message =>
+{
+    if (!OtherPlayers.IsHost) return;
+
+    var chest = BitConverter.ToInt64(message.Body, 0);
+    OtherPlayers.RunFor(message.From, () => SortChest(chest));
+});
+
+// The button: a guest asks the host to do it, by the host's id for the chest.
+if (!OtherPlayers.IsGuest) SortChest(chestId);
+else if (OtherPlayers.HostIdOf(chestId) is { } hostChest) OtherPlayers.SendToHost(Channel, BitConverter.GetBytes(hostChest));
+
+listening.Dispose(); // stop listening
+```
+
+- `IsHost` is true when other people play here and this copy is not a guest.
+- `ActingFor` is, on the host, the character of the friend the game is acting for right now: their action, their character's update, a call from their screen, or `RunFor`. It is `null` for the host's own player, on a guest and when alone. Read it on the main thread.
+- `Listen(channel, heard)` calls `heard` with a `PlayerMessage(Channel, From, Body)` for every message on that channel, at the next frame, on the main thread. Use your plugin GUID, a dot and a word as the channel. Dispose what it returns to stop.
+- `SendToHost(channel, body)` sends from a guest. `SendTo(character, channel, body)` and `SendToEveryone(channel, body)` send from the host. On the host `From` is the sender's character; on a guest it is 0, the host. Messages on one channel arrive in order and none is dropped while the players stay connected. A body can be up to 64 KB (`OtherPlayers.MaxBodyBytes`); a bigger one is refused.
+- `RunFor(character, run)` runs `run` on the host as that friend: their character in the player's seat, and what the game shows going to their screen. For the host's own character, on a guest and when alone it just runs. It returns `false` when the character isn't known.
+- `HostIdOf(id)` and `LocalIdOf(hostId)` turn ids of agents (characters, furniture, robots) and items between a guest's copy and the host. On the host and alone they return the same id. They return `null` for an id that isn't known.
+- `Joined` and `Left` fire on the host, on the main thread, with the friend's character. Use `Joined` to send a new friend what your mod keeps.
+- Toasts follow on their own: `Toasts.Show` on the host while `ActingFor` is a friend shows the toast on that friend's screen only, and returns `ToastId.None`. When they click it, `OnClick` runs on the host, as them.
+- `Connect(link)`, `Disconnect(link)`, `Deliver`, `ReportJoined` and `ReportLeft` are for the multiplayer mod, which implements `IPlayerLink`. Nothing else should call them.
 
 #### Holding a speed
 

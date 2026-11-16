@@ -75,6 +75,7 @@ public sealed class ToastTicker : MonoBehaviour
 
         // Before the toast checks too: mods' page messages and the Mods menu do not need the toasts.
         DeliverPageMessages();
+        DeliverPlayerMessages();
         RunMenu();
         RunTypingGate();
 
@@ -93,6 +94,19 @@ public sealed class ToastTicker : MonoBehaviour
             if (!page.HasWebView) Area.Forget();
 
             ClickRouting.SetArea(Area.At(now));
+        }
+        catch (Exception ex)
+        {
+            ReportOnce(ex);
+        }
+    }
+
+    /// <summary>Before the toasts too: a toast from the host is shown by the frame's pump.</summary>
+    private static void DeliverPlayerMessages()
+    {
+        try
+        {
+            OtherPlayers.Pump();
         }
         catch (Exception ex)
         {
