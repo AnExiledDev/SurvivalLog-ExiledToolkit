@@ -2,7 +2,7 @@
 
 ## 0.23.0
 
-- For mod makers: mods can now work in a shared game. A mod can tell whether this copy is the host, send messages between its copies on each player's game, do something on the host as a friend's character, and turn item and agent ids between a friend's copy and the host's. It also hears when a friend joins or leaves. Multiplayer connects this in a later update; without it every call acts as if you play alone.
+- For mod makers: mods can now work in a shared game. A mod can tell whether this copy is the host, send messages between its copies on each player's game, do something on the host as a friend's character, and turn item and agent ids between a friend's copy and the host's. It also hears when a friend joins or leaves. Multiplayer 0.9.0 connects this. Without it every call acts as if you play alone.
 - In a shared game, a toast a mod shows on the host for a friend's action now shows on that friend's screen instead of the host's. Clicking it works too.
 - Made for Survival Log 1.1.21271.
 
