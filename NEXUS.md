@@ -1,5 +1,5 @@
 Name: Exiled's Toolkit
-Summary: The shared library my Survival Log mods use. It lets you make mod windows bigger or smaller, applies settings changed in the Mod Manager without a restart, shows mods' short notices as toasts next to the HUD, keeps tool buttons and phone apps in tidy groups of four, and gives mods one shared Mods menu. On its own it only restyles the HUD's phone and bag buttons.
+Summary: The shared library my Survival Log mods use. It lets you make mod windows bigger or smaller, applies Mod Manager setting changes without a restart, shows mods' short notices as toasts next to the HUD, groups tool buttons and phone apps in fours, and gives mods one shared Mods menu. On its own it only restyles the HUD's phone and bag buttons.
 
 Description (BBCode):
 [center][img]https://sldb.core-directive.com/media/save/1-save-safe.png[/img][/center]
