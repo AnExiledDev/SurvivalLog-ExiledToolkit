@@ -2,13 +2,13 @@
 
 ## 0.23.0
 
-- For mod makers: mods can now work in a shared game. A mod can tell whether this copy is the host, send messages between its copies on each player's game, do something on the host as a friend's character, and turn item and agent ids between a friend's copy and the host's. It also hears when a friend joins or leaves. Multiplayer 0.9.0 connects this. Without it every call acts as if you play alone.
+- For mod makers: mods can now work in a shared game. A mod can tell whether this copy is the host, send messages between its copies on each player's game, do something on the host as a friend's character, and turn item and agent ids between a friend's copy and the host's. It also hears when a friend joins or leaves. Multiplayer 0.9.0 connects this. Multiplayer is still in development and isn't out yet. Without it every call acts as if you play alone.
 - In a shared game, a toast a mod shows on the host for a friend's action now shows on that friend's screen instead of the host's. Clicking it works too.
 - Made for Survival Log 1.1.21271.
 
 ## 0.22.0
 
-- Mods can now tell when other people play in the same game. Multiplayer 0.7.0 reports them, and Time Control 0.11.0 uses it so it doesn't pause a game someone else is playing in.
+- Mods can now tell when other people play in the same game. Multiplayer 0.7.0 reports them, and Time Control 0.11.0 uses it so it doesn't pause a game someone else is playing in. Multiplayer is still in development and isn't out yet.
 - Mods can now hold a speed the speed buttons don't have. Time Control and Multiplayer both use it.
 - Made for Survival Log 1.1.21271.
 
