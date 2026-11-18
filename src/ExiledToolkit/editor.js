@@ -786,13 +786,17 @@
 
       const isGhost = e => !!e && !entryOf(e.id);
 
-      // The list: every reward or only the changed ones, then only those the search finds.
+      // The list: every reward or only the changed ones, then only those the search finds. They come in number order,
+      // or in the order the tab sets with T.compareIds, so Up, Down and Enter in the search box follow the rows
+      // the way they are drawn.
+      const byNumber = (a, b) => a - b;
+
       function listIds() {
         const ids = T.st.view === 'all' ? T.allIds() : T.st.entries.filter(e => !e.removed).map(e => e.id);
         const words = searchWords();
         const found = words.length ? ids.filter(id => matchesSearch(id, words)) : ids;
 
-        return found.slice().sort((a, b) => a - b);
+        return found.slice().sort(T.compareIds || byNumber);
       }
 
       // ---- Searching the list ----
@@ -854,7 +858,12 @@
       }
 
       function clearSearch() {
+        const input = T.st.root ? T.st.root.querySelector('[data-a="rq"]') : null;
+
         T.st.q = '';
+
+        if (input) input.value = '';
+
         refreshList();
         focusSearch();
       }
@@ -889,6 +898,9 @@
       // under its footer and the pane never scrolls on its own. Call after each redraw.
       const MIN_FIT_H = 300;
 
+      // The attributes that tell one field from another, so the cursor can go back to the same one after a redraw.
+      const FOCUS_ATTRS = ['data-a', 'data-k', 'data-c', 'data-v'];
+
       function fitHeight() {
         const root = T.st.root;
         const pane = root ? root.closest('.pane') : null;
@@ -921,9 +933,77 @@
         T.st.fitWatch = null;
       }
 
+      // A field's change fires when the mouse goes down on something else. A redraw right then swaps out
+      // what is under the mouse and the click is lost, so the redraw waits until the press is over.
+      function renderAfterChange() {
+        T.st.isRenderDue = true;
+
+        if (!T.st.isPressing) setTimeout(renderIfDue, 0);
+      }
+
+      function renderIfDue() {
+        if (!T.st.isRenderDue) return;
+
+        const focus = focusedField();
+
+        T.st.isRenderDue = false;
+        T.render();
+        refocus(focus);
+      }
+
+      // The field with the cursor, as a query that finds it again after a redraw.
+      function focusedField() {
+        const root = T.st.root;
+        const el = root && root.ownerDocument ? root.ownerDocument.activeElement : null;
+
+        if (!el || !el.hasAttribute || !el.hasAttribute('data-a') || !root.contains(el)) return null;
+
+        const attrs = FOCUS_ATTRS.filter(n => el.hasAttribute(n)).map(n => '[' + n + '=' + JSON.stringify(el.getAttribute(n)) + ']');
+
+        return { query: el.tagName.toLowerCase() + attrs.join(''), start: el.selectionStart, end: el.selectionEnd };
+      }
+
+      function refocus(focus) {
+        const el = focus && T.st.root ? T.st.root.querySelector(focus.query) : null;
+
+        if (!el) return;
+
+        el.focus();
+
+        if (typeof focus.start === 'number' && typeof el.setSelectionRange === 'function') el.setSelectionRange(focus.start, focus.end);
+      }
+
+      function watchPresses() {
+        const root = T.st.root;
+
+        if (!root || T.st.pressRoot === root) return;
+
+        T.st.pressRoot = root;
+        root.addEventListener('mousedown', () => { T.st.isPressing = true; }, true);
+        root.ownerDocument.addEventListener('mouseup', endPress, true);
+      }
+
+      // The click comes right after mouseup, so the timer lets it land first.
+      function endPress() {
+        T.st.isPressing = false;
+
+        if (T.st.isRenderDue) setTimeout(renderIfDue, 0);
+      }
+
       // In the search box, Up and Down pick the row above or below and Enter picks the first one found.
       function onSearchKey(ev) {
         if (ev.target.getAttribute('data-a') !== 'rq') return;
+
+        // The Mod Manager's Esc only takes the cursor out of the box, so a search with text in it stops the key here.
+        if (ev.key === 'Escape') {
+          if (!T.st.q) return;
+
+          ev.preventDefault();
+          ev.stopPropagation();
+          clearSearch();
+
+          return;
+        }
 
         const ids = listIds();
         let next = 0;
@@ -945,11 +1025,12 @@
         showSelectedRow();
       }
 
-      // Unsaved edits light up SAVE. Text edits do not redraw the tab, so they call this.
-      function refreshSaved() {
+      // Unsaved edits light up SAVE. Text edits do not redraw the tab, so they call this. Typing a number lights
+      // it too, since the number is only written when you leave the field.
+      function refreshSaved(isTyping) {
         const btn = T.st.root ? T.st.root.querySelector('[data-a="save"]') : null;
 
-        if (btn) btn.classList.toggle('is-due', !!T.st.dirty);
+        if (btn) btn.classList.toggle('is-due', !!T.st.dirty || !!isTyping);
       }
 
       // The switch above the card: it shows the reward as the game would, in English or Chinese.
@@ -1309,6 +1390,12 @@
           return;
         }
 
+        if (a === 'val') {
+          refreshSaved(true);
+
+          return;
+        }
+
         const e = entryOf(T.st.sel);
 
         if (a !== 'txt' || !e) return;
@@ -1562,6 +1649,6 @@
       return CSS_BASE.slice(0, at).concat(extra, CSS_BASE.slice(at + 1)).map(line => line.split('{c}').join(cls));
     }
 
-    return { MAX_LEVELS, MAX_GIVES, GAME_PREFIX, REWARD_ICONS, ICON_GROUPS, TOAST_MS, INT_FIELD, STAT_MAX, NO_SCRIPT, VARS, scopedCss, injectStyle, isObj, isArr, isNum, clone, round2, fmt, range, L, ESCAPES, esc, isEmptyVal, zeroOf, allKeys, sameVal, h, normText, textIn, shown, CATS, GROUP_TALENTS, SKILL_TALENTS, XP_SKILLS, WORK, STATS, ROBOTS, robotScript, robotName, named, nameOptions, num, pct, pick, hide, optionsOf, isOptionOn, availableOptions, groupUnknown, opt, itemCount, plural, numericBuffKeys, FX, fx, FX_BY_ID, picksOf, numsOf, hidesOf, fieldName, display, toRaw, defaultAt, match, rawCache, FIELD_RANK, prettyScript, rawLabel, rawFx, cat, talentIcons, fxIcon, fxName, fromRoot, scriptOfGive, fixedFrom, roundTrips, isEditable, isAutoOn, showsAuto, valsOf, autoLine, autoLevelText, autoDesc, baseText, nameOf, descOf, hasLevelDescs, entryOf, entryOrGhost, levelCount, markChanged, givesChanged, adopt, resetOrDelete, nextStep, setGive, setPick, writeText, saved, discard, send, numText, unitOf, tag, isGhost, listIds, searchWords, searchText, matchesSearch, searchHtml, noMatchHtml, refreshList, clearSearch, focusSearch, showSelectedRow, fitHeight, watchHeight, onSearchKey, refreshSaved, pvBarHtml, editorHtml, hasNoScript, ghostHtml, pickHtml, stepper, descTarget, refreshPreview, talentName, winEl, haystack, matchesQuery, pickerLists, isOnOtherGive, closePicker, renderPicker, railHtml, cardMeta, listHtml, paramRow, readsHtml, chooseButton, choose, onPickerDouble, onPickerKey, iconsHtml, iconGroupName, showIconGroup, closeIcons, onDocDown, closeOverlays, closeToast, clampLevel, select, setText, afterRemove, onInput, hideTab, escapeTab, editorCss };
+    return { MAX_LEVELS, MAX_GIVES, GAME_PREFIX, REWARD_ICONS, ICON_GROUPS, TOAST_MS, INT_FIELD, STAT_MAX, NO_SCRIPT, VARS, scopedCss, injectStyle, isObj, isArr, isNum, clone, round2, fmt, range, L, ESCAPES, esc, isEmptyVal, zeroOf, allKeys, sameVal, h, normText, textIn, shown, CATS, GROUP_TALENTS, SKILL_TALENTS, XP_SKILLS, WORK, STATS, ROBOTS, robotScript, robotName, named, nameOptions, num, pct, pick, hide, optionsOf, isOptionOn, availableOptions, groupUnknown, opt, itemCount, plural, numericBuffKeys, FX, fx, FX_BY_ID, picksOf, numsOf, hidesOf, fieldName, display, toRaw, defaultAt, match, rawCache, FIELD_RANK, prettyScript, rawLabel, rawFx, cat, talentIcons, fxIcon, fxName, fromRoot, scriptOfGive, fixedFrom, roundTrips, isEditable, isAutoOn, showsAuto, valsOf, autoLine, autoLevelText, autoDesc, baseText, nameOf, descOf, hasLevelDescs, entryOf, entryOrGhost, levelCount, markChanged, givesChanged, adopt, resetOrDelete, nextStep, setGive, setPick, writeText, saved, discard, send, numText, unitOf, tag, isGhost, listIds, searchWords, searchText, matchesSearch, searchHtml, noMatchHtml, refreshList, clearSearch, focusSearch, showSelectedRow, fitHeight, watchHeight, renderAfterChange, watchPresses, onSearchKey, refreshSaved, pvBarHtml, editorHtml, hasNoScript, ghostHtml, pickHtml, stepper, descTarget, refreshPreview, talentName, winEl, haystack, matchesQuery, pickerLists, isOnOtherGive, closePicker, renderPicker, railHtml, cardMeta, listHtml, paramRow, readsHtml, chooseButton, choose, onPickerDouble, onPickerKey, iconsHtml, iconGroupName, showIconGroup, closeIcons, onDocDown, closeOverlays, closeToast, clampLevel, select, setText, afterRemove, onInput, hideTab, escapeTab, editorCss };
   }
 })();

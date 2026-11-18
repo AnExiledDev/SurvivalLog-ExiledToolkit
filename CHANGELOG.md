@@ -6,6 +6,9 @@
 - Reward editor: the list and the editor fit the Mod Manager window, so nothing hides under its buttons and the page no longer scrolls on its own.
 - Reward editor: a picked reward scrolls into view in the list, and the editor starts at the top when you pick another one.
 - Reward editor: effect text says "1 hour" and "1 day" instead of "1 hours" and "1 days".
+- Reward editor: SAVE lights up as soon as you start typing a number.
+- Fixed: in the reward editor, the next click after you typed a number did nothing, so clicking SAVE right away did not save.
+- Fixed: in the reward editor, Tab after typing a number lost the cursor. It moves to the next box now.
 - For mod makers: the game key that `GameKeys.All()` returns is now called `GameHotkey`. It was called `GameKey`, the same name as a class in the game, so a mod that used both could not be built.
 - Made for Survival Log 1.1.21271.
 

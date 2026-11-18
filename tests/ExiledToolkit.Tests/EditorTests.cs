@@ -75,6 +75,116 @@ public class EditorTests
     }
 
     [Fact]
+    public void Enter_and_Down_in_the_search_box_follow_the_order_the_tab_draws()
+    {
+        Load();
+        MakeTabWithTwoRewards();
+
+        // A tab that draws 102 above 101, the way New Loop Plus puts its first column above its second.
+        _engine.Execute("T.compareIds = (a, b) => b - a; T.render = () => {};");
+        _engine.Execute("var key = k => tab.onSearchKey({ key: k, target: { getAttribute: () => 'rq' }, preventDefault: () => {} });");
+
+        Assert.Equal("102,101", Found(""));
+
+        _engine.Execute("key('Enter');");
+        Assert.Equal(102, _engine.Evaluate("T.st.sel").AsNumber());
+
+        _engine.Execute("key('ArrowDown');");
+        Assert.Equal(101, _engine.Evaluate("T.st.sel").AsNumber());
+    }
+
+    [Fact]
+    public void The_clear_button_empties_the_search_box()
+    {
+        Load();
+        MakeTabWithTwoRewards();
+        GiveTabASearchBox("solar");
+
+        _engine.Execute("tab.clearSearch();");
+
+        Assert.Equal("", _engine.Evaluate("T.st.q").AsString());
+        Assert.Equal("", _engine.Evaluate("box.value").AsString());
+    }
+
+    [Fact]
+    public void Esc_in_the_search_box_clears_it_and_keeps_the_key_from_the_Mod_Manager()
+    {
+        Load();
+        MakeTabWithTwoRewards();
+        GiveTabASearchBox("solar");
+
+        // The Mod Manager's Esc takes the cursor out of any box it reaches, so the search has to stop the key first.
+        _engine.Execute("var stopped = false; tab.onSearchKey({ key: 'Escape', target: box, preventDefault: () => {}, stopPropagation: () => { stopped = true; } });");
+
+        Assert.True(Bool("stopped"));
+        Assert.Equal("", _engine.Evaluate("T.st.q").AsString());
+        Assert.Equal("", _engine.Evaluate("box.value").AsString());
+    }
+
+    [Fact]
+    public void Esc_in_an_empty_search_box_goes_on_to_the_Mod_Manager()
+    {
+        Load();
+        MakeTabWithTwoRewards();
+        GiveTabASearchBox("");
+
+        _engine.Execute("var stopped = false; tab.onSearchKey({ key: 'Escape', target: box, preventDefault: () => {}, stopPropagation: () => { stopped = true; } });");
+
+        Assert.False(Bool("stopped"));
+    }
+
+    [Fact]
+    public void A_change_made_by_pressing_a_reward_redraws_only_after_the_click_has_landed()
+    {
+        Load();
+        MakeTabWithTwoRewards();
+        GiveTabAPage();
+
+        // Leaving a number field for a reward in the list: mousedown, the field's change, mouseup, then the click.
+        // Timers run while the button is still held, as they would during a slow click.
+        _engine.Execute("rootOn.mousedown(); tab.renderAfterChange(); runTimers();");
+        Assert.Equal(0, Number("renders"));
+
+        _engine.Execute("docOn.mouseup();");
+        Assert.Equal(0, Number("renders"));
+
+        _engine.Execute("runTimers();");
+        Assert.Equal(1, Number("renders"));
+
+        // Once the press is over, a change made from the keyboard does not wait for another one.
+        _engine.Execute("tab.renderAfterChange(); runTimers();");
+        Assert.Equal(2, Number("renders"));
+    }
+
+    [Fact]
+    public void A_change_made_by_Tab_redraws_and_puts_the_cursor_back_in_the_next_field()
+    {
+        Load();
+        MakeTabWithTwoRewards();
+        GiveTabAPage();
+
+        // Tab has already moved the cursor to the cost field of level 2 when the redraw runs.
+        _engine.Execute("doc.activeElement = field('val', 'cost:1', 3);");
+        _engine.Execute("tab.renderAfterChange(); runTimers();");
+
+        Assert.Equal(1, Number("renders"));
+        Assert.Equal("input[data-a=\"val\"][data-k=\"cost:1\"]", _engine.Evaluate("focusedQuery").AsString());
+        Assert.Equal(3, Number("caret"));
+    }
+
+    [Fact]
+    public void Typing_a_number_lights_SAVE_before_the_number_is_written()
+    {
+        Load();
+        MakeTabWithTwoRewards();
+        GiveTabAPage();
+
+        _engine.Execute("T.st.dirty = false; tab.onInput({ target: field('val', 'cost:0', 1) });");
+
+        Assert.True(Bool("saveLit"));
+    }
+
+    [Fact]
     public void Effect_text_says_one_hour_or_one_day_without_a_plural()
     {
         Load();
@@ -96,6 +206,38 @@ public class EditorTests
         var T = { st: { q: '', view: 'all', entries: [] }, allIds: function () { return [102, 101]; }, ghostOf: function (id) { return ghosts[id] || null; } };
         var tab = window.ExiledEditor.make(T);
         """);
+
+    // A tab root that records its listeners, the SAVE button and every focus, with timers that run only when asked.
+    private void GiveTabAPage() => _engine.Execute("""
+        var renders = 0, saveLit = false, focusedQuery = '', caret = -1, timers = [], rootOn = {}, docOn = {};
+        var setTimeout = f => { timers.push(f); };
+        var runTimers = () => { while (timers.length) timers.shift()(); };
+        var field = (a, k, at) => ({
+          tagName: 'INPUT', selectionStart: at, selectionEnd: at,
+          hasAttribute: n => n === 'data-a' || n === 'data-k',
+          getAttribute: n => n === 'data-a' ? a : n === 'data-k' ? k : null
+        });
+        var doc = { activeElement: null, addEventListener: (type, f) => { docOn[type] = f; } };
+        var saveBtn = { classList: { toggle: (c, on) => { saveLit = on; } } };
+        T.st.root = {
+          ownerDocument: doc,
+          contains: () => true,
+          addEventListener: (type, f) => { rootOn[type] = f; },
+          querySelector: q => q === '[data-a="save"]' ? saveBtn
+            : { focus: () => { focusedQuery = q; }, setSelectionRange: (a, b) => { caret = a; } }
+        };
+        T.render = () => { renders++; };
+        tab.watchPresses();
+        """);
+
+    private int Number(string expression) => (int)_engine.Evaluate(expression).AsNumber();
+
+    // A tab root with only the search box in it, holding the given text.
+    private void GiveTabASearchBox(string text) => _engine.Execute(
+        "var box = { value: " + System.Text.Json.JsonSerializer.Serialize(text) + ", getAttribute: () => 'rq', focus: () => {}, setSelectionRange: () => {} };" +
+        "T.st.q = box.value;" +
+        "T.rowsHtml = () => '';" +
+        "T.st.root = { querySelector: s => s === '[data-a=\"rq\"]' ? box : null };");
 
     private string Found(string search)
     {
