@@ -87,6 +87,18 @@ public sealed class WebPage
     public IReadOnlyList<string> ExtraResources { get; init; } = Array.Empty<string>();
 
     /// <summary>
+    /// Scripts from Exiled's Toolkit itself, such as <see cref="Editor"/>, sent ahead of the mod's own so they are there
+    /// when it runs. Toolkit 0.24.0 and newer.
+    /// </summary>
+    public IReadOnlyList<string> ToolkitScripts { get; init; } = Array.Empty<string>();
+
+    /// <summary>
+    /// The reward editor New Loop Plus' Talents tab and More Rewards' Rewards tab share, as window.ExiledEditor: the
+    /// effect list, the effect and icon pickers and the level and text editors. Toolkit 0.24.0 and newer.
+    /// </summary>
+    public const string Editor = "ExiledToolkit.editor.js";
+
+    /// <summary>
     /// The script that hands the page its words, in Chinese when given true. When set, a <see cref="Call"/> runs it first
     /// whenever the page lacks the words or holds the other language's, so a change of the game's language shows at the
     /// next call without resending the words with every call.
@@ -188,16 +200,20 @@ public sealed class WebPage
     {
         if (_script != null) return _script;
 
-        var script = Resource(_resource);
+        var script = "";
 
-        foreach (var extra in ExtraResources) script += "\n;" + Resource(extra);
+        foreach (var shared in ToolkitScripts) script += Resource(typeof(WebPage).Assembly, shared) + "\n;";
+
+        script += Resource(_assembly, _resource);
+
+        foreach (var extra in ExtraResources) script += "\n;" + Resource(_assembly, extra);
 
         return _script = script;
     }
 
-    private string Resource(string name)
+    private static string Resource(Assembly assembly, string name)
     {
-        using var stream = _assembly.GetManifestResourceStream(name) ?? throw new InvalidOperationException(name + " is not embedded in " + _assembly.GetName().Name);
+        using var stream = assembly.GetManifestResourceStream(name) ?? throw new InvalidOperationException(name + " is not embedded in " + assembly.GetName().Name);
         using var reader = new StreamReader(stream);
 
         return reader.ReadToEnd();

@@ -31,6 +31,20 @@ public class WebPageTests
     }
 
     [Fact]
+    public void The_toolkits_own_scripts_go_ahead_of_the_mods_so_they_are_there_when_it_runs()
+    {
+        var page = new WebPage(typeof(WebPageTests).Assembly, Resource, "window.__sltest", "slmod|test|noscript", _log.Add, Run, null)
+        {
+            ToolkitScripts = new[] { WebPage.Editor },
+            ExtraResources = new[] { Extra }
+        };
+
+        Assert.True(page.Install());
+
+        Assert.Equal(Embedded(WebPage.Editor) + "\n;" + Embedded(Resource) + "\n;" + Embedded(Extra), _runs.Single());
+    }
+
+    [Fact]
     public void The_probe_is_silent_while_the_script_is_there_and_asks_for_it_when_it_is_not()
     {
         var page = Page();

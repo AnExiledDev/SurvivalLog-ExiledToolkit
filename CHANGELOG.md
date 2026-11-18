@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.24.0
+
+- For mod makers: the reward editor that New Loop Plus' Talents tab and More Rewards' Rewards tab both use is now part of the Toolkit, so a fix to it reaches both tabs. A mod sends it with its own page script through `WebPage.ToolkitScripts`.
+- Made for Survival Log 1.1.21271.
+
 ## 0.23.1
 
 - Fixed: in a shared game, a toast a mod showed from outside the game's main loop could go to the wrong player. It now shows on the host's screen.

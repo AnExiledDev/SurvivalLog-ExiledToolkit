@@ -41,6 +41,7 @@
     <EmbeddedResource Include="ui.js" LogicalName="ExiledToolkit.ui.js" />
     <EmbeddedResource Include="typing.js" LogicalName="ExiledToolkit.typing.js" />
     <EmbeddedResource Include="api.js" LogicalName="ExiledToolkit.api.js" />
+    <EmbeddedResource Include="editor.js" LogicalName="ExiledToolkit.editor.js" />
   </ItemGroup>
 
   <!-- What the Mod Manager's Mods screen shows about this mod. -->

@@ -23,6 +23,7 @@
     <EmbeddedResource Include="PhoneFake.js" LogicalName="ExiledToolkit.Tests.PhoneFake.js" />
     <EmbeddedResource Include="HudStyleFake.js" LogicalName="ExiledToolkit.Tests.HudStyleFake.js" />
     <EmbeddedResource Include="..\..\src\ExiledToolkit\ui.js" LogicalName="ExiledToolkit.ui.js" Link="ui.js" />
+    <EmbeddedResource Include="..\..\src\ExiledToolkit\editor.js" LogicalName="ExiledToolkit.editor.js" Link="editor.js" />
     <EmbeddedResource Include="UiFake.js" LogicalName="ExiledToolkit.Tests.UiFake.js" />
     <EmbeddedResource Include="..\..\src\ExiledToolkit\menu.js" LogicalName="ExiledToolkit.menu.js" Link="menu.js" />
     <EmbeddedResource Include="MenuFake.js" LogicalName="ExiledToolkit.Tests.MenuFake.js" />
