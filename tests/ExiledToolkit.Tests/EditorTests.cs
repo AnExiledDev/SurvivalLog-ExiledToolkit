@@ -52,6 +52,58 @@ public class EditorTests
         Assert.Equal("newer", _engine.Evaluate("window.ExiledEditor.make()").AsString());
     }
 
+    [Fact]
+    public void The_search_finds_a_reward_by_its_number_or_any_levels_text_in_either_language()
+    {
+        Load();
+        MakeTabWithTwoRewards();
+
+        Assert.Equal("102", Found("loot"));
+        Assert.Equal("101", Found("太阳能"));
+        Assert.Equal("102", Found("102"));
+        Assert.Equal("101", Found("SOLAR"));
+    }
+
+    [Fact]
+    public void The_search_needs_every_word_and_an_empty_search_shows_every_reward()
+    {
+        Load();
+        MakeTabWithTwoRewards();
+
+        Assert.Equal("", Found("solar loot"));
+        Assert.Equal("101,102", Found("  "));
+    }
+
+    [Fact]
+    public void Effect_text_says_one_hour_or_one_day_without_a_plural()
+    {
+        Load();
+
+        _engine.Execute("var t = window.ExiledEditor.make({}), byId = id => t.FX.find(f => f.id === id), countdown = byId('game:countdown'), shelf = byId('game:short-life-discount');");
+
+        Assert.Contains("Gives you 1 hour of", _engine.Evaluate("countdown.desc({ IntValue0: 1 }, false)").AsString());
+        Assert.Contains("Gives you 3 hours of", _engine.Evaluate("countdown.desc({ IntValue0: 3 }, false)").AsString());
+        Assert.Contains("less than 1 day.", _engine.Evaluate("shelf.desc({ FloatValue0: 1, FloatValue1: 10 }, false)").AsString());
+        Assert.Contains("less than 5 days.", _engine.Evaluate("shelf.desc({ FloatValue0: 5, FloatValue1: 10 }, false)").AsString());
+    }
+
+    // Two of the game's rewards: 101 talks about solar power, and only 102's second level mentions loot.
+    private void MakeTabWithTwoRewards() => _engine.Execute("""
+        var ghosts = {
+          101: { id: 101, name: { en: 'Solar Boost', zh: '太阳能增益' }, levels: [{ gameDesc: { en: 'More solar power.', zh: '太阳能板产电效率提升' } }], gives: [] },
+          102: { id: 102, name: { en: 'Lucky Find', zh: '幸运发现' }, levels: [{ gameDesc: { en: 'Find more food.' } }, { gameDesc: { en: 'Find more loot.' } }], gives: [] }
+        };
+        var T = { st: { q: '', view: 'all', entries: [] }, allIds: function () { return [102, 101]; }, ghostOf: function (id) { return ghosts[id] || null; } };
+        var tab = window.ExiledEditor.make(T);
+        """);
+
+    private string Found(string search)
+    {
+        _engine.Execute("T.st.q = " + System.Text.Json.JsonSerializer.Serialize(search) + ";");
+
+        return _engine.Evaluate("tab.listIds().join(',')").AsString();
+    }
+
     private void Load() => _engine.Execute(Resource("ExiledToolkit.editor.js"));
 
     private bool Bool(string expression) => _engine.Evaluate(expression).AsBoolean();

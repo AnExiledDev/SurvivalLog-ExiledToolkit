@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.26.0
+
+- Reward editor (New Loop Plus' Talents tab and More Rewards' Rewards tab): a search box finds rewards by name, description or number, in English or Chinese. Enter opens the first one found, Up and Down move through the list and Esc clears the search.
+- Reward editor: the list and the editor fit the Mod Manager window, so nothing hides under its buttons and the page no longer scrolls on its own.
+- Reward editor: a picked reward scrolls into view in the list, and the editor starts at the top when you pick another one.
+- Reward editor: effect text says "1 hour" and "1 day" instead of "1 hours" and "1 days".
+- Made for Survival Log 1.1.21271.
+
 ## 0.25.0
 
 - For mod makers: a mod can now report what it changes in the game that Harmony doesn't keep track of: rows it adds to the game's tables, values it writes into them, native hooks and changed code. Mod Manager uses this to find two mods that change the same thing. Reporting doesn't change anything in the game.

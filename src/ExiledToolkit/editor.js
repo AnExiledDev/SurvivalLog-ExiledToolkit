@@ -243,7 +243,7 @@
         en: 'More time before the disaster', zh: '灾难前更多时间', what: ['Adds hours to the countdown before the disaster hits.', '增加灾难来临前的倒计时。'],
         params: [num('IntValue0', 'Extra time', '额外时间', ['h', '小时'], [1, 2, 3, 4, 7], { scale: 1 / 3600 })],
         line: (v, zh) => '+' + fmt(v.IntValue0) + (zh ? '小时' : 'h'),
-        desc: (v, zh) => zh ? '提升灾难前醒来时间' + fmt(v.IntValue0) + '小时' : 'Gives you ' + fmt(v.IntValue0) + ' hours of extra time before the disaster hits.' });
+        desc: (v, zh) => zh ? '提升灾难前醒来时间' + fmt(v.IntValue0) + '小时' : 'Gives you ' + plural(v.IntValue0, 'hour') + ' of extra time before the disaster hits.' });
       fx({ id: 'game:gold', src: 'game', cat: 'prep', script: 'PreDisaster_AddGold',
         en: 'Starting money', zh: '初始资金', what: ['Extra money before the disaster.', '灾前额外资金。'],
         params: [num('IntValue0', 'Extra money', '额外资金', ['$', '$'], [100, 200, 300, 400, 600], { step: 50 })],
@@ -258,7 +258,7 @@
         en: 'Discount on short-life supplies', zh: '临期物资折扣', what: ['Cheaper supplies that spoil soon.', '购买即将过期的物资时打折。'],
         params: [pct('FloatValue1', 'Discount', '折扣', [10, 15, 20, 25, 30], { scale: -100, add: 100 }), num('FloatValue0', 'Shelf life under', '保质期小于', ['days', '天'], [5, 5, 5, 5, 5])],
         line: v => '-' + fmt(v.FloatValue1) + '%',
-        desc: (v, zh) => zh ? '购买保质期小于' + fmt(v.FloatValue0) + '天的物资时，获得' + fmt(v.FloatValue1) + '%折扣' : 'Get a ' + fmt(v.FloatValue1) + '% discount when purchasing supplies with a shelf life of less than ' + fmt(v.FloatValue0) + ' days.' });
+        desc: (v, zh) => zh ? '购买保质期小于' + fmt(v.FloatValue0) + '天的物资时，获得' + fmt(v.FloatValue1) + '%折扣' : 'Get a ' + fmt(v.FloatValue1) + '% discount when purchasing supplies with a shelf life of less than ' + plural(v.FloatValue0, 'day') + '.' });
       fx({ id: 'game:bulk-discount', src: 'game', cat: 'prep', script: 'BigVolume_Discount',
         en: 'Discount on big items', zh: '大件折扣', what: ['Cheaper supplies that take a lot of space.', '购买大体积物资时打折。'],
         params: [pct('FloatValue1', 'Discount', '折扣', [5, 10, 15, 20, 25], { scale: -100, add: 100 }), num('FloatValue0', 'Size at least', '体积至少', ['', ''], [6, 6, 6, 6, 6])],
@@ -786,15 +786,182 @@
 
       const isGhost = e => !!e && !entryOf(e.id);
 
+      // The list: every reward or only the changed ones, then only those the search finds.
       function listIds() {
         const ids = T.st.view === 'all' ? T.allIds() : T.st.entries.filter(e => !e.removed).map(e => e.id);
+        const words = searchWords();
+        const found = words.length ? ids.filter(id => matchesSearch(id, words)) : ids;
 
-        return ids.slice().sort((a, b) => a - b);
+        return found.slice().sort((a, b) => a - b);
+      }
+
+      // ---- Searching the list ----
+
+      const searchWords = () => String(T.st.q || '').toLowerCase().split(/\s+/).filter(w => w);
+
+      // A search looks through the reward's number, its name, every level's text and what it gives, in both languages.
+      function searchText(id) {
+        const e = entryOrGhost(id);
+
+        if (!e) return String(id);
+
+        const parts = [String(id), nameOf(e, 'en'), nameOf(e, 'zh')];
+
+        range(e.levels.length).forEach(i => parts.push(descOf(e, i, 'en'), descOf(e, i, 'zh')));
+        e.gives.forEach(g => parts.push(fxName(g.fx, false), fxName(g.fx, true)));
+
+        if (T.searchExtra) parts.push(T.searchExtra(e));
+
+        return parts.join(' ').toLowerCase();
+      }
+
+      function matchesSearch(id, words) {
+        const text = searchText(id);
+
+        return words.every(w => text.indexOf(w) >= 0);
+      }
+
+      const SEARCH_ICON = '<svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><circle cx="6.5" cy="6.5" r="5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10.5 10.5l4.5 4.5" stroke="currentColor" stroke-width="2"/></svg>';
+
+      function searchHtml() {
+        const q = T.st.q || '';
+
+        return '<div class="srch">' + SEARCH_ICON +
+          '<input data-a="rq" value="' + esc(q) + '" placeholder="' + esc(L('Search names and descriptions', '搜索名称和描述')) + '" spellcheck="false" autocomplete="off">' +
+          '<span class="clr' + (q ? '' : ' is-hid') + '" data-a="rqx" title="' + esc(L('Clear the search', '清除搜索')) + '">&#x2715;</span></div>';
+      }
+
+      // Shown in place of the rows when the search finds nothing.
+      function noMatchHtml() {
+        const q = esc(T.st.q || '');
+        const all = T.st.view !== 'all' ? '<br><span class="gbtn dim" data-a="view" data-v="all">' + L('SEARCH ALL REWARDS', '搜索全部奖励') + '</span>' : '';
+
+        return '<div class="nomatch">' + L('Nothing matches "<b>' + q + '</b>".', '没有找到「<b>' + q + '</b>」。') + all + '</div>';
+      }
+
+      // Typing in the search box redraws only the list, so the box keeps its focus and what is typed in it.
+      function refreshList() {
+        const root = T.st.root;
+        const list = root ? root.querySelector('[data-list]') : null;
+        const clr = root ? root.querySelector('.srch .clr') : null;
+
+        if (clr) clr.classList.toggle('is-hid', !T.st.q);
+
+        if (!list) return;
+
+        list.innerHTML = T.rowsHtml();
+        list.scrollTop = 0;
+      }
+
+      function clearSearch() {
+        T.st.q = '';
+        refreshList();
+        focusSearch();
+      }
+
+      function focusSearch() {
+        const input = T.st.root ? T.st.root.querySelector('[data-a="rq"]') : null;
+
+        if (!input) return;
+
+        input.focus();
+        input.setSelectionRange(input.value.length, input.value.length);
+      }
+
+      // Scrolls the list just enough to show the selected row below its sticky heading. Measured on screen, since the
+      // row's offsetTop counts from whichever parent is positioned, which is not always the list.
+      function showSelectedRow() {
+        const list = T.st.root ? T.st.root.querySelector('[data-list]') : null;
+        const row = list ? list.querySelector('.is-sel') : null;
+
+        if (!row) return;
+
+        const head = list.querySelector('.col-h');
+        const listBox = list.getBoundingClientRect();
+        const rowBox = row.getBoundingClientRect();
+        const top = listBox.top + (head ? head.offsetHeight : 0);
+
+        if (rowBox.top < top) list.scrollTop -= top - rowBox.top;
+        else if (rowBox.bottom > listBox.bottom) list.scrollTop += rowBox.bottom - listBox.bottom;
+      }
+
+      // The list and the editor reach down to the bottom of the Mod Manager pane, whatever its size, so nothing sits
+      // under its footer and the pane never scrolls on its own. Call after each redraw.
+      const MIN_FIT_H = 300;
+
+      function fitHeight() {
+        const root = T.st.root;
+        const pane = root ? root.closest('.pane') : null;
+        const ed = root ? root.querySelector('.ed') : null;
+
+        if (!pane || !ed) return;
+
+        const edTop = ed.getBoundingClientRect().top - pane.getBoundingClientRect().top + pane.scrollTop;
+        const padBottom = parseFloat(getComputedStyle(root).paddingBottom) || 0;
+
+        root.style.setProperty('--fit-h', Math.max(MIN_FIT_H, Math.floor(pane.clientHeight - edTop - padBottom)) + 'px');
+      }
+
+      // Refits when the pane changes size: the game window, or the Mod Manager showing its restart panel.
+      function watchHeight() {
+        const pane = T.st.root ? T.st.root.closest('.pane') : null;
+        const view = pane ? pane.ownerDocument.defaultView : null;
+
+        unwatchHeight();
+
+        if (!view || typeof view.ResizeObserver !== 'function') return;
+
+        T.st.fitWatch = new view.ResizeObserver(fitHeight);
+        T.st.fitWatch.observe(pane);
+      }
+
+      function unwatchHeight() {
+        if (T.st.fitWatch) T.st.fitWatch.disconnect();
+
+        T.st.fitWatch = null;
+      }
+
+      // In the search box, Up and Down pick the row above or below and Enter picks the first one found.
+      function onSearchKey(ev) {
+        if (ev.target.getAttribute('data-a') !== 'rq') return;
+
+        const ids = listIds();
+        let next = 0;
+
+        if (ev.key === 'Enter') next = ids[0];
+        else if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
+          const at = ids.indexOf(T.st.sel);
+
+          next = ids[at < 0 ? 0 : Math.max(0, Math.min(ids.length - 1, at + (ev.key === 'ArrowDown' ? 1 : -1)))];
+        } else return;
+
+        ev.preventDefault();
+
+        if (!next) return;
+
+        select(next);
+        T.render();
+        focusSearch();
+        showSelectedRow();
+      }
+
+      // Unsaved edits light up SAVE. Text edits do not redraw the tab, so they call this.
+      function refreshSaved() {
+        const btn = T.st.root ? T.st.root.querySelector('[data-a="save"]') : null;
+
+        if (btn) btn.classList.toggle('is-due', !!T.st.dirty);
+      }
+
+      // The switch above the card: it shows the reward as the game would, in English or Chinese.
+      function pvBarHtml() {
+        const mini = (v, label) => '<span data-a="pvl" data-v="' + v + '"' + (T.st.pvLang === v ? ' class="is-on"' : '') + '>' + label + '</span>';
+
+        return '<div class="pv-bar">' + L('As the game shows it', '游戏内显示') + '<span class="mini">' + mini('en', 'EN') + mini('zh', '中文') + '</span></div>';
       }
 
       function editorHtml(e) {
         const ghost = isGhost(e);
-        let html = T.previewHtml(e) + T.whyHtml(e, ghost);
+        let html = pvBarHtml() + T.previewHtml(e) + T.whyHtml(e, ghost);
 
         if (ghost) return html + ghostHtml(e);
 
@@ -1079,10 +1246,12 @@
       }
 
       function closeOverlays() {
-        const wasOpen = !!(T.st.pickerEl || T.st.iconsEl);
+        let wasOpen = !!(T.st.pickerEl || T.st.iconsEl);
 
         closePicker();
         closeIcons();
+
+        if (T.closeMenus && T.closeMenus()) wasOpen = true;
 
         return wasOpen;
       }
@@ -1133,6 +1302,13 @@
           return;
         }
 
+        if (a === 'rq') {
+          T.st.q = t.value;
+          refreshList();
+
+          return;
+        }
+
         const e = entryOf(T.st.sel);
 
         if (a !== 'txt' || !e) return;
@@ -1141,6 +1317,7 @@
 
         T.editText(e, key, t.value);
         refreshPreview();
+        refreshSaved();
 
         if (key.indexOf('name:') === 0) {
           const nm = T.st.root.querySelector('.ab.is-sel .nm');
@@ -1151,21 +1328,44 @@
 
       function hideTab() {
         closeOverlays();
+        unwatchHeight();
       }
 
+      // Esc closes a picker first, then clears the search.
       function escapeTab() {
-        return closeOverlays();
+        if (closeOverlays()) return true;
+
+        if (!T.st.q) return false;
+
+        T.st.q = '';
+        T.render();
+
+        return true;
       }
 
 
     // The styles both tabs use. {c} is the tab's class name, and the tab's own lines go in at '@extra'.
     const CSS_BASE = [
-      'N &{' + VARS + 'position:relative;min-height:677px;padding:16px 26px 26px;color:var(--tm);background:radial-gradient(ellipse at 20% 0%,rgba(120,80,30,0.28),transparent 60%),linear-gradient(180deg,#1f1a15,#16120e)}',
+      'N &{' + VARS + 'position:relative;padding:16px 26px 26px;color:var(--tm);background:radial-gradient(ellipse at 20% 0%,rgba(120,80,30,0.28),transparent 60%),linear-gradient(180deg,#1f1a15,#16120e)}',
       'N &::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent 10%,var(--hl) 50%,transparent 90%);opacity:.5}',
       'B input,textarea,select{user-select:text}',
-      'N .{c}-top{display:flex;align-items:center;gap:16px;margin-bottom:12px}',
+      'N .{c}-top{display:flex;align-items:flex-start;gap:12px;margin-bottom:12px}',
+      'N .{c}-head{flex:1;min-width:0}',
       'N .{c}-title{font-size:1.5rem;font-weight:700;letter-spacing:4px;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.6);white-space:nowrap}',
-      'N .{c}-sub{color:var(--td);font-size:.9rem}',
+      'N .{c}-sub{color:var(--td);font-size:.9rem;line-height:1.4;margin-top:2px}',
+      'N .{c}-top .key-btn.is-due{border-color:var(--hl);color:var(--hl);background:rgba(255,200,58,0.12)}',
+      'N .{c}-bar{display:flex;align-items:center;flex-wrap:wrap;gap:10px 12px;margin-bottom:12px}',
+      'N .srch{flex:1;min-width:200px;display:flex;align-items:center;gap:8px;border:1px solid var(--bl);background:rgba(0,0,0,0.45);padding:0 10px;color:var(--tmeta)}',
+      'N .srch:focus-within{border-color:var(--hl)}',
+      'N .srch svg{flex:none}',
+      'N .srch input{flex:1;min-width:0;background:transparent;border:0;outline:none;color:#fff;font:400 .95rem var(--body);padding:7px 0}',
+      'N .srch input::placeholder{color:#6d6253}',
+      'N .srch .clr{cursor:pointer;padding:0 4px}',
+      'N .srch .clr:hover{color:#fff}',
+      'N .srch .clr.is-hid{visibility:hidden}',
+      'N .nomatch{padding:24px 16px;text-align:center;color:var(--td);line-height:1.6}',
+      'N .nomatch b{color:#fff}',
+      'N .nomatch .gbtn{display:inline-block;margin-top:10px}',
       'B .sp{flex:1}',
       'N .{c}-chips{display:flex;border:1px solid var(--bl)}',
       'N .{c}-chips span{padding:6px 14px;font-size:.85rem;color:var(--td);cursor:pointer;letter-spacing:1px;white-space:nowrap}',
@@ -1174,19 +1374,21 @@
       'N .{c}-probs{margin:0 0 12px;padding:8px 14px;border:1px solid rgba(255,82,82,0.4);background:rgba(255,82,82,0.08);color:#e9b;font-size:.85rem;line-height:1.5}',
       'N .{c}-bad{margin:0 0 12px;padding:10px 14px;border:1px solid rgba(255,82,82,0.5);background:rgba(255,82,82,0.12);color:#fcc;font-size:.92rem}',
       'N .{c}-wait{padding:60px;text-align:center;color:var(--td)}',
-      'N .{c}-main{display:grid;grid-template-columns:450px minmax(0,1fr);gap:22px;align-items:start}',
-      'N .{c}-list{height:610px;overflow-y:auto;border:1px solid var(--bd2);background:rgba(0,0,0,0.22)}',
-      'B ::-webkit-scrollbar{width:6px}',
+      'N .{c}-main{display:grid;grid-template-columns:minmax(280px,34%) minmax(0,1fr);gap:20px;align-items:start}',
+      'N .{c}-list{position:relative;height:var(--fit-h,610px);overflow-y:auto;overflow-x:hidden;border:1px solid var(--bd2);background:rgba(0,0,0,0.22)}',
+      'B ::-webkit-scrollbar{width:6px;height:6px}',
+      'B ::-webkit-scrollbar-track,::-webkit-scrollbar-corner{background:transparent}',
       'B ::-webkit-scrollbar-thumb{background:rgba(255,200,58,0.3)}',
       'N .col-h{position:sticky;top:0;z-index:2;padding:9px 16px;text-align:center;color:var(--hl);font-weight:700;letter-spacing:5px;font-size:.95rem;text-shadow:0 0 12px var(--hl-glow);background:#1d1813;border-bottom:1px solid var(--bl)}',
       'N .col-h small{position:absolute;right:12px;top:11px;font-family:var(--mono);font-size:.7rem;color:var(--tmeta);letter-spacing:0;text-shadow:none}',
-      'N .ab{position:relative;display:grid;grid-template-columns:52px 1fr auto;gap:14px;align-items:center;padding:8px 16px;min-height:66px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.04)}',
+      'N .ab{position:relative;display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:14px;align-items:center;padding:8px 16px;min-height:66px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.04)}',
       'N .ab::before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:3px}',
       'N .ab:hover{background:linear-gradient(90deg,rgba(255,200,58,0.06),transparent)}',
       'N .ab.is-sel{background:linear-gradient(90deg,rgba(255,200,58,0.13),rgba(255,200,58,0.02) 70%,transparent)}',
       'N .ab.is-sel::before{background:var(--hl);box-shadow:0 0 10px var(--hl-glow)}',
       'N .ab img{width:52px;height:52px;object-fit:contain;filter:drop-shadow(0 2px 5px rgba(0,0,0,.5))}',
       'N .ab .nm{font-weight:700;font-size:1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      'N .ab .ds{margin-top:2px;font-size:.8rem;color:var(--td);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
       'N .ab .mt{display:flex;gap:10px;align-items:center;margin-top:3px;font-size:.8rem;color:var(--tmeta)}',
       'N .ab .lvn{font-family:var(--mono);color:var(--hl)}',
       'N .ab.is-out{opacity:.5}',
@@ -1203,10 +1405,10 @@
       'B .tg.ex{color:var(--tmeta);border-color:rgba(255,255,255,0.15);border-style:dashed}',
       'N .new-btn{padding:7px 14px;border:1px dashed var(--hl);color:var(--hl);cursor:pointer;letter-spacing:2px;font-size:.85rem;font-weight:700;white-space:nowrap}',
       'N .new-btn:hover{background:rgba(255,200,58,0.12);color:#fff}',
-      'N .ed{min-width:0;height:610px;overflow-y:auto;padding-right:8px}',
-      'N .pv{display:grid;grid-template-columns:110px 1fr;gap:20px;padding:16px 20px;border:1px solid var(--bl);background:linear-gradient(180deg,rgba(40,32,24,0.95),rgba(24,20,16,0.95));box-shadow:0 8px 30px rgba(0,0,0,.5);position:relative}',
+      'N .ed{min-width:0;height:var(--fit-h,610px);overflow-y:auto;overflow-x:hidden;padding-right:8px}',
+      'N .pv{display:grid;grid-template-columns:110px minmax(0,1fr);gap:20px;padding:16px 20px;border:1px solid var(--bl);background:linear-gradient(180deg,rgba(40,32,24,0.95),rgba(24,20,16,0.95));box-shadow:0 8px 30px rgba(0,0,0,.5);position:relative}',
       'N .pv img{width:110px;height:110px;object-fit:contain;filter:drop-shadow(0 0 12px rgba(255,200,58,0.25))}',
-      'N .pv-name{font-size:1.45rem;font-weight:700;color:#fff;display:flex;align-items:baseline;gap:14px;padding-right:200px}',
+      'N .pv-name{font-size:1.45rem;font-weight:700;color:#fff;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px;overflow-wrap:break-word}',
       'N .pv-name .lvb{font-family:var(--mono);font-size:1.1rem;color:var(--hl);text-shadow:0 0 6px var(--hl-glow);white-space:nowrap}',
       'N .pv-lt{color:var(--hl);font-size:.95rem;margin-top:4px}',
       'N .pv-lt b{color:#fff;text-decoration:underline;text-decoration-color:var(--hl);text-underline-offset:3px}',
@@ -1214,10 +1416,11 @@
       'N .pv-desc.is-empty{color:var(--tmeta);font-style:italic}',
       'N .pv-cost{margin-top:8px;font-size:.9rem;color:var(--td)}',
       'N .pv-cost b{color:var(--hl);font-family:var(--mono);font-size:1.05rem}',
-      'N .pv-tag{position:absolute;right:12px;top:10px;display:flex;gap:8px;align-items:center;font-size:.75rem;color:var(--tmeta)}',
-      'N .pv-tag .mini{display:flex;border:1px solid var(--bl)}',
-      'N .pv-tag .mini span{padding:2px 8px;cursor:pointer}',
-      'N .pv-tag .mini span.is-on{color:var(--hl);background:rgba(255,200,58,0.12)}',
+      'N .pv-sub{margin-top:4px;font-size:.85rem;color:var(--td)}',
+      'N .pv-bar{display:flex;justify-content:flex-end;gap:8px;align-items:center;margin-bottom:6px;font-size:.75rem;color:var(--tmeta)}',
+      'N .pv-bar .mini{display:flex;border:1px solid var(--bl)}',
+      'N .pv-bar .mini span{padding:2px 8px;cursor:pointer}',
+      'N .pv-bar .mini span.is-on{color:var(--hl);background:rgba(255,200,58,0.12)}',
       'N .sec-h{display:flex;align-items:center;gap:12px;margin:16px 0 8px;color:var(--hl);letter-spacing:3px;font-size:.8rem;font-weight:700}',
       'N .sec-h small{color:var(--tmeta);letter-spacing:0;font-weight:400;font-size:.8rem}',
       'N .look{display:grid;grid-template-columns:96px 1fr;gap:16px;padding:12px 14px;border:1px solid var(--bd2);background:rgba(0,0,0,0.25)}',
@@ -1225,7 +1428,7 @@
       'N .look-ic img{width:80px;height:80px;object-fit:contain}',
       'N .look-ic span{position:absolute;bottom:-1px;left:-1px;right:-1px;text-align:center;font-size:.66rem;letter-spacing:1px;background:rgba(0,0,0,0.75);color:var(--hl);padding:2px 0}',
       'N .look-ic:hover{border-color:var(--hl)}',
-      'N .look-f{display:grid;grid-template-columns:110px 1fr 1fr;gap:8px 10px;align-items:center}',
+      'N .look-f{display:grid;grid-template-columns:90px minmax(0,1fr) minmax(0,1fr);gap:8px 10px;align-items:center}',
       'N .look-f .k,.tx .k{color:var(--td);font-size:.88rem}',
       'N .look-f input,.tx input{width:100%;box-sizing:border-box;background:rgba(0,0,0,0.4);border:1px solid var(--bd2);color:#fff;padding:6px 9px;font:400 .92rem var(--body);outline:none}',
       'N .look-f input:focus,.tx input:focus{border-color:var(--hl)}',
@@ -1238,7 +1441,7 @@
       'N .gv-row img{width:44px;height:44px;object-fit:contain}',
       'N .gv-n{font-weight:700;color:#fff;display:flex;gap:8px;align-items:center}',
       'N .gv-w{color:var(--td);font-size:.84rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
-      'N .gv-picks{display:flex;gap:6px}',
+      'N .gv-picks{display:flex;flex-wrap:wrap;gap:6px}',
       'N .gv-row a{color:var(--hl);font-size:.8rem;letter-spacing:2px;cursor:pointer}',
       'N .gv-row a:hover{color:#fff}',
       'N .gv-row .x{color:var(--tmeta);cursor:pointer;padding:0 4px}',
@@ -1248,7 +1451,7 @@
       'N .gv-empty{padding:18px;text-align:center;color:var(--td)}',
       'N .gv-empty .gbtn{display:inline-block;margin-top:10px}',
       'N select.nsel{background:#1d1813;border:1px solid var(--bl);color:#fff;padding:5px 8px;font:400 .88rem var(--body);outline:none}',
-      'N .lvs{display:flex;gap:6px;margin:14px 0 6px;align-items:center}',
+      'N .lvs{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0 6px;align-items:center}',
       'N .lvs span{min-width:46px;text-align:center;padding:6px 0;font-family:var(--mono);font-size:.85rem;color:var(--td);border:1px solid var(--bd2);cursor:pointer}',
       'N .lvs span.is-on{color:#1c1814;background:var(--hl);border-color:var(--hl);font-weight:700}',
       'N .lvs span.is-add{color:var(--hl);border-style:dashed;padding:6px 10px}',
@@ -1272,25 +1475,25 @@
       'N .nnote b{color:var(--tm)}',
       'N .fold{margin-top:14px;border-top:1px solid var(--bd2);padding-top:10px}',
       'N .fold-t{cursor:pointer;color:var(--hl);letter-spacing:3px;font-size:.8rem}',
-      'N .tx{display:grid;grid-template-columns:130px 1fr 1fr;gap:8px 10px;align-items:center;margin-top:10px}',
+      'N .tx{display:grid;grid-template-columns:130px minmax(0,1fr) minmax(0,1fr);gap:8px 10px;align-items:center;margin-top:10px}',
       '@extra',
       'N .tx .auto{color:var(--hl);font-size:.88rem;line-height:1.4}',
       'N .tx .hd2{color:var(--tmeta);font-size:.74rem;letter-spacing:2px}',
       'N .chk{display:flex;align-items:center;gap:8px;margin-top:10px;color:var(--td);font-size:.88rem;cursor:pointer}',
       'N .chk input{accent-color:#FFC83A}',
-      'N .ed-acts{display:flex;gap:10px;margin-top:16px;align-items:center}',
-      'B .gbtn{padding:8px 16px;border:1px solid var(--hl);color:var(--hl);background:rgba(255,200,58,0.08);cursor:pointer;letter-spacing:2px;font-size:.85rem;font-weight:700}',
+      'N .ed-acts{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px;align-items:center}',
+      'B .gbtn{padding:8px 16px;border:1px solid var(--hl);color:var(--hl);background:rgba(255,200,58,0.08);cursor:pointer;letter-spacing:2px;font-size:.85rem;font-weight:700;white-space:nowrap}',
       'B .gbtn:hover{background:rgba(255,200,58,0.22);color:#fff}',
       'B .gbtn.dim{border-color:var(--bl);color:var(--td);background:transparent}',
       'B .gbtn.is-dis{opacity:.45;pointer-events:none}',
       'N .add-cta{padding:18px 20px;margin-top:14px;border:1px dashed var(--bl);color:var(--td)}',
       'N .add-cta .gbtn{display:inline-block;margin:10px 10px 0 0}',
       'P &{' + VARS + 'position:absolute;inset:0;z-index:50;background:rgba(0,0,0,0.72);display:flex;align-items:center;justify-content:center;color:var(--tm);animation:slmm-pop .18s both}',
-      'P .fxp-card{width:1520px;height:850px;display:grid;grid-template-rows:auto 1fr auto;border:1px solid rgba(255,200,58,0.35);background:linear-gradient(180deg,#221c16,#15110d);box-shadow:0 30px 90px rgba(0,0,0,0.9)}',
-      'P .fxp-hd{display:flex;align-items:center;gap:18px;padding:14px 20px;border-bottom:1px solid var(--bl)}',
+      'P .fxp-card{width:calc(100% - 40px);max-width:1520px;height:calc(100% - 40px);max-height:850px;display:grid;grid-template-rows:auto 1fr auto;border:1px solid rgba(255,200,58,0.35);background:linear-gradient(180deg,#221c16,#15110d);box-shadow:0 30px 90px rgba(0,0,0,0.9)}',
+      'P .fxp-hd{display:flex;flex-wrap:wrap;align-items:center;gap:12px 18px;padding:14px 20px;border-bottom:1px solid var(--bl)}',
       'P .fxp-hd .t{font-size:1.25rem;font-weight:700;letter-spacing:4px;color:#fff;white-space:nowrap}',
       'P .fxp-hd .t small{display:block;font-size:.8rem;letter-spacing:1px;color:var(--td);font-weight:400}',
-      'P .fxp-q{flex:1;display:flex;align-items:center;gap:8px;border:1px solid var(--bl);background:rgba(0,0,0,0.45);padding:0 12px}',
+      'P .fxp-q{flex:1;min-width:240px;display:flex;align-items:center;gap:8px;border:1px solid var(--bl);background:rgba(0,0,0,0.45);padding:0 12px}',
       'P .fxp-q:focus-within{border-color:var(--hl)}',
       'P .fxp-q input{flex:1;background:transparent;border:0;outline:none;color:#fff;font:400 1.05rem var(--body);padding:9px 0}',
       'P .fxp-q span{color:var(--tmeta)}',
@@ -1300,7 +1503,7 @@
       'P .fxp-src span.is-on{background:rgba(255,200,58,0.14);color:var(--hl)}',
       'P .fxp-x{font-size:1.4rem;color:var(--td);cursor:pointer;padding:0 4px}',
       'P .fxp-x:hover{color:#fff}',
-      'P .fxp-bd{display:grid;grid-template-columns:250px minmax(0,1fr) 480px;min-height:0}',
+      'P .fxp-bd{display:grid;grid-template-columns:minmax(170px,230px) minmax(0,1fr) minmax(300px,440px);min-height:0}',
       'P .fxp-rail{overflow-y:auto;border-right:1px solid var(--bd2);padding:8px 0;background:rgba(0,0,0,0.2)}',
       'P .fxp-rail .rh{padding:12px 18px 6px;font-size:.7rem;letter-spacing:2px;color:var(--tmeta)}',
       'P .fxp-rail .ri{display:flex;justify-content:space-between;padding:7px 18px;cursor:pointer;font-size:.92rem;color:var(--td);border-left:3px solid transparent}',
@@ -1340,11 +1543,13 @@
       'P .fxd .fn{margin-top:6px;font-size:.84rem;color:var(--td);line-height:1.5}',
       'P .fxd .gbtn{display:inline-block;margin-top:18px}',
       'P .fxp-ft{display:flex;align-items:center;gap:14px;padding:12px 20px;border-top:1px solid var(--bl);color:var(--tmeta);font-size:.84rem}',
-      'I &{' + VARS + 'position:absolute;z-index:60;width:720px;padding:10px;background:#1a1611;border:1px solid rgba(255,200,58,0.4);box-shadow:0 20px 60px rgba(0,0,0,0.85)}',
+      'I &{' + VARS + 'position:absolute;z-index:60;width:720px;max-width:calc(100% - 20px);box-sizing:border-box;padding:10px;background:#1a1611;border:1px solid rgba(255,200,58,0.4);box-shadow:0 20px 60px rgba(0,0,0,0.85)}',
       'I .icg{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}',
       'I .icg span{padding:3px 10px;font-size:.8rem;color:var(--td);border:1px solid var(--bl);cursor:pointer;white-space:nowrap}',
       'I .icg span.is-on{background:rgba(255,200,58,0.14);color:var(--hl);border-color:var(--hl)}',
-      'I .icl{display:grid;grid-template-columns:repeat(10,1fr);gap:4px;max-height:400px;overflow-y:auto}',
+      'I ::-webkit-scrollbar{width:6px}',
+      'I ::-webkit-scrollbar-thumb{background:rgba(255,200,58,0.3)}',
+      'I .icl{display:grid;grid-template-columns:repeat(auto-fill,minmax(62px,1fr));gap:4px;max-height:400px;overflow-y:auto}',
       'I img{width:58px;height:58px;object-fit:contain;padding:4px;border:1px solid transparent;cursor:pointer}',
       'I img:hover{border-color:var(--hl);background:rgba(255,200,58,0.1)}',
       'T &{position:absolute;left:50%;bottom:74px;transform:translateX(-50%);background:#0d1716;border:1px solid var(--teal);color:#cfe;padding:10px 18px;font-size:.95rem;z-index:40;box-shadow:0 10px 30px rgba(0,0,0,0.7);animation:slmm-pin .25s both}',
@@ -1357,6 +1562,6 @@
       return CSS_BASE.slice(0, at).concat(extra, CSS_BASE.slice(at + 1)).map(line => line.split('{c}').join(cls));
     }
 
-    return { MAX_LEVELS, MAX_GIVES, GAME_PREFIX, REWARD_ICONS, ICON_GROUPS, TOAST_MS, INT_FIELD, STAT_MAX, NO_SCRIPT, VARS, scopedCss, injectStyle, isObj, isArr, isNum, clone, round2, fmt, range, L, ESCAPES, esc, isEmptyVal, zeroOf, allKeys, sameVal, h, normText, textIn, shown, CATS, GROUP_TALENTS, SKILL_TALENTS, XP_SKILLS, WORK, STATS, ROBOTS, robotScript, robotName, named, nameOptions, num, pct, pick, hide, optionsOf, isOptionOn, availableOptions, groupUnknown, opt, itemCount, plural, numericBuffKeys, FX, fx, FX_BY_ID, picksOf, numsOf, hidesOf, fieldName, display, toRaw, defaultAt, match, rawCache, FIELD_RANK, prettyScript, rawLabel, rawFx, cat, talentIcons, fxIcon, fxName, fromRoot, scriptOfGive, fixedFrom, roundTrips, isEditable, isAutoOn, showsAuto, valsOf, autoLine, autoLevelText, autoDesc, baseText, nameOf, descOf, hasLevelDescs, entryOf, entryOrGhost, levelCount, markChanged, givesChanged, adopt, resetOrDelete, nextStep, setGive, setPick, writeText, saved, discard, send, numText, unitOf, tag, isGhost, listIds, editorHtml, hasNoScript, ghostHtml, pickHtml, stepper, descTarget, refreshPreview, talentName, winEl, haystack, matchesQuery, pickerLists, isOnOtherGive, closePicker, renderPicker, railHtml, cardMeta, listHtml, paramRow, readsHtml, chooseButton, choose, onPickerDouble, onPickerKey, iconsHtml, iconGroupName, showIconGroup, closeIcons, onDocDown, closeOverlays, closeToast, clampLevel, select, setText, afterRemove, onInput, hideTab, escapeTab, editorCss };
+    return { MAX_LEVELS, MAX_GIVES, GAME_PREFIX, REWARD_ICONS, ICON_GROUPS, TOAST_MS, INT_FIELD, STAT_MAX, NO_SCRIPT, VARS, scopedCss, injectStyle, isObj, isArr, isNum, clone, round2, fmt, range, L, ESCAPES, esc, isEmptyVal, zeroOf, allKeys, sameVal, h, normText, textIn, shown, CATS, GROUP_TALENTS, SKILL_TALENTS, XP_SKILLS, WORK, STATS, ROBOTS, robotScript, robotName, named, nameOptions, num, pct, pick, hide, optionsOf, isOptionOn, availableOptions, groupUnknown, opt, itemCount, plural, numericBuffKeys, FX, fx, FX_BY_ID, picksOf, numsOf, hidesOf, fieldName, display, toRaw, defaultAt, match, rawCache, FIELD_RANK, prettyScript, rawLabel, rawFx, cat, talentIcons, fxIcon, fxName, fromRoot, scriptOfGive, fixedFrom, roundTrips, isEditable, isAutoOn, showsAuto, valsOf, autoLine, autoLevelText, autoDesc, baseText, nameOf, descOf, hasLevelDescs, entryOf, entryOrGhost, levelCount, markChanged, givesChanged, adopt, resetOrDelete, nextStep, setGive, setPick, writeText, saved, discard, send, numText, unitOf, tag, isGhost, listIds, searchWords, searchText, matchesSearch, searchHtml, noMatchHtml, refreshList, clearSearch, focusSearch, showSelectedRow, fitHeight, watchHeight, onSearchKey, refreshSaved, pvBarHtml, editorHtml, hasNoScript, ghostHtml, pickHtml, stepper, descTarget, refreshPreview, talentName, winEl, haystack, matchesQuery, pickerLists, isOnOtherGive, closePicker, renderPicker, railHtml, cardMeta, listHtml, paramRow, readsHtml, chooseButton, choose, onPickerDouble, onPickerKey, iconsHtml, iconGroupName, showIconGroup, closeIcons, onDocDown, closeOverlays, closeToast, clampLevel, select, setText, afterRemove, onInput, hideTab, escapeTab, editorCss };
   }
 })();
