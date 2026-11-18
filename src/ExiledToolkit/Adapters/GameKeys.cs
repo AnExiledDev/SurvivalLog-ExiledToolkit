@@ -9,7 +9,7 @@ namespace ExiledToolkit.Game;
 /// <summary>One of the game's hotkey actions and the key the player bound to it.</summary>
 /// <param name="Action">The action's name in the game's code (HotKeyAction), such as "Backpack".</param>
 /// <param name="Label">The action's name as the game's key settings show it, in the language the game shows.</param>
-public sealed record GameKey(string Action, KeyCode Key, string Label, bool IsMouse);
+public sealed record GameHotkey(string Action, KeyCode Key, string Label, bool IsMouse);
 
 /// <summary>
 /// The game's hotkeys, as the player bound them. Reading one goes through the game's SettingManager, so each key
@@ -26,9 +26,9 @@ public static class GameKeys
     public static KeyCode KeyFor(HotKeyAction action) => Book.KeyFor((int)action) is { } key ? (KeyCode)key : KeyCode.None;
 
     /// <summary>Every action that has a key, in the game's order. Empty before the game has made its settings.</summary>
-    public static IReadOnlyList<GameKey> All()
+    public static IReadOnlyList<GameHotkey> All()
     {
-        var keys = new List<GameKey>();
+        var keys = new List<GameHotkey>();
 
         foreach (HotKeyAction action in Enum.GetValues(typeof(HotKeyAction)))
         {
@@ -36,7 +36,7 @@ public static class GameKeys
 
             if (key == KeyCode.None) continue;
 
-            keys.Add(new GameKey(action.ToString(), key, LabelOf(action), HotKeyBinding.IsMouseKey(key)));
+            keys.Add(new GameHotkey(action.ToString(), key, LabelOf(action), HotKeyBinding.IsMouseKey(key)));
         }
 
         return keys;
