@@ -462,6 +462,162 @@ public class EditorTests
         Assert.Contains("less than 5 days.", _engine.Evaluate("shelf.desc({ FloatValue0: 5, FloatValue1: 10 }, false)").AsString());
     }
 
+    // The plural of a few words puts the s on the last one: "2 more times", never "{0|more time}" left in the text.
+    [Fact]
+    public void A_plural_of_several_words_puts_the_s_on_the_last_word()
+    {
+        Load();
+
+        _engine.Execute("var t = window.ExiledEditor.make({}), eats = t.FX.find(f => f.id === 'game:AE_TiredOfFoodExtraEats');");
+
+        Assert.Contains("the same food 1 more time before", Str("eats.desc({ FloatValue0: 1 }, false)"));
+        Assert.Contains("the same food 2 more times before", Str("eats.desc({ FloatValue0: 2 }, false)"));
+    }
+
+    // Every effect in the list reads as finished text at its first default, in both languages: nothing like {0},
+    // undefined or NaN left for the player to see.
+    [Fact]
+    public void Every_effect_reads_its_default_numbers_as_plain_text_in_both_languages()
+    {
+        Load();
+
+        _engine.Execute("""
+            var t = window.ExiledEditor.make({ st: { lang: 'en', game: [], byId: {}, scripts: new Set() } }), bad = [];
+            t.FX.forEach(f => {
+              var v = {};
+              f.params.forEach(p => { v[p.key] = Array.isArray(p.def) ? p.def[0] : p.def; });
+              [false, true].forEach(zh => {
+                var text = f.line(v, zh) + ' ' + f.desc(v, zh, f.params);
+                if (/\{\d|undefined|NaN/.test(text)) bad.push(f.id + (zh ? ' zh: ' : ' en: ') + text);
+              });
+            });
+            """);
+
+        Assert.Equal("", Str("bad.join(' | ')"));
+        Assert.True(Number("t.FX.length") > 200);
+    }
+
+    // A tab that adds an effect with an id already in the list replaces it in place, so a mod can reword one.
+    [Fact]
+    public void An_effect_with_an_id_already_in_the_list_replaces_it()
+    {
+        Load();
+
+        _engine.Execute("""
+            var t = window.ExiledEditor.make({}), before = t.FX.length, at = t.FX.findIndex(f => f.id === 'game:solar');
+            t.fx({ id: 'game:solar', cat: 'home', script: 'AE_SolarOutput', en: 'Mine', zh: '我的', what: ['', ''], params: [], line: '', desc: '' });
+            """);
+
+        Assert.Equal(Number("before"), Number("t.FX.length"));
+        Assert.Equal("Mine", Str("t.FX[at].en"));
+    }
+
+    // One game script can be several effects, told apart by a fixed field (the status it changes, the skill a recipe
+    // is for). A row with a value none of them takes is shown as the unnamed script instead of a wrong name.
+    [Fact]
+    public void A_game_row_finds_the_effect_its_fixed_fields_belong_to()
+    {
+        Load();
+
+        _engine.Execute("var t = window.ExiledEditor.make({ isAvailable: () => true, st: { lang: 'en', game: [], byId: {} } }), id = (s, v) => t.match(s, v).id;");
+
+        Assert.Equal("game:Passive_Hunger", Str("id('Passive_Hunger', { IntValue0: 1001, IntValue1: 30, IntValue2: 30 })"));
+        Assert.Equal("raw:Passive_Dismay", Str("id('Passive_Dismay', { IntValue0: 1016, IntValue1: 30, IntValue2: 30 })"));
+        Assert.Equal("game:Buff_Gratitude-wish", Str("id('Buff_Gratitude', { IntValue0: 1009, IntValue1: 1017, FloatValue0: 7200 })"));
+        Assert.Equal("game:Buff_Gratitude-appetite", Str("id('Buff_Gratitude', { IntValue0: 200, FloatValue0: -3600 })"));
+        Assert.Equal("game:cook-recipe", Str("id('UnlockCraftRecipe', { StrValue0: 'Cooking', StrValue1: '2016' })"));
+        Assert.Equal("game:UnlockCraftRecipe", Str("id('UnlockCraftRecipe', { StrValue0: 'Production', StrValue1: '305;337' })"));
+    }
+
+    // The three flowerpot sizes are one effect with a pick, and each size's script reads back as that size.
+    [Fact]
+    public void Each_flowerpot_script_reads_back_as_its_own_size()
+    {
+        Load();
+
+        _engine.Execute("""
+            var t = window.ExiledEditor.make({ isAvailable: () => true, st: { lang: 'en', game: [], byId: {} } });
+            var pot = t.FX.find(f => f.id === 'game:pot-no-till'), size = s => t.picksOf(pot)[0].from({}, s);
+            """);
+
+        Assert.Equal("game:pot-no-till", Str("t.match('AE_SkipTillSoilLargePot', {}).id"));
+        Assert.Equal("game:pot-no-till", Str("t.match('AE_SkipTillSoilMediumPot', {}).id"));
+        Assert.Equal("Medium", Str("size('AE_SkipTillSoilMediumPot')"));
+        Assert.Equal("Large", Str("size('AE_SkipTillSoilLargePot')"));
+        Assert.Equal("AE_SkipTillSoilLargePot", Str("pot.scriptOf({ pick: { pot: 'Large' } })"));
+    }
+
+    // Early Bedtime only gives more Stamina from rest, so its text leaves out the faster hunger the 3 day status has.
+    [Fact]
+    public void Rest_text_names_faster_hunger_only_when_the_reward_has_it()
+    {
+        Load();
+
+        _engine.Execute("var t = window.ExiledEditor.make({}), rest = t.FX.find(f => f.id === 'game:Buff_306510');");
+
+        Assert.Equal("For 3 days, resting gives 50% more Stamina.", Str("rest.desc({ FloatValue1: 50, FloatValue2: 0 }, false)"));
+        Assert.Equal("For 3 days, resting gives 100% more Stamina, but Satiety drops 30% faster.", Str("rest.desc({ FloatValue1: 100, FloatValue2: 30 }, false)"));
+    }
+
+    // A script nothing names yet: its boxes are numbered from 1, a fraction its cards write as a percent shows as one,
+    // and the first card's text says what it does.
+    [Fact]
+    public void An_unnamed_script_numbers_its_boxes_and_shows_the_percents_its_cards_use()
+    {
+        Load();
+
+        _engine.Execute("""
+            var game = [{ id: 9001, name: { en: 'Test Reward', zh: '测试奖励' }, levelText: { en: '30% / 60%', zh: '' }, levels: [
+              { script: 'MadeUpScript', desc: { en: 'Use 30% less Stamina for 5 days.', zh: '5天内精力消耗降低30%' }, values: { FloatValue0: -0.3, FloatValue1: 0.5, IntValue0: 5 } },
+              { script: 'MadeUpScript', desc: { en: 'Use 60% less Stamina for 5 days.', zh: '' }, values: { FloatValue0: -0.6, FloatValue1: 0.5, IntValue0: 5 } }] }];
+            var t = window.ExiledEditor.make({ isAvailable: () => true, st: { lang: 'en', game: game, byId: { 9001: game[0] } } });
+            var raw = t.match('MadeUpScript', game[0].levels[0].values), v = { FloatValue0: -30, FloatValue1: 0.5, IntValue0: 5 };
+            """);
+
+        Assert.Equal("raw:MadeUpScript", Str("raw.id"));
+        Assert.Equal("Number 1: -30%, Number 2: 0.5, Number 3: 5", Str("raw.desc(v, false)"));
+        Assert.Equal("数值 1：-30%，数值 2：0.5，数值 3：5", Str("raw.desc(v, true)"));
+        Assert.Equal("-30,-60", Str("raw.params[0].def.join(',')"));
+        Assert.Equal("Use 30% less Stamina for 5 days.", Str("raw.what[0]"));
+    }
+
+    // The game's card text for up to three rewards that run an effect: the first level that runs it, then the
+    // values per level, or the last level's text when the reward has no such line.
+    [Fact]
+    public void The_game_card_text_shows_for_up_to_three_rewards_that_use_an_effect()
+    {
+        Load();
+
+        _engine.Execute("""
+            var lv = (script, en) => ({ script: script, desc: { en: en, zh: en + ' zh' }, values: {} });
+            var game = [
+              { id: 1, name: { en: 'Steady Hands', zh: '稳手' }, levelText: { en: '10% / 20%', zh: '' }, levels: [lv('S', 'Work 10% faster.'), lv('S', 'Work 20% faster.')] },
+              { id: 2, name: { en: 'Quiet Steps', zh: '轻步' }, levels: [lv('Other', 'Something else.'), lv('S', 'Walk quietly.'), lv('S', 'Walk very quietly.')] },
+              { id: 3, name: { en: 'Third', zh: '三' }, levels: [lv('S', 'Three.')] },
+              { id: 4, name: { en: 'Fourth', zh: '四' }, levels: [lv('S', 'Four.')] }];
+            var byId = {};
+            game.forEach(g => { byId[g.id] = g; });
+            var T = { st: { lang: 'en', game: game, byId: byId } }, t = window.ExiledEditor.make(T);
+            var f = { scripts: ['S'], usedBy: [1, 2, 3, 4], finishes: [] }, html = t.gameCardsHtml(f);
+            """);
+
+        Assert.Contains("WHAT THE GAME SAYS", Str("html"));
+        Assert.Contains(">Steady Hands<", Str("html"));
+        Assert.Contains(">Work 10% faster.<", Str("html"));
+        Assert.Contains("By level: 10% / 20%", Str("html"));
+        Assert.Contains(">Walk quietly.<", Str("html"));
+        Assert.Contains("Level 3: Walk very quietly.", Str("html"));
+        Assert.DoesNotContain("Something else.", Str("html"));
+        Assert.DoesNotContain("Four.", Str("html"));
+        Assert.Equal("", Str("t.gameCardsHtml({ scripts: ['S'], usedBy: [], finishes: [] })"));
+
+        _engine.Execute("T.st.lang = 'zh';");
+
+        Assert.Contains("游戏内说明", Str("t.gameCardsHtml(f)"));
+        Assert.Contains(">Work 10% faster. zh<", Str("t.gameCardsHtml(f)"));
+        Assert.Contains("第3级：Walk very quietly. zh", Str("t.gameCardsHtml(f)"));
+    }
+
     // Two of the game's rewards: 101 talks about solar power, and only 102's second level mentions loot. A tab whose
     // levels add up says so before it makes the editor, as More Rewards does.
     private void MakeTabWithTwoRewards(bool levelsAddUp = false) => _engine.Execute("var levelsAddUp = " + (levelsAddUp ? "true" : "false") + ";" + """
@@ -515,6 +671,8 @@ public class EditorTests
     private void Load() => _engine.Execute(Resource("ExiledToolkit.editor.js"));
 
     private bool Bool(string expression) => _engine.Evaluate(expression).AsBoolean();
+
+    private string Str(string expression) => _engine.Evaluate(expression).AsString();
 
     private static string Resource(string name)
     {

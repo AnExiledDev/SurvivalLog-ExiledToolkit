@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.30.0
+
+- Reward editor: every effect the game's rewards use now has a name, in English and Chinese, with boxes that say what each number does. Before, 173 of them showed as an unnamed game script with raw numbers.
+- Reward editor: an effect's page shows what the game's cards say about it, for up to three rewards that use it, with the numbers per level when the game lists them.
+- Reward editor: an effect that still has no name numbers its boxes from 1, shows a fraction as a percent when the game's cards write it as one, and reads "Number 1: -30%" instead of "Number 0 0.3".
+- For mod makers: `gameCardsHtml(f)` draws the game's card text for an effect, and `RAW_NOTE` is the note for an effect with no name. Put each game reward's `levelText` in `T.st.byId` so the cards show the numbers per level. An effect added with an id already in the list replaces it.
+- Made for Survival Log 1.1.21271.
+
 ## 0.29.0
 
 - Reward editor: in More Rewards, the totals follow how the game counts each effect. Most effects add up. Discounts on short-life supplies and on big items multiply, so two levels of 10% off make 19% off. Furniture and settlement discounts add up. Start with a skill level counts only the highest level, so levels of 1 and 2 give 2, where 0.28.1 showed 3.

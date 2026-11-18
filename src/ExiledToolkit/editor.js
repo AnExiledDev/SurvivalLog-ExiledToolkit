@@ -141,6 +141,10 @@
         ['farm', 'Farming', '种植'],
         ['defense', 'Traps and defense', '陷阱与防御'],
         ['money', 'Money and trade', '金钱与交易'],
+        ['food', 'Food and cooking', '食物与烹饪'],
+        ['events', 'Wishes and events', '愿望与事件'],
+        ['camps', 'Camps and aid', '营地与求援'],
+        ['status', 'Statuses', '状态'],
         ['loop', 'Loop', '轮回'],
         ['raw', 'Other game scripts', '其他游戏脚本']
       ].map(c => ({ id: c[0], en: c[1], zh: c[2] }));
@@ -170,8 +174,52 @@
         return (/^[AEFHILMNORSX]/.test(name) ? 'an ' : 'a ') + name;
       }
 
+      // The game's food types, by the number in a food field's name (BuffSatietyFood4Add_Ratio is fish).
+      const FOOD_TYPES = [[1, 'Staple food', '主食'], [2, 'Meat', '肉类'], [3, 'Eggs and dairy', '蛋奶'], [4, 'Fish', '鱼类'], [5, 'Vegetables', '蔬菜'], [6, 'Fruit', '水果'],
+        [7, 'Snacks', '零食'], [8, 'Seasoning', '调味品'], [9, 'Soft drinks', '软饮料'], [10, 'Liquor', '酒类'], [11, 'Mushrooms', '菌菇']].map(f => ({ v: f[0], en: f[1], zh: f[2] }));
+
+      const FOOD_STATS = STATS.filter(s => s.v === 'Satiety' || s.v === 'Morale');
+
+      const FOOD_FIELD = /^(EF_BuffMorale|BuffSatiety)Food(\d+)Add_Ratio$/;
+
+      const foodField = (stat, food) => (stat === 'Morale' ? 'EF_BuffMoraleFood' : 'BuffSatietyFood') + food + 'Add_Ratio';
+
+      const foodKeys = v => Object.keys(v).filter(k => FOOD_FIELD.test(k) && isNum(v[k]) && v[k] !== 0);
+
+      const POTS = [['Small', 'Small Flowerpot', '小型花盆'], ['Medium', 'Medium Flowerpot', '中型花盆'], ['Large', 'Large Flowerpot', '大型花盆']].map(p => ({ v: p[0], en: p[1], zh: p[2], script: 'AE_SkipTillSoil' + p[0] + 'Pot' }));
+
+      const DISH_TIERS = [{ v: 2, en: 'Medium', zh: '中档' }, { v: 3, en: 'High', zh: '高档' }];
+
+      // The device groups AE_PowerCostByGroup can raise, by its IntValue0.
+      const POWER_GROUPS = [{ v: 2, en: 'Defense turrets (each shot)', zh: '塔防装置（每次开火）' }, { v: 1, en: 'Fridges and freezers', zh: '冰箱冷柜' }];
+
+      const recipeUnknown =(v, zh) => (zh ? '配方 ' : 'Recipes ') + v;
+
       // Filled from the game's reward names once the data arrives.
-      const named = { groups: [], skills: [], xp: [], work: [], robots: [] };
+      const named = { groups: [], skills: [], xp: [], work: [], robots: [], crafts: [], cooks: [] };
+
+      // The recipes the game's rewards teach, named after the reward's card ("Unlocks the Oven crafting recipe.").
+      function recipeOptions(skill) {
+        const seen = new Set();
+        const out = [];
+
+        T.st.game.forEach(t => t.levels.forEach(l => {
+          const v = l.values || {};
+          const recipes = v.StrValue1;
+
+          if (l.script !== 'UnlockCraftRecipe' || v.StrValue0 !== skill || typeof recipes !== 'string' || seen.has(recipes)) return;
+
+          const desc = normText(l.desc) || { en: '', zh: '' };
+          const name = normText(t.name) || { en: '', zh: '' };
+          const en = desc.en.replace(/^Unlocks (the )?/, '').replace(/ (crafting|cooking) recipes?\.?$/, '');
+          const zh = (desc.zh.match(/【[^】]+】/g) || []).map(s => s.slice(1, -1)).join('、');
+
+          seen.add(recipes);
+          out.push({ v: recipes, en: en && en !== desc.en ? en : name.en || 'Recipes ' + recipes, zh: zh || name.zh || '配方 ' + recipes });
+        }));
+
+        return out;
+      }
 
       function nameOptions() {
         named.groups = Object.keys(GROUP_TALENTS).map(Number).filter(g => T.st.byId[GROUP_TALENTS[g]]).map(g => {
@@ -194,6 +242,8 @@
         });
         named.work = WORK.map(w => ({ v: w[0], en: w[1], zh: w[2], script: 'AE_' + w[0] + 'SpeedMultiplier' }));
         named.robots = ROBOTS.map(r => ({ v: r[0], en: r[1], zh: r[2], script: robotScript(r[0]) }));
+        named.crafts = recipeOptions('Production');
+        named.cooks = recipeOptions('Cooking');
       }
 
       // A number that can change per level. scale and add turn the file's raw value into what the player reads (0.1 -> 10%).
@@ -239,12 +289,45 @@
       const FX = [];
 
       // An effect whose number is a result (a limit of 800, 2x as long) has a sum version for a tab whose levels add
-      // up, where each level gives its own raise.
+      // up, where each level gives its own raise. An effect is a game one named game:<script> unless it says otherwise,
+      // and a tab that adds an effect with an id already in the list replaces it.
       function fx(o) {
         const own = T.levelsAddUp && o.sum ? Object.assign({}, o, o.sum) : o;
+        const made = Object.assign({ id: GAME_PREFIX + o.script, src: 'game', usedBy: [], finishes: [], params: [], modes: 'both', pickable: true, raw: false }, own, { scripts: o.scripts || [o.script] });
+        const at = FX.findIndex(f => f.id === made.id);
 
-        FX.push(Object.assign({ usedBy: [], finishes: [], params: [], modes: 'both', pickable: true, raw: false }, own, { scripts: o.scripts || [o.script] }));
+        made.line = fromTemplate(made.line, made.params);
+        made.desc = fromTemplate(made.desc, made.params);
+
+        if (at >= 0) FX[at] = made;
+        else FX.push(made);
       }
+
+      // A line or desc can be text instead of a function: one string for both languages, or [en, zh]. {0} is the first
+      // number or pick the player sees, {1} the second, and {0|hour} writes "1 hour" or "2 hours" in English
+      // (the s goes on the last word, so {0|more time} writes "2 more times").
+      const fromTemplate = (t, params) => typeof t === 'string' || isArr(t) ? (v, zh) => fill(t, v, zh, params) : t;
+
+      function fill(text, v, zh, params) {
+        const shownParams = params.filter(p => p.type !== 'hide');
+        const t = isArr(text) ? text[zh ? 1 : 0] : text;
+
+        return t.replace(/\{(\d)(?:\|([^}]+))?\}/g, (_, i, word) => {
+          const p = shownParams[+i];
+
+          if (!p) return '';
+
+          if (p.type === 'pick') return opt(p, v[p.key], zh);
+
+          return word && !zh ? plural(v[p.key], word) : fmt(v[p.key]);
+        });
+      }
+
+      // A drop or a cut stored as a negative fraction (-0.25 reads as 25%).
+      const neg = (key, en, zh, def, o) => pct(key, en, zh, def, Object.assign({ scale: -100 }, o));
+
+      // A whole number the game keeps in seconds, shown in hours.
+      const hours = (key, en, zh, def, o) => num(key, en, zh, ['h', '小时'], def, Object.assign({ scale: 1 / 3600 }, o));
 
       fx({ id: 'game:countdown', src: 'game', cat: 'prep', script: 'PreDisaster_AddCountDownTime',
         en: 'More time before the disaster', zh: '灾难前更多时间', what: ['Adds hours to the countdown before the disaster hits.', '增加灾难来临前的倒计时。'],
@@ -438,12 +521,12 @@
         params: [num('FloatValue0', 'More trades', '额外次数', ['', '次'], [1, 2], { min: 0 })],
         line: v => '+' + fmt(v.FloatValue0),
         desc: (v, zh) => zh ? '无人机每日可交易次数+' + fmt(v.FloatValue0) : 'The trade drone can make ' + plural(v.FloatValue0, 'more trade') + ' a day.' });
-      fx({ id: 'game:brew-speed', src: 'game', cat: 'body', script: 'AE_BrewSpeedUp',
+      fx({ id: 'game:brew-speed', src: 'game', cat: 'food', script: 'AE_BrewSpeedUp',
         en: 'Faster brewing', zh: '酿酒加速', what: ['Brewing takes less time.', '酿酒所需时间缩短。'],
         params: [pct('FloatValue0', 'Less time', '时间缩短', [10, 20, 30])],
         line: v => '-' + fmt(v.FloatValue0) + '%',
         desc: (v, zh) => zh ? '酿酒所需时间缩短' + fmt(v.FloatValue0) + '%' : 'Brewing takes ' + fmt(v.FloatValue0) + '% less time.' });
-      fx({ id: 'game:brew-yield', src: 'game', cat: 'body', script: 'AE_BrewBottleYield',
+      fx({ id: 'game:brew-yield', src: 'game', cat: 'food', script: 'AE_BrewBottleYield',
         en: 'More bottles per brew', zh: '酿酒出瓶更多', what: ['Each bottle needs less Satiety, so a brew gives more bottles.', '酿酒时每瓶所需的饱腹度降低，能酿出更多酒。'],
         params: [pct('FloatValue0', 'Less per bottle', '每瓶降低', [10, 20, 30])],
         line: v => '-' + fmt(v.FloatValue0) + '%',
@@ -473,7 +556,7 @@
         params: [pct('FloatValue0', 'Faster by', '加快', [10, 20, 30])],
         line: v => '+' + fmt(v.FloatValue0) + '%',
         desc: (v, zh) => zh ? '通过休息恢复精力的速度加快' + fmt(v.FloatValue0) + '%' : 'Resting restores Stamina ' + fmt(v.FloatValue0) + '% faster.' });
-      fx({ id: 'game:press-nutrition', src: 'game', cat: 'body', script: 'AE_CompressValueRate',
+      fx({ id: 'game:press-nutrition', src: 'game', cat: 'food', script: 'AE_CompressValueRate',
         en: 'Ration Press keeps more nutrition', zh: '压制保留更多营养', what: ['The Ration Press keeps more of the food\'s nutrition (normally 60%).', '使用口粮压制机时保留更多营养（原本为 60%）。'],
         params: [pct('FloatValue0', 'More kept', '多保留', [5, 10, 20])],
         line: v => '+' + fmt(v.FloatValue0) + '%',
@@ -489,6 +572,919 @@
         scriptOf: g => robotScript(g.pick.robot),
         line: (v, zh) => robotName(v.robot, zh).split(' ')[0] + (zh ? ' 机器人' : ' robot'),
         desc: (v, zh) => zh ? '开局获得一台' + robotName(v.robot, true) + '，并掌握其全部制造图纸' : 'Start the run with ' + robotName(v.robot, false, true) + ' and all its crafting blueprints.' });
+
+      // Food and cooking.
+      fx({ cat: 'food', script: 'AE_BrewTierEase', en: 'Better liquor from the same brew', zh: '更易酿出好酒',
+        what: ['Liquor quality lines drop, so the same ingredients make better liquor.', '酿酒品质的分界线下移，同样的原料更容易酿出好酒。'],
+        params: [num('FloatValue0', 'Lines drop by', '分界线下移', ['', ''], [0.05, 0.1, 0.15], { step: 0.05 })],
+        line: '-{0}',
+        desc: ['Liquor quality lines drop by {0}, so the same ingredients make better liquor.', '酿酒品质的分界线下移 {0}，同样的原料更容易酿出好酒'] });
+      fx({ cat: 'food', script: 'AE_ColdChainKeeper', en: 'Cold storage keeps food longer', zh: '冷库保鲜',
+        what: ['Food in cold storage spoils slower.', '冷库中存放的食物变质更慢。'],
+        params: [pct('FloatValue0', 'Slower spoiling', '变质减慢', [25, 50])],
+        line: '-{0}%',
+        desc: ['Food in cold storage spoils {0}% slower.', '冷库中存放的食物变质速度降低{0}%'] });
+      fx({ cat: 'food', script: 'AE_CookDishNourish', en: 'Your dishes restore more', zh: '料理更养人',
+        what: ['Dishes you cook restore more when you eat them.', '你做的菜食用时恢复效果更好。'],
+        params: [pct('FloatValue0', 'More recovery', '恢复加成', [5, 10, 15])],
+        line: '+{0}%',
+        desc: ['Dishes you cook restore {0}% more when you eat them.', '你做的菜更养人，食用时恢复效果+{0}%'] });
+      fx({ cat: 'food', script: 'AE_CookEatPerfectMorale', en: 'Morale from Perfect dishes', zh: '完美料理回复心态',
+        what: ['Eating a Perfect quality dish restores extra Morale.', '吃下完美品质的料理时额外回复心态。'],
+        params: [num('FloatValue0', 'Extra Morale', '额外心态', ['', '点'], [3, 6, 9])],
+        line: '+{0}',
+        desc: ['Eating a Perfect quality dish restores {0} extra Morale.', '吃下完美品质的料理时，额外回复{0}点心态'] });
+      fx({ cat: 'food', script: 'AE_CookRottenPenaltyReduce', en: 'Smaller penalty for spoiled ingredients', zh: '变质食材惩罚减免',
+        what: ['Cooking with spoiled ingredients costs less dish quality.', '用变质食材烹饪时，品质惩罚减少。'],
+        params: [pct('FloatValue0', 'Smaller by', '减免', [30, 60, 100], { step: 10 })],
+        line: '-{0}%',
+        desc: ['The quality penalty for cooking with spoiled ingredients is {0}% smaller.', '用变质食材烹饪时，品质惩罚减免{0}%'] });
+      fx({ cat: 'food', script: 'AE_CookTagQualityBonus', en: 'Better creative dishes', zh: '创意料理品质提升',
+        what: ['Creative dishes (cooked from a mix of ingredients instead of a recipe) come out better.', '创意料理（凭食材搭配、非固定菜谱）品质更高。'],
+        params: [num('FloatValue0', 'More quality', '品质提升', ['', ''], [5, 10, 15], { scale: 100 })],
+        line: '+{0}',
+        desc: ['Creative dishes (cooked from a mix of ingredients instead of a recipe) get +{0} quality.', '创意料理（凭食材搭配、非固定菜谱）品质+{0}'] });
+      fx({ cat: 'food', script: 'AE_CookTagTierFloor', en: 'Lowest tier for creative dishes', zh: '创意料理保底',
+        what: ['Creative dishes never come out below the tier you pick.', '创意料理的成品档次有保底。'],
+        params: [pick('FloatValue0', 'At least', '至少', () => DISH_TIERS, 2)],
+        line: ['{0} or better', '至少{0}'],
+        desc: ['Creative dishes always come out at {0} quality or better.', '创意料理的成品档次至少为{0}'] });
+      fx({ cat: 'food', script: 'AE_PerfectQualityMultiplier', en: 'More Perfect dishes', zh: '完美料理概率',
+        what: ['Better odds of cooking a Perfect dish.', '做菜时做出完美料理的概率提高。'],
+        params: [pct('FloatValue0', 'Better odds', '概率提高', [15, 30, 45])],
+        line: '+{0}%',
+        desc: ['+{0}% chance to cook a Perfect dish.', '做菜时，做出完美料理的概率+{0}%'] });
+      fx({ cat: 'food', script: 'AE_FuelSavingMultiplier', en: 'Stoves burn less fuel', zh: '燃料炉省燃料',
+        what: ['Cooking on a fuel stove burns less fuel.', '用燃料炉做菜时燃料消耗降低。'],
+        params: [pct('FloatValue0', 'Less fuel', '燃料减少', [20, 40, 60])],
+        line: '-{0}%',
+        desc: ['Cooking on a fuel stove burns {0}% less fuel.', '用燃料炉做菜时，燃料消耗-{0}%'] });
+      fx({ cat: 'food', script: 'AE_TiredOfFoodExtraEats', en: 'Eat a food more before tiring of it', zh: '同种食物多吃几次',
+        what: ['You can eat the same food more times before you get tired of it.', '同种食物可以多吃几次才会腻。'],
+        params: [num('FloatValue0', 'Extra times', '额外次数', ['', '次'], [1, 2, 3])],
+        line: '+{0}',
+        desc: ['You can eat the same food {0|more time} before you get tired of it.', '同种食物可以多吃{0}次才会腻'] });
+      fx({ cat: 'food', script: 'AE_ExpiredFoodEase', en: 'Shorter sickness from expired food', zh: '过期食物病程缩短',
+        what: ['Sickness from eating expired food ends sooner.', '吃过期食物的生病症状时长缩短。'],
+        params: [pct('FloatValue0', 'Shorter by', '缩短', [20, 40, 60])],
+        line: '-{0}%',
+        desc: ['Sickness from eating expired food is {0}% shorter.', '吃过期食物的生病症状时长-{0}%'] });
+      fx({ cat: 'food', script: 'AE_StorageShelfLife', en: 'Food keeps longer', zh: '食物保质期延长',
+        what: ['All food keeps longer before it goes bad.', '食物保质期延长。'],
+        params: [pct('FloatValue0', 'Longer by', '延长', [10, 20, 30])],
+        line: '+{0}%',
+        desc: ['Food shelf life +{0}%.', '食物保质期+{0}%'] });
+      fx({ cat: 'food', script: 'Buff_EnergyFood_304410', en: 'Stamina from non-staple food', zh: '非主食回复精力',
+        what: ['Eating anything that is not a staple food gives a few points of Stamina.', '食用非主食类食品时获得随机精力。'],
+        params: [num('FloatValue0', 'At least', '至少', ['', '点'], [2, 4, 6]), num('FloatValue1', 'At most', '至多', ['', '点'], [4, 8, 12])],
+        line: ['+{0} to {1}', '+{0}到{1}'],
+        desc: ['Eating non-staple food gives {0} to {1} Stamina.', '食用非主食类食品时，获得随机{0}到{1}点精力'] });
+      fx({ cat: 'food', script: 'Buff_FlavorFood_304510', en: 'Morale from Delicacy food', zh: '特色风味回复心态',
+        what: ['Eating food with the Delicacy tag gives a few points of Morale.', '食用「特色风味」食品时获得随机心态。'],
+        params: [num('FloatValue0', 'At least', '至少', ['', '点'], [2, 4, 6]), num('FloatValue1', 'At most', '至多', ['', '点'], [4, 8, 12])],
+        line: ['+{0} to {1}', '+{0}到{1}'],
+        desc: ['Eating food with the Delicacy tag gives {0} to {1} extra Morale.', '食用「特色风味」食品时，获得额外随机{0}到{1}点心态'] });
+      fx({ cat: 'food', script: 'Buff_HealthFood_304610', en: 'Health from All-Natural food', zh: '绿色食品回复健康',
+        what: ['Eating food with the All-Natural tag gives a few points of Health.', '食用「绿色食品」时获得随机健康。'],
+        params: [num('FloatValue0', 'At least', '至少', ['', '点'], [1, 2, 3]), num('FloatValue1', 'At most', '至多', ['', '点'], [3, 6, 9])],
+        line: ['+{0} to {1}', '+{0}到{1}'],
+        desc: ['Eating food with the All-Natural tag gives {0} to {1} extra Health.', '食用「绿色食品」时，获得额外随机{0}到{1}点健康'] });
+      fx({ cat: 'food', script: 'Buff_NutritionFood_304710', en: 'Life from fruit, vegetables and fish', zh: '蔬果鱼类回复生命',
+        what: ['Eating fruit, vegetables or fish gives a few points of Life.', '食用水果、蔬菜、鱼类时恢复随机生命。'],
+        params: [num('FloatValue0', 'At least', '至少', ['', '点'], [2, 4, 6]), num('FloatValue1', 'At most', '至多', ['', '点'], [3, 6, 9])],
+        line: ['+{0} to {1}', '+{0}到{1}'],
+        desc: ['Eating fruit, vegetables or fish gives {0} to {1} Life.', '食用水果、蔬菜、鱼类时，可恢复{0}到{1}点生命'] });
+      fx({ cat: 'food', script: 'Eats_Anything', en: 'Shorter Appetite Loss from disliked food', zh: '厌食时间缩短',
+        what: ['Appetite Loss from eating food you dislike wears off sooner.', '食用不喜爱食物时产生的「厌食」时间缩短。'],
+        params: [neg('FloatValue0', 'Shorter by', '缩短', [70, 85, 100])],
+        line: '-{0}%',
+        desc: ['Appetite Loss from food you dislike is {0}% shorter.', '食用不喜爱食物时产生的「厌食」时间缩短{0}%'] });
+      fx({ cat: 'food', script: 'Buff_306110', en: 'More Satiety for 3 days', zh: '三天进食饱腹加成',
+        what: ['For 3 days, food fills you more.', '持续3天，进食获得的饱腹效果增加。'],
+        params: [pct('FloatValue0', 'More Satiety', '饱腹加成', [100, 200, 300], { step: 25 })],
+        line: '+{0}%',
+        desc: ['For 3 days, food gives {0}% more Satiety.', '持续3天，进食获得的饱腹效果增加{0}%'] });
+      // One food type and one stat. Carnivore and Vegetarian change eight fields at once and stay raw.
+      fx({ cat: 'food', script: 'AE_FoodTypeBonus', en: 'More from one food type', zh: '某类食物加成',
+        what: ['One kind of food gives more Satiety or Morale.', '食用某类食物时获得更多饱腹或心态。'],
+        params: [
+          pick('food', 'Food', '食物', () => FOOD_TYPES, 1, { virtual: true, from: v => { const k = foodKeys(v)[0]; return k ? Number(FOOD_FIELD.exec(k)[2]) : 1; } }),
+          pick('stat', 'Stat', '属性', () => FOOD_STATS, 'Satiety', { virtual: true, from: v => { const k = foodKeys(v)[0]; return k && /^EF_/.test(k) ? 'Morale' : 'Satiety'; } }),
+          pct('ratio', 'More', '提升', [25, 50, 75], { dyn: g => foodField(g.pick.stat, g.pick.food) })
+        ],
+        test: v => { const keys = foodKeys(v); return keys.length === 1 && v[keys[0]] > 0; },
+        zeroOthers: (k, g) => FOOD_FIELD.test(k) && k !== foodField(g.pick.stat, g.pick.food),
+        line: '+{2}%',
+        desc: ['Eating {0} gives {2}% more {1}.', '食用{0}时，获得的{1}效果增加{2}%'] });
+      fx({ id: 'game:cook-recipe', cat: 'food', script: 'UnlockCraftRecipe', en: 'Learn a cooking recipe', zh: '解锁烹饪配方',
+        what: ['Learn to cook a dish.', '解锁一道菜的烹饪配方。'],
+        params: [hide('StrValue0', 'Cooking'), pick('StrValue1', 'Recipe', '配方', () => named.cooks, '2016', { unknown: recipeUnknown })],
+        line: '{0}',
+        desc: ['Learn to cook: {0}.', '解锁烹饪配方：{0}'] });
+
+      // Items and carrying.
+      fx({ cat: 'items', script: 'UnlockCraftRecipe', en: 'Learn crafting recipes', zh: '解锁制作配方',
+        what: ['Learn to craft one or more items.', '解锁一件或几件物品的制作配方。'],
+        params: [hide('StrValue0', 'Production'), pick('StrValue1', 'Recipes', '配方', () => named.crafts, '305;337', { unknown: recipeUnknown })],
+        line: '{0}',
+        desc: ['Learn to craft: {0}.', '解锁制作配方：{0}'] });
+      fx({ cat: 'items', script: 'AE_BurdenFlat', en: 'Carry more weight', zh: '负重上限提升',
+        what: ['Your backpack holds more weight.', '背包负重上限提升。'],
+        params: [num('FloatValue0', 'Extra weight', '额外负重', ['kg', '千克'], [0.5, 0.75, 1], { step: 0.25, scale: 1 / 1200 })],
+        line: '+{0}kg',
+        desc: ['Your backpack holds {0}kg more.', '背包负重上限提升{0}千克'] });
+      fx({ cat: 'items', script: 'AE_HeavyLoad', en: 'Carry more weight (percent)', zh: '负重上限按比例提升',
+        what: ['Your backpack holds more weight, by a percent of what it held.', '背包负重上限按比例提升。'],
+        params: [pct('FloatValue0', 'More weight', '负重提升', [15, 25])],
+        line: '+{0}%',
+        desc: ['Your backpack holds {0}% more weight.', '背包负重上限提升{0}%'] });
+      fx({ cat: 'items', script: 'AE_HeavyCarryEase', en: 'Move faster when overloaded', zh: '超重减速减少',
+        what: ['Carrying too much slows you down less.', '超重时移动速度惩罚减少。'],
+        params: [pct('FloatValue0', 'Smaller slowdown', '惩罚减少', [50, 75, 100])],
+        line: '-{0}%',
+        desc: ['Carrying too much slows you down {0}% less.', '超重时移动速度惩罚减少{0}%'] });
+
+      // Farming.
+      fx({ cat: 'farm', script: 'AE_FertilizerMultiplier', en: 'Stronger fertilizer', zh: '肥料增效',
+        what: ['Fertilizer works better.', '肥料效果更好。'],
+        params: [pct('FloatValue0', 'Stronger by', '增效', [20, 40, 60])],
+        line: '+{0}%',
+        desc: ['Fertilizer works {0}% better.', '肥料效果+{0}%'] });
+      fx({ cat: 'farm', script: 'AE_FlowerGrowthSpeed', en: 'Flowers grow faster', zh: '花卉生长加速',
+        what: ['Flowers you plant grow faster.', '种植的花卉生长更快。'],
+        params: [pct('FloatValue0', 'Faster by', '加速', [15, 30, 45])],
+        line: '+{0}%',
+        desc: ['Flowers you plant grow {0}% faster.', '种植花卉的生长速度+{0}%'] });
+      fx({ cat: 'farm', script: 'AE_FlowerSeedDiscoverBonus', en: 'Find flower seeds', zh: '发现花朵种子',
+        what: ['Better odds of finding flower seeds when you harvest plants.', '收获植物时更容易发现花朵种子。'],
+        params: [pct('FloatValue0', 'Better odds', '概率提高', [5, 10, 15])],
+        line: '+{0}%',
+        desc: ['+{0}% chance to find flower seeds when you harvest plants.', '收获植物时发现花朵种子的概率+{0}%'] });
+      fx({ cat: 'farm', script: 'AE_RareSeedDiscoverBonus', en: 'Find Boston ivy seeds', zh: '发现爬山虎种子',
+        what: ['Better odds of finding Boston ivy seeds when you harvest plants.', '收获植物时更容易发现爬山虎种子。'],
+        params: [pct('FloatValue0', 'Better odds', '概率提高', [5, 10, 15])],
+        line: '+{0}%',
+        desc: ['+{0}% chance to find Boston ivy seeds when you harvest plants.', '收获植物时发现爬山虎种子的概率+{0}%'] });
+      fx({ cat: 'farm', script: 'AE_PlantColdResistanceBonus', en: 'Plants handle cold better', zh: '植物更耐寒',
+        what: ['Plants hold up better in frost.', '植物更耐霜冻。'],
+        params: [num('FloatValue0', 'Cold resistance', '抗寒能力', ['', ''], [1, 2, 3])],
+        line: '+{0}',
+        desc: ['Plant cold resistance +{0}.', '植物抗寒能力 +{0}，更耐霜冻'] });
+      fx({ cat: 'farm', script: 'AE_PlantLightNeedReduce', en: 'Plants need less light', zh: '植物更耐弱光',
+        what: ['Plants grow fine with less light.', '植物所需光照降低。'],
+        params: [num('FloatValue0', 'Less light needed', '光照需求降低', ['', ''], [1, 2, 3])],
+        line: '-{0}',
+        desc: ['Plant light requirement -{0}.', '植物光照需求 -{0}，更耐弱光'] });
+      fx({ cat: 'farm', script: 'AE_PlantDroughtRateReduce', en: 'Fewer dry crops', zh: '作物少干旱',
+        what: ['Crops are less likely to dry out.', '作物出现干旱的概率降低。'],
+        params: [pct('FloatValue0', 'Less likely', '概率降低', [20, 40, 60])],
+        line: '-{0}%',
+        desc: ['Crops are {0}% less likely to dry out.', '作物出现干旱的概率降低{0}%'] });
+      fx({ cat: 'farm', script: 'AE_PlantPestRateReduce', en: 'Fewer pests', zh: '作物少虫害',
+        what: ['Crops are less likely to get pests.', '作物出现虫害的概率降低。'],
+        params: [pct('FloatValue0', 'Less likely', '概率降低', [20, 40, 60])],
+        line: '-{0}%',
+        desc: ['Crops are {0}% less likely to get pests.', '作物出现虫害的概率降低{0}%'] });
+      fx({ cat: 'farm', script: 'AE_PlantWeedRateReduce', en: 'Fewer weeds', zh: '作物少长草',
+        what: ['Crops are less likely to grow weeds.', '作物长草的概率降低。'],
+        params: [pct('FloatValue0', 'Less likely', '概率降低', [20, 40, 60])],
+        line: '-{0}%',
+        desc: ['Crops are {0}% less likely to grow weeds.', '作物长草的概率降低{0}%'] });
+      fx({ cat: 'farm', script: 'AE_PlantExtraSeed', en: 'Extra seed from harvests', zh: '收获额外种子',
+        what: ['A harvest can give a seed of a random crop you can already plant.', '收获时有概率额外获得一颗随机已解锁作物的种子。'],
+        params: [pct('FloatValue0', 'Chance', '概率', [10, 20, 30])],
+        line: '{0}%',
+        desc: ['Each harvest has a {0}% chance to give 1 extra seed of a random crop you can already plant.', '每次收获有{0}%概率额外获得1颗随机已解锁作物的种子'] });
+      fx({ cat: 'farm', script: 'AE_PlantPerfectRateBonus', en: 'Bigger harvests', zh: '丰收概率',
+        what: ['Better odds of extra yield when you harvest plants.', '收获植物时更容易获得额外产出。'],
+        params: [pct('FloatValue0', 'Better odds', '概率提高', [15, 30, 45])],
+        line: '+{0}%',
+        desc: ['+{0}% chance of extra yield when you harvest plants.', '植物收获时有额外 +{0}% 的概率获得额外产出'] });
+      fx({ cat: 'farm', script: 'AE_PlantSeedDropMultiplier', en: 'More seeds', zh: '种子更多',
+        what: ['Better odds of getting seeds.', '获得种子的概率提高。'],
+        params: [pct('FloatValue0', 'Better odds', '概率提高', [10, 20, 30])],
+        line: '+{0}%',
+        desc: ['+{0}% chance to get seeds.', '提高种子获得概率 {0}%'] });
+      fx({ cat: 'farm', script: 'AE_PlantSlowGrowHighYield', en: 'Slow growth, big harvest', zh: '慢长多收',
+        what: ['Crops take longer to grow, then give more at harvest and more planting experience.', '作物生长更慢，收获时产出更多、种植经验更多。'],
+        params: [
+          pct('FloatValue0', 'More yield', '产出增加', [60, 120, 180]),
+          pct('FloatValue1', 'Longer growth', '生长延长', [50, 100, 150]),
+          pct('FloatValue2', 'More experience', '经验增加', [50, 100, 150])
+        ],
+        line: '+{0}%',
+        desc: ['Crops take {1}% longer to grow, give {0}% more at harvest and {2}% more planting experience.', '作物生长时间延长 {1}%，收获时常规产出增加 {0}%、种植经验增加 {2}%'] });
+      fx({ id: 'game:pot-no-till', cat: 'farm', script: 'AE_SkipTillSoilSmallPot', scripts: POTS.map(p => p.script),
+        en: 'No tilling in flowerpots', zh: '花盆免翻土',
+        what: ['One size of flowerpot needs no tilling after a harvest, so you can replant right away. No numbers.', '某种花盆收获后免翻土，可直接复种。没有数值。'],
+        params: [pick('pot', 'Flowerpot', '花盆', () => POTS, 'Small', { virtual: true, from: (v, script) => { const m = /^AE_SkipTillSoil(.*)Pot$/.exec(script); return m ? m[1] : 'Small'; } })],
+        scriptOf: g => 'AE_SkipTillSoil' + g.pick.pot + 'Pot',
+        line: '{0}',
+        desc: ['{0}s need no tilling after a harvest and can be replanted right away.', '{0}收获后免翻土，可直接复种'] });
+      fx({ cat: 'farm', script: 'AE_WitheredCompostBonus', en: 'Fertilizer from withered plants', zh: '枯萎堆肥',
+        what: ['Harvesting a withered plant gives extra fertilizer.', '收获枯萎植物时额外产出肥料。'],
+        params: [hide('IntValue0', 15501), num('IntValue1', 'Extra fertilizer', '额外肥料', ['', '个'], [1, 2])],
+        line: '+{0}',
+        desc: ['Harvesting a withered plant gives {0} extra fertilizer.', '枯萎收获额外产出 {0} 个肥料'] });
+      fx({ cat: 'farm', script: 'AE_VaseLifeExtend', en: 'Vase flowers last longer', zh: '花瓶保鲜',
+        what: ['Flowers in vases stay fresh longer.', '花瓶里的花保鲜更久。'],
+        params: [pct('FloatValue0', 'Longer by', '延长', [25, 50, 75])],
+        line: '+{0}%',
+        desc: ['Flowers in vases stay fresh {0}% longer.', '花瓶里的花保鲜时长+{0}%'] });
+      fx({ cat: 'farm', script: 'AE_VaseMoraleBonus', en: 'More Morale from vase flowers', zh: '插花心态加成',
+        what: ['Floral Fragrance from flower arranging gives more Morale.', '插花带来的花香心态加成更高。'],
+        params: [pct('FloatValue0', 'More Morale', '心态加成', [10, 20, 30])],
+        line: '+{0}%',
+        desc: ['Floral Fragrance from flower arranging gives {0}% more Morale.', '插花带来的花香心态加成+{0}%'] });
+
+      // Home and power.
+      fx({ cat: 'home', script: 'AE_DeviceHeatBonus', en: 'Heaters warm more', zh: '暖气增温',
+        what: ['Each running air conditioner or electric heater raises the temperature more.', '每台运行中的空调或电暖器提升更多温度。'],
+        params: [num('FloatValue0', 'Extra warmth', '额外温度', ['', ''], [1, 2, 3])],
+        line: '+{0}',
+        desc: ['Each running Air Conditioning or Electric Heater raises the temperature by {0} more.', '每台运行中的空调或电暖器提升的温度+{0}'] });
+      fx({ cat: 'home', script: 'AE_GeneratorFuelSaving', en: 'Generators burn less fuel', zh: '发电机省燃料',
+        what: ['Generators burn less fuel.', '发电机燃料消耗降低。'],
+        params: [pct('FloatValue0', 'Less fuel', '燃料减少', [15, 30, 45])],
+        line: '-{0}%',
+        desc: ['Generators burn {0}% less fuel.', '发电机燃料消耗-{0}%'] });
+      fx({ cat: 'home', script: 'AE_GeneratorFuelSlotBonus', en: 'More generator fuel slots', zh: '发电机燃料槽',
+        what: ['Diesel generators hold more fuel.', '柴油发电机的燃料槽增加。'],
+        params: [num('FloatValue0', 'Extra slots', '额外格数', ['', '格'], [1, 2, 3])],
+        line: '+{0}',
+        desc: ['Diesel generators get {0|more fuel slot}.', '柴油发电机的燃料槽 +{0}'] });
+      fx({ cat: 'home', script: 'AE_PowerConsumerSaving', en: 'Furniture uses less power while running', zh: '家具用电降低',
+        what: ['Furniture draws less power while you use it.', '使用时家具用电降低。'],
+        params: [pct('FloatValue0', 'Less power', '用电降低', [15, 30, 45])],
+        line: '-{0}%',
+        desc: ['Furniture uses {0}% less power while in use.', '使用时家具用电 -{0}%'] });
+      fx({ cat: 'home', script: 'AE_PowerGeneratorEfficiency', en: 'Diesel generators make more power', zh: '柴油发电增效',
+        what: ['Diesel generators make more power.', '柴油发电机产电效率提高。'],
+        params: [pct('FloatValue0', 'More power', '产电提高', [15, 30, 45])],
+        line: '+{0}%',
+        desc: ['Diesel generators make {0}% more power.', '柴油发电机产电效率 +{0}%'] });
+      fx({ cat: 'home', script: 'AE_PowerStorageMultiplier', en: 'Store more power', zh: '储电上限提升',
+        what: ['Your batteries hold more power.', '储电量上限提高。'],
+        params: [pct('FloatValue0', 'More storage', '储电提高', [50, 100, 150], { step: 25 })],
+        line: '+{0}%',
+        desc: ['Max power capacity +{0}%.', '储电量上限+{0}%'] });
+      fx({ cat: 'home', script: 'AE_PowerCostByGroup', en: 'Some devices use more power', zh: '部分设备耗电增加',
+        what: ['One kind of device uses more power. The game uses this for the Power Hog and Costly Cold statuses.', '某类设备耗电增加。游戏用于「耗电大户」和「冷藏昂贵」状态。'],
+        params: [pick('IntValue0', 'Devices', '设备', () => POWER_GROUPS, 2), neg('FloatValue0', 'More power', '耗电增加', [60])],
+        line: '+{1}%',
+        desc: ['{0} use {1}% more power.', '{0}耗电增加{1}%'] });
+      fx({ cat: 'home', script: 'AE_HomePackageMax', en: 'More furniture packages at the entryway', zh: '玄关包裹上限',
+        what: ['The entryway can hold more furniture packages.', '玄关可囤的家具包裹更多。'],
+        params: [num('FloatValue0', 'Extra packages', '额外包裹', ['', '个'], [1, 2, 3])],
+        line: '+{0}',
+        desc: ['The Entryway holds {0|more furniture package}.', '玄关可囤的家具包裹上限 +{0}'] });
+      fx({ cat: 'home', script: 'AE_PersonalColdResist', en: 'Feel warmer', zh: '体感温度提升',
+        what: ['Thermal Comfort moves up a step (Cold, Chilly, Warming, Comfortable), up to Comfortable.', '体感温度提升一档（受冷、微寒、取暖、舒适），最高至舒适。'],
+        params: [num('FloatValue0', 'Steps warmer', '提升档数', ['', '档'], [1, 2])],
+        line: '+{0}',
+        desc: ['Thermal Comfort is {0|step} warmer, up to Comfortable.', '体感温度提升{0}档（最高至舒适）'] });
+      fx({ cat: 'home', script: 'AE_EndlessBasementTemp', modes: 'endless', en: 'Warmer basement', zh: '地下室升温',
+        what: ['The basement is warmer.', '地下室的温度提高。'],
+        params: [num('FloatValue0', 'Warmer by', '升温', ['', '度'], [1, 2, 3])],
+        line: '+{0}',
+        desc: ['The basement is {0|degree} warmer.', '地下室的温度提高 {0} 度'] });
+      fx({ cat: 'home', script: 'AE_EndlessIndoorTemp', modes: 'endless', en: 'Warmer indoors', zh: '室内升温',
+        what: ['Every indoor area is warmer.', '全部室内区域的温度提高。'],
+        params: [num('FloatValue0', 'Warmer by', '升温', ['', '度'], [1, 2, 3])],
+        line: '+{0}',
+        desc: ['Every indoor area is {0|degree} warmer.', '全部室内区域的温度提高 {0} 度'] });
+      fx({ cat: 'home', script: 'AE_EndlessCookHeat', modes: 'endless', en: 'Stoves warm the room', zh: '灶台供暖',
+        what: ['A stove in use warms the area it stands in.', '烹饪时灶台为所在区域供暖。'],
+        params: [num('FloatValue0', 'Warmer by', '升温', ['', '度'], [2, 4, 6])],
+        line: '+{0}',
+        desc: ['A stove in use warms the area it stands in by {0|degree}.', '烹饪时灶台为所在区域供暖 {0} 度'] });
+
+      // Traps and defense.
+      fx({ cat: 'defense', script: 'AE_IvyShieldBonus', en: 'Stronger vine shields', zh: '藤蔓护盾增强',
+        what: ['Vines give your defense structures a stronger shield.', '藤蔓为防御设施提供的护盾更强。'],
+        params: [pct('FloatValue0', 'Stronger by', '增强', [15, 30, 45])],
+        line: '+{0}%',
+        desc: ['Vines give defense structures a {0}% stronger shield.', '藤蔓为防御设施提供的护盾+{0}%'] });
+      fx({ cat: 'defense', script: 'AE_MolotovDamageBonus', en: 'Molotovs burn harder', zh: '燃烧瓶伤害提升',
+        what: ['Molotov Cocktails deal more burn damage.', '燃烧瓶的爆燃伤害提高。'],
+        params: [pct('FloatValue0', 'More damage', '伤害提升', [25, 50, 75])],
+        line: '+{0}%',
+        desc: ['Molotov Cocktail burn damage +{0}%.', '燃烧瓶的爆燃伤害提升{0}%'] });
+      fx({ cat: 'defense', script: 'AE_MolotovRadiusBonus', en: 'Wider Molotov fire', zh: '燃烧瓶范围扩大',
+        what: ['Molotov Cocktails burn a wider area.', '燃烧瓶的爆燃范围更大。'],
+        params: [pct('FloatValue0', 'Wider by', '扩大', [20, 40, 60])],
+        line: '+{0}%',
+        desc: ['Molotov Cocktail burn range +{0}%.', '燃烧瓶的爆燃范围扩大{0}%'] });
+      fx({ cat: 'defense', script: 'AE_TowerBackupPower', en: 'Defenses run during outages', zh: '停电备用电池',
+        what: ['Electric traps and chainsaws keep running at half speed when the power is out. No numbers.', '停电时电网和电锯仍能以半速运转。没有数值。'],
+        params: [],
+        line: ['Half speed in outages', '停电半速运转'],
+        desc: ['Electric traps and chainsaws keep running at half speed during power outages.', '停电时电网和电锯仍能以半速继续运转'] });
+      fx({ cat: 'defense', script: 'AE_TowerDeviceDamageBonus', en: 'Defenses hit harder', zh: '防御装置攻击力',
+        what: ['Spikes, electric traps, chainsaws and other defense structures deal more damage.', '尖刺、电网、电锯等防御装置攻击力提高。'],
+        params: [pct('FloatValue0', 'More damage', '攻击力提升', [15, 30, 45])],
+        line: '+{0}%',
+        desc: ['Spikes, electric traps, chainsaws and other defense structures deal {0}% more damage.', '尖刺、电网、电锯等防御装置的攻击力提升{0}%'] });
+      fx({ cat: 'defense', script: 'AE_TowerDeviceMaxDurability', en: 'Tougher defenses', zh: '防御装置耐久提升',
+        what: ['Defense structures have more max Durability.', '防御装置的耐久上限提高。'],
+        params: [pct('FloatValue0', 'More Durability', '耐久提升', [30, 60, 90])],
+        line: '+{0}%',
+        desc: ['Defense structures get {0}% more max Durability.', '防御装置的耐久上限提升{0}%'] });
+      fx({ cat: 'defense', script: 'AE_TowerDeviceSpeedBonus', en: 'Defenses attack faster', zh: '防御装置攻速',
+        what: ['Defense structures wait less between attacks.', '防御装置的攻击间隔缩短。'],
+        params: [pct('FloatValue0', 'Shorter wait', '间隔缩短', [15, 30, 45])],
+        line: '-{0}%',
+        desc: ['Defense structures wait {0}% less between attacks.', '防御装置的攻击间隔缩短{0}%'] });
+      fx({ cat: 'defense', script: 'AE_TowerHitSlowEnhance', en: 'Stronger stun and slow', zh: '麻痹减速增强',
+        what: ['When a defense hits a zombie, its stun and slow work better.', '装置命中丧尸时的麻痹减速效果更强。'],
+        params: [pct('FloatValue0', 'Stronger by', '增强', [15, 30, 45])],
+        line: '+{0}%',
+        desc: ['Stun and slow from defense hits are {0}% stronger.', '装置命中丧尸时的麻痹减速效果增强{0}%'] });
+      fx({ cat: 'defense', script: 'AE_TowerWaveKillMorale', en: 'Morale from kills', zh: '击杀回复心态',
+        what: ['After each wave of defense, recover Morale for every 5 kills, up to 10 a wave.', '每波防守结束后按击杀数恢复心态，单波最多10点。'],
+        params: [num('FloatValue0', 'Morale per 5 kills', '每5杀心态', ['', '点'], [1, 2, 3], { scale: 5 })],
+        line: '+{0}',
+        desc: ['After each wave, recover {0} Morale for every 5 kills, up to 10 a wave.', '每波防守结束后按击杀数恢复心态，每5杀恢复{0}点，单波最多10点'] });
+      fx({ cat: 'defense', script: 'AE_TrapBaitCapacityBonus', en: 'Bigger bait bay', zh: '诱饵仓扩容',
+        what: ['The Auto Trap Cage holds more bait (normally 8 slots).', '自动诱捕笼的诱饵仓更大（原本8格）。'],
+        params: [num('FloatValue0', 'Extra slots', '额外格数', ['', '格'], [1, 2])],
+        line: '+{0}',
+        desc: ['The Auto Trap Cage bait bay gets {0|more slot} (normally 8).', '自动诱捕笼的诱饵仓增加 {0} 格（原本 8 格）'] });
+      fx({ cat: 'defense', script: 'AE_TrapBaitMultiplier', en: 'Better bait', zh: '诱饵增效',
+        what: ['Bait works better in every trap.', '所有陷阱的诱饵效果更好。'],
+        params: [pct('FloatValue0', 'Better by', '提升', [30, 60, 90])],
+        line: '+{0}%',
+        desc: ['Bait works {0}% better in every trap.', '提升所有陷阱的诱饵系数+{0}%'] });
+      fx({ cat: 'defense', script: 'AE_TrapDurabilityBonus', en: 'Tougher traps', zh: '陷阱耐久提升',
+        what: ['Traps have more max Durability.', '陷阱最大耐久提高。'],
+        params: [pct('FloatValue0', 'More Durability', '耐久提升', [20, 40, 60])],
+        line: '+{0}%',
+        desc: ['Trap max Durability +{0}%.', '陷阱最大耐久 +{0}%'] });
+      fx({ cat: 'defense', script: 'AE_TrapIntervalReduce', en: 'Traps catch sooner', zh: '陷阱捕获更快',
+        what: ['Traps wait less between catches.', '陷阱捕获间隔缩短。'],
+        params: [pct('FloatValue0', 'Shorter wait', '间隔缩短', [5, 10, 15])],
+        line: '-{0}%',
+        desc: ['Traps wait {0}% less between catches.', '陷阱捕获间隔 -{0}%'] });
+      fx({ cat: 'defense', script: 'AE_TrapNightCapture', en: 'Better catches at night', zh: '夜间捕获加成',
+        what: ['From 7 PM to 7 AM, traps are more likely to catch prey.', '夜间（19点至次日7点）陷阱更容易捕获猎物。'],
+        params: [pct('FloatValue0', 'More likely', '权重提高', [15, 30])],
+        line: '+{0}%',
+        desc: ['From 7 PM to 7 AM, traps are {0}% more likely to catch prey.', '夜间（19点至次日7点）陷阱捕获猎物的权重提高{0}%'] });
+      fx({ cat: 'defense', script: 'AE_TrapPreySeedBonus', en: 'Seeds from trapped prey', zh: '猎物带种子',
+        what: ['Better odds of finding seeds when you collect trapped prey.', '取走陷阱猎物时更容易获得种子。'],
+        params: [pct('FloatValue0', 'Better odds', '概率提高', [5, 10, 15])],
+        line: '+{0}%',
+        desc: ['+{0}% chance to find seeds when you collect trapped prey.', '取走陷阱猎物时获得种子的概率+{0}%'] });
+      // The game starts a rat's chance to bolt at 70%, and each 0.1 also keeps rats in storage 0.5 seconds longer.
+      fx({ cat: 'defense', script: 'AE_RatCatchEase', en: 'Catch rats by hand', zh: '徒手抓鼠',
+        what: ['Rats are less likely to bolt when you grab them, and rats in storage stay longer.', '徒手抓鼠更容易得手，储物家具里的老鼠停留更久。'],
+        params: [pct('FloatValue0', 'Less likely to bolt', '逃跑概率降低', [10, 20, 30])],
+        line: '-{0}%',
+        desc: (v, zh) => zh
+          ? '徒手抓鼠更容易得手：老鼠受惊逃跑的概率由 70% 降至 ' + fmt(Math.max(0, 70 - v.FloatValue0)) + '%，储物家具里的老鼠多停留 ' + fmt(v.FloatValue0 / 20) + ' 秒'
+          : 'Rats are easier to catch by hand: the chance a rat bolts drops from 70% to ' + fmt(Math.max(0, 70 - v.FloatValue0)) + '%, and rats in storage stay ' + fmt(v.FloatValue0 / 20) + 's longer.' });
+      fx({ cat: 'defense', script: 'AE_EndlessTrapCost', modes: 'endless', en: 'Traps wear less', zh: '陷阱损耗降低',
+        what: ['Each catch uses less trap Durability.', '陷阱每次捕获消耗的耐久降低。'],
+        params: [pct('FloatValue0', 'Less wear', '损耗降低', [30, 60, 90])],
+        line: '-{0}%',
+        desc: ['Each catch uses {0}% less trap Durability.', '陷阱每次捕获消耗的耐久降低 {0}%'] });
+      fx({ cat: 'defense', script: 'AE_EndlessEarlyWaveCut', modes: 'endless', en: 'Weaker early hordes', zh: '早期尸潮削弱',
+        what: ['For the first 10 days, zombies in hordes have less health.', '前10天的尸潮丧尸血量降低。'],
+        params: [pct('FloatValue0', 'Less health', '血量降低', [50, 75, 90])],
+        line: '-{0}%',
+        desc: ['For the first 10 days, zombies in hordes have {0}% less health.', '前 10 天的尸潮丧尸血量降低 {0}%'] });
+
+      // Money and trade.
+      const WISH_BONUSES = [[303311, 'Wish Reward I'], [303321, 'Wish Reward II'], [303331, 'Wish Reward III']].map((w, i) => ({ v: w[0], en: w[1], zh: '愿望奖励 Lv' + (i + 1) }));
+
+      fx({ cat: 'money', script: 'AE_DroneForagingExtraTrip', en: 'More drone foraging trips', zh: '无人机拾荒次数',
+        what: ['The drone can go foraging more times each day.', '无人机每日可拾荒派遣次数增加。'],
+        params: [num('FloatValue0', 'Extra trips', '额外次数', ['', '次'], [1, 2])],
+        line: '+{0}',
+        desc: ['The drone can go foraging {0|more time} each day.', '无人机每日可拾荒派遣次数 +{0}'] });
+      fx({ cat: 'money', script: 'AE_StrangerTradeBonusGift', en: 'Gifts from trades', zh: '交易附赠礼物',
+        what: ['A trade can come with a small free gift.', '成交时有概率额外获赠小礼物。'],
+        params: [pct('FloatValue0', 'Chance', '概率', [15, 30, 45])],
+        line: '{0}%',
+        desc: ['Each trade has a {0}% chance to come with a small gift.', '每次成交有{0}%概率额外获赠1件小礼物'] });
+      fx({ cat: 'money', script: 'AE_StrangerTradeDealMorale', en: 'Morale from trades', zh: '成交回复心态',
+        what: ['Each trade restores some Morale.', '每次成交额外回复心态。'],
+        params: [num('FloatValue0', 'Extra Morale', '额外心态', ['', '点'], [2, 4, 6])],
+        line: '+{0}',
+        desc: ['Each trade restores {0} extra Morale.', '每次成交额外回 {0} 点心态'] });
+      fx({ cat: 'money', script: 'AE_MoraleToPointBoost', en: 'Better Morale to points rate', zh: '心态生金',
+        what: ['At the end of each day, Morale turns into Survival Points at a better rate (normally 5 Morale for 1 point).', '每日结算时，心态转化生存点的效率提升（原本5:1）。'],
+        params: [num('FloatValue0', 'Less Morale per point', '每点少用心态', ['', ''], [1, 2, 3])],
+        line: (v, zh) => fmt(Math.max(1, 5 - v.FloatValue0)) + ':1',
+        desc: (v, zh) => zh
+          ? '每日结算时，心态转化生存点效率提升（5:1 到 ' + fmt(Math.max(1, 5 - v.FloatValue0)) + ':1）'
+          : 'At the end of each day, ' + fmt(Math.max(1, 5 - v.FloatValue0)) + ' Morale turns into 1 Survival Point, down from 5.' });
+      fx({ cat: 'money', script: 'AE_StockpileDailyPoints', en: 'Survival Points from stored food', zh: '储粮返生存点',
+        what: ['Each day, food stored at home pays Survival Points, up to 3 a day.', '每日结算按家中食物储备返还生存点，每日最多3点。'],
+        params: [num('FloatValue0', 'Points per 500 Satiety', '每500饱腹返点', ['', '点'], [1, 2, 3], { scale: 500 })],
+        line: '+{0}',
+        desc: ['Each day, get {0} Survival Points for every 500 Satiety of food stored at home, up to 3 a day.', '每日结算按家中食物储备返还生存点：每500点储备饱腹值返{0}点，每日最多3点'] });
+      fx({ cat: 'money', script: 'AE_PioneerCrisisBelief', en: 'Planning Points from crises', zh: '危机获得信念点',
+        what: ['Each crisis you get through gives Planning Points.', '每克服一次危机获得信念点。'],
+        params: [num('IntValue0', 'Planning Points', '信念点', ['', '点'], [5, 10, 15])],
+        line: '+{0}',
+        desc: ['Get {0} Planning Points for each crisis you get through.', '每成功克服一次危机，获得 {0} 点信念点'] });
+      fx({ cat: 'money', script: 'Annual_Bonus_0', en: 'Points now, fewer later', zh: '短期激励',
+        what: ['Extra Survival Points each day for 5 days, then 1 fewer each day for the next 5.', '此后5天每日多得生存点，之后5天每日少得1点。'],
+        params: [hide('IntValue1', 302611), num('IntValue0', 'Extra points a day', '每日多得', ['', '点'], [3, 6, 9])],
+        line: '+{0}',
+        desc: ['Get {0} extra Survival Points each day for the next 5 days, then 1 fewer each day for the 5 days after.', '此后5天每日结算多得{0}点生存点，之后5天每日少得1点'] });
+      fx({ cat: 'money', script: 'CrisisSettlementBonus', en: 'Points during a crisis', zh: '危机红利',
+        what: ['During a crisis, each day pays extra Survival Points.', '危机期间每日结算额外获得生存点。'],
+        params: [num('IntValue0', 'Extra points', '额外生存点', ['', '点'], [3, 6, 9])],
+        line: '+{0}',
+        desc: ['During a crisis, get {0} extra Survival Points at the end of each day.', '危机期间，每日结算额外获得{0}点生存点'] });
+      fx({ cat: 'money', script: 'Daily_Closing_Plan', en: 'Flat Survival Points each day', zh: '每日固定生存点',
+        what: ['Each day pays a few more Survival Points.', '每日结算时多得生存点。'],
+        params: [num('IntValue0', 'Extra points', '额外生存点', ['', '点'], [1, 2])],
+        line: '+{0}',
+        desc: ['Get {0} more Survival Points at the end of each day.', '每日结算时获得的生存点增加{0}点'] });
+      fx({ cat: 'money', script: 'Health_Reward', en: 'Points for a healthy day', zh: '健康奖励',
+        what: ['A day that ends with no bad statuses pays extra Survival Points.', '结算时若没有任何不良状态，额外获得生存点。'],
+        params: [num('IntValue0', 'Extra points', '额外生存点', ['', '点'], [2, 4, 6])],
+        line: '+{0}',
+        desc: ['Get {0} extra Survival Points at the end of a day with no bad statuses.', '结算时若没有任何不良状态，则额外获得生存点（{0}点）'] });
+      fx({ cat: 'money', script: 'Task_Bonus', en: 'Points for missions', zh: '任务奖金',
+        what: ['Each mission you finish pays extra Survival Points.', '每次完成任务额外获得生存点。'],
+        params: [num('IntValue0', 'Extra points', '额外生存点', ['', '点'], [1, 2, 3])],
+        line: '+{0}',
+        desc: ['Get {0} extra Survival Points each time you finish a mission.', '每次完成任务后获得额外生存点 {0}点'] });
+      // Each status in WISH_BONUSES gives 1 point for 24 hours. The game gives one per level of Wish Reward.
+      fx({ cat: 'money', script: 'PostDisaster_AddWishRewardBuff', en: 'A point for each wish', zh: '愿望奖励生存点',
+        what: ['Fulfilling a wish gives 1 extra Survival Point. The game has one of these per level of Wish Reward.', '完成愿望后额外获得1点生存点。游戏中愿望奖励的每一级各有一个。'],
+        params: [pick('IntValue0', 'Bonus', '加成', () => WISH_BONUSES, 303311)],
+        line: '+1',
+        desc: ['Fulfilling a wish gives 1 extra Survival Point ({0}).', '完成愿望后额外获得1点生存点（{0}）'] });
+      fx({ cat: 'money', script: 'Buff_305810', en: 'Trade Life for points', zh: '生命换生存点',
+        what: ['Lose some Life right away to get Survival Points.', '立即减少生命值，换取生存点。'],
+        params: [hide('FloatValue0', -20), num('IntValue0', 'Survival Points', '生存点', ['', '点'], [5, 10, 15]), num('FloatValue1', 'Life lost', '失去生命', ['', '点'], [20], { scale: -1 })],
+        line: '+{0}',
+        desc: ['Lose {1} Life to get {0} Survival Points.', '主动减少{1}点生命值，以换取{0}点生存点'] });
+      fx({ cat: 'money', script: 'Buff_305910', en: 'Trade supplies for points', zh: '物资换生存点',
+        what: ['Lose some random supplies right away to get Survival Points.', '随机失去物资，换取生存点。'],
+        params: [num('IntValue0', 'Survival Points', '生存点', ['', '点'], [8, 16, 24]), num('IntValue1', 'Items lost', '失去物资', ['', '件'], [3, 6, 9])],
+        line: '+{0}',
+        desc: ['Lose {1} random supply items to get {0} Survival Points.', '随机失去{1}件物资，以换取{0}点生存点'] });
+      fx({ cat: 'money', script: 'Buff_305410', en: 'Double crisis rewards', zh: '危机奖励翻倍',
+        what: ['Every reward for getting through a crisis is doubled. No numbers.', '成功度过危机后获得的所有奖励翻倍。没有数值。'],
+        params: [],
+        line: ['x2', '翻倍'],
+        desc: ['Rewards for getting through a crisis are doubled.', '成功度过危机后，获得的所有奖励翻倍'] });
+
+      // Camps and aid, all Endless mode.
+      fx({ cat: 'camps', script: 'AE_EndlessAidCooldown', modes: 'endless', en: 'Ask for aid more often', zh: '求援冷却缩短',
+        what: ['Asking for aid has a shorter cooldown (normally 12 days).', '主动求援的冷却时间缩短（原本12天）。'],
+        params: [num('FloatValue0', 'Days shorter', '缩短天数', ['', '天'], [1, 2, 3])],
+        line: '-{0}',
+        desc: (v, zh) => zh ? '主动求援的冷却时间缩短至 ' + fmt(Math.max(0, 12 - v.FloatValue0)) + ' 天' : 'Asking for aid has a ' + plural(Math.max(0, 12 - v.FloatValue0), 'day') + ' cooldown, down from 12.' });
+      fx({ cat: 'camps', script: 'AE_EndlessAidForecast', modes: 'endless', en: 'Aid requests announced early', zh: '求援提前预告',
+        what: ['Camp aid requests show up a day early, with whether they need supplies or defense. No numbers.', '营地求援提前一天预告，并标明需要物资还是协防。没有数值。'],
+        params: [],
+        line: ['1 day early', '提前1天'],
+        desc: ['Camp aid requests are announced a day early, with whether they need supplies or defense.', '营地求援提前一天预告，并标明对方需要物资还是协防'] });
+      fx({ cat: 'camps', script: 'AE_EndlessAidRetreat', modes: 'endless', en: 'Reinforcements draw more zombies', zh: '援军引走更多丧尸',
+        what: ['Reinforcements you call for draw away more zombies.', '主动求援时，援军能引走更多丧尸。'],
+        params: [pct('FloatValue0', 'More zombies', '引走更多', [50, 100, 150], { step: 25 })],
+        line: '+{0}%',
+        desc: ['Reinforcements you call for draw away {0}% more zombies.', '主动求援时，援军引走的丧尸增加{0}%'] });
+      fx({ cat: 'camps', script: 'AE_EndlessCampAidRound', modes: 'endless', en: 'Camps can call for aid more', zh: '营地求援次数',
+        what: ['The Recycling Yard, East Camp and Rooftop Nursery can each call for aid more times.', '回收站、城东营地、育苗棚的求援次数上限提高。'],
+        params: [num('FloatValue0', 'Extra calls', '额外次数', ['', '次'], [1, 2, 3])],
+        line: '+{0}',
+        desc: ['The Recycling Yard, East Camp and Rooftop Nursery can each call for aid {0|more time}.', '回收站、城东营地、育苗棚的求援次数上限提高 {0} 次'] });
+      fx({ cat: 'camps', script: 'AE_EndlessCampDailyCap', modes: 'endless', en: 'Higher daily camp rewards', zh: '营地回馈上限',
+        what: ['Camps can pay more each day (normally up to 3 points).', '每日营地回馈上限提高（原本3点）。'],
+        params: [num('FloatValue0', 'Higher cap', '上限提高', ['', '点'], [1, 2, 3])],
+        line: '+{0}',
+        desc: (v, zh) => zh ? '每日营地回馈上限提高至 ' + fmt(3 + v.FloatValue0) + ' 点' : 'Daily camp rewards are capped at ' + plural(3 + v.FloatValue0, 'point') + ', up from 3.' });
+      fx({ cat: 'camps', script: 'AE_EndlessCampDailyDouble', modes: 'endless', en: 'Double camp rewards', zh: '营地回馈翻倍',
+        what: ['Daily camp rewards double while 4 or more camps you helped are still standing. No numbers.', '同时有4个及以上你帮助过的营地存活时，每日营地回馈翻倍。没有数值。'],
+        params: [],
+        line: ['x2', '翻倍'],
+        desc: ['Daily camp rewards are doubled while 4 or more camps you have helped remain.', '同时有 4 个及以上你帮助过的营地存活时，每日营地回馈翻倍'] });
+      fx({ cat: 'camps', script: 'AE_EndlessCampEvacPoint', modes: 'endless', en: 'More points for camp evacuations', zh: '协助撤离生存点',
+        what: ['Helping a camp evacuate pays more Survival Points (normally 10).', '协助营地撤离的一次性生存点提高（原本10点）。'],
+        params: [num('FloatValue0', 'Extra points', '额外生存点', ['', '点'], [10, 20, 30])],
+        line: '+{0}',
+        desc: (v, zh) => zh ? '协助营地撤离的一次性生存点提高至 ' + fmt(10 + v.FloatValue0) + ' 点' : 'Helping a camp evacuate pays ' + plural(10 + v.FloatValue0, 'Survival Point') + ', up from 10.' });
+      fx({ cat: 'camps', script: 'AE_EndlessCampRestock', modes: 'endless', en: 'Camps restock more', zh: '营地补货增加',
+        what: ['Stable camps restock more items each day.', '状态稳定的营地每天多补货。'],
+        params: [num('FloatValue0', 'Extra items', '额外件数', ['', '件'], [1, 2, 3])],
+        line: '+{0}',
+        desc: ['Stable camps restock {0|more item} each day.', '状态稳定的营地每天多补 {0} 件货'] });
+      fx({ cat: 'camps', script: 'AE_EndlessCrisisPoint', modes: 'endless', en: 'Points for each crisis', zh: '危机生存点',
+        what: ['Each crisis you get through pays extra Survival Points.', '每度过一次危机额外获得生存点。'],
+        params: [num('FloatValue0', 'Extra points', '额外生存点', ['', '点'], [5, 10, 15])],
+        line: '+{0}',
+        desc: ['Get {0} extra Survival Points each time you get through a crisis.', '每度过一次危机，额外获得 {0} 点生存点'] });
+      fx({ cat: 'camps', script: 'AE_EndlessEarlyDailyPoint', modes: 'endless', en: 'Points in the first 10 days', zh: '前10天生存点',
+        what: ['For the first 10 days, each day pays extra Survival Points.', '前10天每日结算额外获得生存点。'],
+        params: [num('FloatValue0', 'Extra points', '额外生存点', ['', '点'], [3, 5, 8])],
+        line: '+{0}',
+        desc: ['For the first 10 days, get {0} extra Survival Points at the end of each day.', '前 10 天每日结算时额外获得 {0} 点生存点'] });
+      fx({ cat: 'camps', script: 'AE_EndlessFallDefer', modes: 'endless', en: 'Sites fall later', zh: '探索点推迟沦陷',
+        what: ['Every exploration site falls 5 days later, and shows a countdown 5 days before it falls. No numbers.', '所有探索点的沦陷推迟5天，并在沦陷前5天显示倒计时。没有数值。'],
+        params: [],
+        line: ['5 days later', '推迟5天'],
+        desc: ['All exploration sites fall 5 days later, with a countdown shown 5 days before they fall.', '所有探索点的沦陷推迟 5 天，并在沦陷前 5 天显示倒计时'] });
+      fx({ cat: 'camps', script: 'AE_EndlessPledgeReduce', modes: 'endless', en: 'Smaller swarms from defense pledges', zh: '协防尸群缩小',
+        what: ['Zombie swarms drawn in by a defense pledge are smaller.', '因协防承诺引来的尸群规模降低。'],
+        params: [pct('FloatValue0', 'Smaller by', '降低', [25, 50, 75])],
+        line: '-{0}%',
+        desc: ['Zombie swarms drawn in by a defense pledge are {0}% smaller.', '因协防承诺引来的尸群规模降低 {0}%'] });
+
+      // Wishes and events.
+      fx({ cat: 'events', script: 'Clear_Requirements', en: 'More general wishes', zh: '大类愿望更多',
+        what: ['Wishes more often ask for a general kind of thing, like food or tools.', '许愿时更容易出现大类愿望（如食物、工具）。'],
+        params: [pct('FloatValue0', 'More likely', '概率增加', [20, 40, 60])],
+        line: '+{0}%',
+        desc: ['+{0}% chance that a wish asks for a general kind of thing, like food or tools.', '许愿时出现大类愿望（如需要食物、工具等）的概率增加 {0}%'] });
+      fx({ cat: 'events', script: 'Focused_Wish', en: 'More wishes', zh: '许愿更频繁',
+        what: ['Wish events show up more often.', '许愿事件更容易触发。'],
+        params: [neg('FloatValue0', 'More likely', '概率提高', [20, 40, 60])],
+        line: '+{0}%',
+        desc: ['Wish events are {0}% more likely.', '许愿事件触发的概率提高{0}%'] });
+      fx({ cat: 'events', script: 'Fortune_Favors_The_Bold', en: 'More random events', zh: '随机事件更多',
+        what: ['Random events show up more often.', '随机事件更容易触发。'],
+        params: [pct('FloatValue0', 'More likely', '概率提高', [30, 60, 90])],
+        line: '+{0}%',
+        desc: ['Random events are {0}% more likely.', '随机事件触发概率+{0}%'] });
+      fx({ cat: 'events', script: 'Sustained_Action', en: 'Longer missions', zh: '任务时间延长',
+        what: ['Mission events last longer.', '任务类事件持续更久。'],
+        params: [pct('FloatValue0', 'Longer by', '延长', [50, 100, 150], { step: 25 })],
+        line: '+{0}%',
+        desc: ['Mission events last {0}% longer.', '任务类事件的持续时间增加 {0}%'] });
+      fx({ cat: 'events', script: 'Efficient_Action', en: 'More from events', zh: '事件奖励增加',
+        what: ['Finishing an event gives bigger stat rewards.', '完成事件获得的属性奖励更多。'],
+        params: [pct('FloatValue0', 'More reward', '奖励增加', [50, 100, 150], { step: 25 })],
+        line: '+{0}%',
+        desc: ['Finishing an event gives {0}% more stat rewards.', '完成事件获得的属性奖励增加 {0}%'] });
+      fx({ cat: 'events', script: 'Excess_Return', en: 'Stats from fulfilled wishes', zh: '愿望超额回报',
+        what: ['Fulfilling a wish gives extra Satiety, Morale, Stamina, Health and Life.', '成功完成愿望后额外获得饱腹、心态、精力、健康和生命。'],
+        params: [
+          num('FloatValue0', 'Satiety', '饱腹', ['', '点'], [10, 20, 30]),
+          num('FloatValue1', 'Morale', '心态', ['', '点'], [10, 20, 30]),
+          num('FloatValue2', 'Stamina', '精力', ['', '点'], [10, 20, 30]),
+          num('FloatValue3', 'Health', '健康', ['', '点'], [10, 20, 30]),
+          num('FloatValue4', 'Life', '生命', ['', '点'], [10, 20, 30])
+        ],
+        line: '+{0}',
+        desc: ['After you fulfill a wish: Satiety +{0}, Morale +{1}, Stamina +{2}, Health +{3}, Life +{4}.', '成功完成愿望后：饱腹+{0}、心态+{1}、精力+{2}、健康+{3}、生命+{4}'] });
+      fx({ cat: 'events', script: 'Buff_306210_WishBoost', en: 'A wish every day for 3 days', zh: '三天每天许愿',
+        what: ['For 3 days, a wish event shows up every day. No numbers.', '持续3天，每天必定触发一个许愿事件。没有数值。'],
+        params: [],
+        line: ['3 days', '3天'],
+        desc: ['For 3 days, a wish event shows up every day.', '持续3天，每天必定触发一个许愿事件'] });
+      fx({ cat: 'events', script: 'Buff_306310_AntiAnorexia', en: 'No Appetite Loss for 3 days', zh: '三天免疫厌食',
+        what: ['For 3 days you can\'t get Appetite Loss, but no wishes show up. No numbers.', '持续3天免疫「厌食」，但不会出现许愿。没有数值。'],
+        params: [],
+        line: ['3 days', '3天'],
+        desc: ['For 3 days you can\'t get Appetite Loss, but no wishes show up.', '持续3天，免疫「厌食」效果，但不会出现许愿'] });
+      fx({ id: 'game:Buff_Gratitude-wish', cat: 'events', script: 'Buff_Gratitude', en: 'Wish status lasts longer', zh: '愿望状态延长',
+        what: ['The status you get after fulfilling a wish lasts longer.', '满足愿望后获得的状态持续更久。'],
+        params: [hide('IntValue0', 1009), hide('IntValue1', 1017), hours('FloatValue0', 'Longer by', '延长', [2, 4, 6, 9, 12])],
+        line: '+{0}h',
+        desc: ['The status you get after fulfilling a wish lasts {0|hour} longer.', '满足愿望后获得的状态持续时间增加{0}小时'] });
+      fx({ id: 'game:Buff_Gratitude-appetite', cat: 'food', script: 'Buff_Gratitude', en: 'Shorter Appetite Loss', zh: '厌食时间缩短',
+        what: ['Appetite Loss wears off sooner.', '「厌食」状态时间缩短。'],
+        params: [hide('IntValue0', 200), hours('FloatValue0', 'Shorter by', '缩短', [1, 2, 3, 4, 5], { scale: -1 / 3600 })],
+        line: '-{0}h',
+        desc: ['Appetite Loss is {0|hour} shorter.', '厌食状态时间缩短{0}小时'] });
+      fx({ cat: 'events', script: 'ExtendSatisfaction', en: 'Contentment lasts longer', zh: '心满意足延长',
+        what: ['The Contentment status lasts longer.', '「心满意足」状态的持续时间延长。'],
+        params: [hide('IntValue0', 1009), pct('FloatValue0', 'Longer by', '延长', [50, 100, 150], { step: 25 })],
+        line: '+{0}%',
+        desc: ['Contentment lasts {0}% longer.', '「心满意足」状态的持续时间延长{0}%'] });
+      fx({ id: 'game:ExtendSatisfaction-fail', cat: 'events', script: 'ExtendSatisfaction', en: 'Shorter penalty for a failed wish', zh: '愿望失败惩罚缩短',
+        what: ['The bad status from a failed wish ends sooner.', '愿望失败时的惩罚状态时间缩短。'],
+        params: [hide('IntValue0', 1010), neg('FloatValue0', 'Shorter by', '缩短', [50, 75, 100])],
+        line: '-{0}%',
+        desc: ['The penalty for a failed wish is {0}% shorter.', '愿望失败时的惩罚时间减少{0}%'] });
+
+      // Body and needs.
+      fx({ cat: 'body', script: 'Accelerate_Recovery', en: 'Shorter illnesses', zh: '疾病时间缩短',
+        what: ['Illnesses wear off sooner.', '各类疾病状态的持续时间缩短。'],
+        params: [hide('IntValue0', 1), neg('FloatValue0', 'Shorter by', '缩短', [25, 50, 75])],
+        line: '-{0}%',
+        desc: ['Illnesses are {0}% shorter.', '各类疾病状态的持续时间缩短{0}%'] });
+      fx({ cat: 'body', script: 'Anti_Corrosion_Training', en: 'Safer expired food', zh: '变质食物更安全',
+        what: ['Expired food is less likely to make you sick.', '食用变质食物后罹患疾病的概率降低。'],
+        params: [neg('FloatValue0', 'Less likely by', '概率降低', [25, 50, 75])],
+        line: '-{0}%',
+        desc: ['Expired food is {0}% less likely to make you sick.', '食用变质食物后罹患疾病的概率降低{0}%'] });
+      fx({ cat: 'body', script: 'BlackoutAdaptation', en: 'Less Stamina used in outages', zh: '停电时精力消耗降低',
+        what: ['You use less Stamina while the power is out.', '停电期间精力消耗降低。'],
+        params: [hide('IntValue0', 30002), neg('FloatValue0', 'Less Stamina used', '精力消耗降低', [15])],
+        line: '-{0}%',
+        desc: ['Use {0}% less Stamina during power outages.', '停电期间，精力消耗降低{0}%'] });
+      fx({ cat: 'body', script: 'Buff_300210_EnergyMetabolism', en: 'Slower hunger', zh: '饱腹下降减慢',
+        what: ['Satiety drops more slowly.', '饱腹度的下降速度减慢。'],
+        params: [neg('FloatValue0', 'Slower by', '减慢', [10, 20, 30])],
+        line: '-{0}%',
+        desc: ['Satiety drops {0}% slower.', '饱腹度的下降速度减慢{0}%'] });
+
+      const CRISIS_CALM = [{ v: 305311, en: 'Calm in Crisis: 50% less Morale used', zh: '临危不乱：心态消耗-50%' }, { v: 305611, en: 'Steady Focus: 30% less Stamina used', zh: '沉着冷静：精力消耗-30%' }];
+
+      fx({ cat: 'body', script: 'Buff_305310', en: 'A boost when a crisis starts', zh: '危机开始时获得增益',
+        what: ['When a crisis starts, you get a status for 1 day. Pick which one.', '进入危机阶段时，获得持续1天的增益状态。可选择哪一种。'],
+        params: [pick('IntValue0', 'Status', '状态', () => CRISIS_CALM, 305311, { unknown: (v, zh) => (zh ? '状态 ' : 'Status ') + v })],
+        line: '{0}',
+        desc: ['When a crisis starts, get 1 day of {0}.', '进入危机阶段时，获得持续1天的增益：{0}'] });
+      fx({ cat: 'body', script: 'Buff_306410_DiseaseImmunity', en: 'No diseases for 3 days', zh: '三天免疫疾病',
+        what: ['For 3 days you can\'t get sick, but Life doesn\'t recover. The numbers stay as the game set them.', '持续3天免疫所有疾病，但生命停止恢复。数值沿用游戏设定。'],
+        params: [],
+        line: ['3 days', '3天'],
+        desc: ['Immune to all diseases for 3 days, but Life doesn\'t recover.', '持续3天，免疫所有疾病效果，但生命停止恢复'] });
+      fx({ cat: 'body', script: 'Buff_306510', en: 'More Stamina from rest', zh: '休息精力增加',
+        what: ['For 3 days, resting gives more Stamina. It can also make Satiety drop faster.', '持续3天，休息获得的精力增加。也可以让饱腹下降加快。'],
+        params: [pct('FloatValue1', 'More Stamina from rest', '休息精力增加', [100], { step: 25 }), pct('FloatValue2', 'Satiety drops faster', '饱腹下降加快', [30])],
+        line: '+{0}%',
+        desc: (v, zh) => zh
+          ? '持续3天，休息获得的精力+' + fmt(v.FloatValue1) + '%' + (v.FloatValue2 ? '，但饱腹下降速度增加' + fmt(v.FloatValue2) + '%' : '')
+          : 'For 3 days, resting gives ' + fmt(v.FloatValue1) + '% more Stamina' + (v.FloatValue2 ? ', but Satiety drops ' + fmt(v.FloatValue2) + '% faster.' : '.') });
+      fx({ cat: 'body', script: 'ColdAlertness', en: 'Less Stamina used when chilly', zh: '微寒时精力消耗降低',
+        what: ['During a cold wave, you use less Stamina while your room is slightly cold.', '寒潮中身处微寒环境时，精力消耗降低。'],
+        params: [neg('FloatValue0', 'Less Stamina used', '精力消耗降低', [15])],
+        line: '-{0}%',
+        desc: ['During a cold wave, use {0}% less Stamina in a slightly cold room.', '寒潮中身处微寒环境时，精力消耗降低{0}%'] });
+      fx({ cat: 'body', script: 'DebuffFreeVigor', en: 'More Stamina with no bad statuses', zh: '无负面状态时精力增加',
+        what: ['You gain more Stamina while you have no bad statuses.', '身上没有任何负面状态时，精力获得提高。'],
+        params: [pct('FloatValue0', 'More Stamina', '精力获得提高', [15])],
+        line: '+{0}%',
+        desc: ['Gain {0}% more Stamina while you have no bad statuses.', '身上没有任何负面状态时，精力获得提高{0}%'] });
+      fx({ cat: 'body', script: 'Fight_Fire_With_Fire', en: 'Trade Life to cure diseases', zh: '以生命清除疾病',
+        what: ['Lose some Life right away and get rid of every disease.', '立即减少生命值，清除身上所有疾病状态。'],
+        params: [hide('IntValue0', 1), num('FloatValue0', 'Life lost', '失去生命', ['', '点'], [10], { scale: -1 })],
+        line: '-{0}',
+        desc: ['Lose {0} Life to get rid of every disease right away.', '减少{0}点生命值，立即清除身上所有疾病状态'] });
+      fx({ cat: 'body', script: 'LightTravel', en: 'Faster with a light bag', zh: '轻装简行',
+        what: ['While your bag is light, you walk 15% faster and use less Stamina.', '背包很轻时，移动速度提高15%，精力消耗降低。'],
+        params: [hide('IntValue1', 319011), num('IntValue0', 'Bag weighs under', '背包总重低于', ['g', '克'], [1000], { step: 100, stack: 'each' }), neg('FloatValue0', 'Less Stamina used', '精力消耗降低', [10])],
+        line: '-{1}%',
+        desc: ['When your bag weighs under {0}g, walk 15% faster and use {1}% less Stamina.', '背包总重低于{0}克时，移动速度提高15%，精力消耗降低{1}%'] });
+      fx({ cat: 'body', script: 'Living_With_Illness', en: 'Lose less Life while sick', zh: '生病时生命下降减缓',
+        what: ['While you are sick, Life and Health drop more slowly. The reward card only names Life.', '生病期间，生命值和健康值的下降速度减缓。奖励卡片只提到生命。'],
+        params: [hide('IntValue0', 1), neg('FloatValue0', 'Life drops slower', '生命下降减缓', [25, 50, 75]), neg('FloatValue1', 'Health drops slower', '健康下降减缓', [25, 50, 75])],
+        line: '-{0}%',
+        desc: ['While sick, Life drops {0}% slower and Health drops {1}% slower.', '生病期间，生命值的下降速度减缓{0}%，健康值的下降速度减缓{1}%'] });
+      fx({ cat: 'body', script: 'Process_Adapt', en: 'Starving hurts less', zh: '极度饥饿伤害减少',
+        what: ['While Starving, you lose less Life and Health.', '极度饥饿时，生命值和健康值的下降减少。'],
+        params: [hide('IntValue0', 1002), neg('FloatValue1', 'Less Life lost', '生命下降减少', [25, 50, 75]), neg('FloatValue0', 'Less Health lost', '健康下降减少', [25, 50, 75])],
+        line: '-{0}%',
+        desc: ['While Starving, lose {0}% less Life and {1}% less Health.', '极度饥饿时，生命值下降减少{0}%，健康值下降减少{1}%'] });
+      fx({ cat: 'body', script: 'NightHibernation', en: 'Slower at night, slower hunger', zh: '夜间蛰伏',
+        what: ['You walk slower at night, but Satiety drops more slowly.', '晚上移动速度变慢，但饱腹度下降速度减慢。'],
+        params: [neg('FloatValue1', 'Satiety drops slower', '饱腹下降减慢', [10]), neg('FloatValue0', 'Walk slower at night', '夜间移动减慢', [20])],
+        line: '-{0}%',
+        desc: ['You walk {1}% slower at night, but Satiety drops {0}% slower.', '晚上移动速度减少{1}%，但饱腹度下降速度减少{0}%'] });
+      fx({ cat: 'body', script: 'Patience_Training', en: 'Slower hunger while Hungry', zh: '饥饿时饱腹下降减慢',
+        what: ['While Hungry, Satiety drops more slowly, but your max Satiety is lower.', '处于饥饿状态时，饱腹度下降速度减慢，但饱腹度上限降低。'],
+        params: [hide('IntValue0', 1001), hide('IntValue1', 1002), neg('FloatValue0', 'Slower while Hungry', '饥饿时减慢', [30]), num('BuffSatietyMax', 'Max Satiety lost', '饱腹上限降低', ['', '点'], [10], { scale: -1 })],
+        line: '-{0}%',
+        desc: ['While Hungry, Satiety drops {0}% slower, but max Satiety is {1} lower.', '处于饥饿状态时，饱腹度下降速度减慢{0}%，但饱腹度上限降低{1}'] });
+      fx({ cat: 'body', script: 'PostDisaster_HealthRecovery', en: 'Faster Health recovery', zh: '健康恢复加快',
+        what: ['Health recovers on its own faster.', '健康值的自然恢复速度加快。'],
+        params: [pct('FloatValue0', 'Faster by', '加快', [30, 60, 90])],
+        line: '+{0}%',
+        desc: ['Health recovers {0}% faster.', '健康值的自然恢复速度加快{0}%'] });
+      fx({ cat: 'body', script: 'PostDisaster_VitalityRecovery', en: 'Faster Life recovery', zh: '生命恢复加快',
+        what: ['Life recovers on its own faster.', '生命值的自然恢复速度加快。'],
+        params: [pct('FloatValue0', 'Faster by', '加快', [30, 60, 90])],
+        line: '+{0}%',
+        desc: ['Life recovers {0}% faster.', '生命值的自然恢复速度加快{0}%'] });
+      fx({ cat: 'body', script: 'SleepEnergyManagement', en: 'More Stamina from night sleep', zh: '夜间睡眠精力增加',
+        what: ['Sleeping at night gives more Stamina, and sleeping in the day gives less.', '夜间睡觉恢复的精力增加，白天睡觉恢复的精力减少。'],
+        params: [pct('FloatValue1', 'More at night', '夜间增加', [50]), neg('FloatValue0', 'Less in the day', '白天减少', [50])],
+        line: '+{0}%',
+        desc: ['Sleeping at night gives {0}% more Stamina, and sleeping in the day gives {1}% less.', '夜间睡觉恢复的精力+{0}%，白天睡觉恢复的精力-{1}%'] });
+      fx({ cat: 'body', script: 'StarvingFocus', en: 'Less Stamina used at low Satiety', zh: '低饱腹时精力消耗降低',
+        what: ['When Satiety is very low, you use less Stamina.', '饱腹很低时，精力消耗降低。'],
+        params: [num('IntValue0', 'Satiety below', '饱腹低于', ['%', '%'], [10], { stack: 'each' }), neg('FloatValue0', 'Less Stamina used', '精力消耗降低', [20])],
+        line: '-{1}%',
+        desc: ['When Satiety is below {0}%, use {1}% less Stamina.', '饱腹低于{0}%时，精力消耗降低{1}%'] });
+
+      // Morale.
+      fx({ cat: 'morale', script: 'Buff_300410_EmotionManagement', en: 'Slower Morale drop', zh: '心态下降减慢',
+        what: ['Morale drops more slowly.', '心态的下降速度减慢。'],
+        params: [neg('FloatValue0', 'Slower by', '减慢', [10, 20, 30])],
+        line: '-{0}%',
+        desc: ['Morale drops {0}% slower.', '心态的下降速度减慢{0}%'] });
+      fx({ cat: 'morale', script: 'Endurance_Training', en: 'Hunger hurts Morale less', zh: '饥饿影响心态减少',
+        what: ['Being Hungry costs less Morale.', '饥饿导致的心态下降减少。'],
+        params: [hide('IntValue0', 1001), neg('FloatValue0', 'Less Morale lost', '心态下降减少', [25, 50, 75])],
+        line: '-{0}%',
+        desc: ['Being Hungry costs {0}% less Morale.', '饥饿导致的心态下降值减少{0}%'] });
+      fx({ cat: 'morale', script: 'HearthComfort', en: 'More Morale in a warm house', zh: '暖屋心态增加',
+        what: ['During a cold wave, you gain more Morale while your house is heated.', '寒潮中把屋子烧暖时，心态获得提高。'],
+        params: [pct('FloatValue0', 'More Morale', '心态获得提高', [20])],
+        line: '+{0}%',
+        desc: ['During a cold wave, gain {0}% more Morale while your house is heated.', '寒潮中把屋子烧暖时，心态获得提高{0}%'] });
+      fx({ cat: 'morale', script: 'AE_StockpileComfort', en: 'Morale from a full pantry', zh: '家底厚实',
+        what: ['Each day, if your stored food adds up to 500 Satiety or more, you get extra Morale.', '家中食物储备总饱腹值达500以上时，每日结算额外恢复心态。'],
+        params: [num('FloatValue0', 'Extra Morale', '额外心态', ['', '点'], [5])],
+        line: '+{0}',
+        desc: ['When your stored food adds up to 500 Satiety or more, get {0} extra Morale at the end of each day.', '家中食物储备总饱腹值达500以上时，每日结算额外恢复{0}点心态'] });
+      fx({ cat: 'morale', script: 'Multitask', en: 'Morale from steady work', zh: '乐在其中',
+        what: ['For 3 days, every full hour spent doing things gives Morale. Stopping only pauses the count.', '持续3天。做任何事都在累计，每满1小时恢复心态；中断只暂停，不清零。'],
+        params: [hide('BuffInterval', 3600), num('BuffMoraleInterval', 'Morale each hour', '每小时心态', ['', '点'], [3])],
+        line: '+{0}',
+        desc: ['For 3 days, get {0} Morale for every full hour spent doing things. Stopping only pauses the count.', '持续3天。做任何事都在累计，每满1小时恢复{0}点心态；中断只暂停，不清零'] });
+      fx({ cat: 'morale', script: 'Passive_Abundance', en: 'Abundance from a full home', zh: '家有余粮',
+        what: ['While your home has lots of supplies, you get the Abundance status, and Morale and Stamina keep recovering.', '物资储备充足时获得「富足」状态，心态和精力持续回复。'],
+        params: [hide('IntValue0', 314220), num('IntValue1', 'Starts at', '达到时获得', ['', '件'], [150], { step: 10, stack: 'each' }), num('IntValue3', 'Ends below', '低于时移除', ['', '件'], [100], { step: 10, stack: 'each' })],
+        line: '{0}+',
+        desc: ['With {0} or more items at home you get Abundance. It ends when you have fewer than {1}.', '家中物资达到{0}件时获得「富足」，低于{1}件时移除'] });
+
+      // Statuses the game puts on you. Each one's "what" names the status.
+      fx({ cat: 'status', script: 'BagOverweight', en: 'Walk slower (Encumbered)', zh: '移动变慢（超重）',
+        what: ['The Encumbered status: you walk slower.', '「超重」状态：移动速度降低。'],
+        params: [neg('FloatValue0', 'Slower by', '降低', [40])],
+        line: '-{0}%',
+        desc: ['Walk {0}% slower.', '移动速度降低{0}%'] });
+      fx({ cat: 'status', script: 'BloodSeal', en: 'Lose Life when the disaster starts (Sold Blood)', zh: '灾后开局扣生命（卖血印记）',
+        what: ['The Sold Blood status: you lose Life right after the disaster starts. The heavier marks also give Blood Donor Weakness.', '「卖血印记」状态：灾后开局立即扣除生命。较重的印记还会附加献血虚弱。'],
+        params: [num('BuffVitalityStart', 'Life lost', '扣除生命', ['', '点'], [5, 15, 25], { scale: -1 })],
+        line: '-{0}',
+        desc: ['Lose {0} Life right after the disaster starts.', '灾后开局立即扣除{0}点生命'] });
+      fx({ cat: 'status', script: 'BloodWeak', en: 'Slower recovery (Blood Donor Weakness)', zh: '恢复变慢（献血虚弱）',
+        what: ['The Blood Donor Weakness status: every stat recovers more slowly.', '「献血虚弱」状态：所有属性恢复速度降低。'],
+        params: [neg('FloatValue0', 'Slower by', '降低', [25, 30])],
+        line: '-{0}%',
+        desc: ['All stats recover {0}% slower.', '所有属性恢复速度降低{0}%'] });
+      fx({ cat: 'status', script: 'Buff20011', en: 'Stamina doesn\'t drop (Energy Drink)', zh: '精力不下降（功能饮料）',
+        what: ['The Energy Drink rush: Stamina doesn\'t drop for a while. The numbers stay as the game set them.', '「功能饮料-兴奋」状态：一段时间内精力不下降。数值沿用游戏设定。'],
+        params: [],
+        line: ['No Stamina drop', '精力不降'],
+        desc: ['Stamina doesn\'t drop.', '精力不下降'] });
+      fx({ cat: 'status', script: 'Buff20012', en: 'Stamina drops twice as fast (Energy Drink side effects)', zh: '精力双倍下降（功能饮料副作用）',
+        what: ['The Energy Drink side effects: Stamina drops twice as fast for a while. The numbers stay as the game set them.', '「功能饮料-副作用」状态：一段时间内精力双倍下降。数值沿用游戏设定。'],
+        params: [],
+        line: ['x2 Stamina drop', '精力双倍下降'],
+        desc: ['Stamina drops twice as fast.', '精力双倍下降'] });
+      fx({ cat: 'status', script: 'Buff_1300_Satiated', en: 'Work faster, eat more (Well-Fed)', zh: '做事更快（饱足）',
+        what: ['The Well-Fed status: you work faster and Morale and Stamina recover faster, but Satiety drops faster.', '「饱足」状态：做事更快，心态和精力恢复更快，但饱腹下降也更快。'],
+        params: [pct('FloatValue3', 'Work faster', '做事加快', [10]), pct('FloatValue0', 'Satiety drops faster', '饱腹下降加快', [30]), pct('FloatValue1', 'Morale recovers faster', '心态恢复加快', [20]), pct('FloatValue2', 'Stamina recovers faster', '精力恢复加快', [20])],
+        line: '+{0}%',
+        desc: ['Work {0}% faster, but Satiety drops {1}% faster. Morale recovers {2}% faster and Stamina {3}% faster.', '做事速度+{0}%，但饱腹下降速度+{1}%；心态恢复+{2}%，精力恢复+{3}%'] });
+      fx({ cat: 'status', script: 'Buff_CondOnOtherBuff', en: 'No losses from the outbreak', zh: '疫病不再消耗属性',
+        what: ['Fever Reducing and Anti-Infection give you this status. While you have it, the disease outbreak costs you no stats. The numbers stay as the game set them.', '「退烧中」和「抗感染」会给你这个状态。持续期间，疫病不会让你损失属性。数值沿用游戏设定。'],
+        params: [],
+        line: ['No outbreak losses', '疫病不掉属性'],
+        desc: ['The disease outbreak costs you no stats.', '疫病不会让你损失属性'] });
+      fx({ cat: 'status', script: 'Child_Dismay', en: 'Gain less (Depressed)', zh: '获得减少（沮丧）',
+        what: ['The Depressed status: you gain less Satiety and Stamina.', '「沮丧」状态：饱腹和精力的获得减少。'],
+        params: [neg('FloatValue0', 'Less Satiety gained', '饱腹获得减少', [10]), neg('FloatValue1', 'Less Stamina gained', '精力获得减少', [10])],
+        line: '-{0}%',
+        desc: ['Gain {0}% less Satiety and {1}% less Stamina.', '饱腹获得减少{0}%，精力获得减少{1}%'] });
+      fx({ cat: 'status', script: 'Child_Dying', en: 'Gain less, walk slower (Critical)', zh: '获得减少，移动变慢（垂危）',
+        what: ['The Critical status: lower max Stamina, less Satiety, Morale and Stamina gained, and slower walking.', '「垂危」状态：精力上限降低，饱腹、心态、精力获得减少，移动变慢。'],
+        params: [num('IntValue0', 'Max Stamina lost', '精力上限降低', ['', '点'], [10], { scale: -1 }), neg('FloatValue0', 'Less Satiety gained', '饱腹获得减少', [10]),
+          neg('FloatValue1', 'Less Morale gained', '心态获得减少', [10]), neg('FloatValue2', 'Less Stamina gained', '精力获得减少', [10]), neg('BuffSpeed', 'Walk slower', '移动减慢', [30])],
+        line: '-{1}%',
+        desc: ['Max Stamina {0} lower. Gain {1}% less Satiety, {2}% less Morale and {3}% less Stamina. Walk {4}% slower.', '精力上限-{0}；饱腹获得-{1}%，心态获得-{2}%，精力获得-{3}%；移动速度-{4}%'] });
+      fx({ cat: 'status', script: 'Child_ExtremeFatigue', en: 'Lose Life, walk slower (Exhausted)', zh: '失去生命，移动变慢（极度疲劳）',
+        what: ['The Exhausted status: less Satiety, Morale and Life gained, Life lost every hour, and slower walking.', '「极度疲劳」状态：饱腹、心态、生命获得减少，每小时失去生命，移动变慢。'],
+        params: [hide('IntValue0', 3600), neg('FloatValue0', 'Less Satiety gained', '饱腹获得减少', [10]), neg('FloatValue1', 'Less Morale gained', '心态获得减少', [10]),
+          neg('FloatValue3', 'Less Life gained', '生命获得减少', [10]), num('FloatValue4', 'Life lost each hour', '每小时失去生命', ['', '点'], [2], { scale: -1 }), neg('BuffSpeed', 'Walk slower', '移动减慢', [30])],
+        line: '-{3}',
+        desc: ['Gain {0}% less Satiety, {1}% less Morale and {2}% less Life. Lose {3} Life every hour. Walk {4}% slower.', '饱腹获得-{0}%，心态获得-{1}%，生命获得-{2}%；每小时生命-{3}；移动速度-{4}%'] });
+      fx({ cat: 'status', script: 'Child_ExtremeHunger', en: 'Lose Life, walk slower (Starving)', zh: '失去生命，移动变慢（极度饥饿）',
+        what: ['The Starving status: you lose Life every 2 hours and walk slower.', '「极度饥饿」状态：每2小时失去生命，移动变慢。'],
+        params: [hide('IntValue0', 7200), num('FloatValue2', 'Life lost every 2 hours', '每2小时失去生命', ['', '点'], [6], { scale: -1 }), neg('BuffSpeed', 'Walk slower', '移动减慢', [30])],
+        line: '-{0}',
+        desc: ['Lose {0} Life every 2 hours. Walk {1}% slower.', '每2小时生命-{0}；移动速度-{1}%'] });
+      fx({ cat: 'status', script: 'Child_Fatigue', en: 'Gain less (Fatigued)', zh: '获得减少（疲劳）',
+        what: ['The Fatigued status: you gain less Satiety, Morale and Life.', '「疲劳」状态：饱腹、心态、生命的获得减少。'],
+        params: [neg('FloatValue0', 'Less Satiety gained', '饱腹获得减少', [10]), neg('FloatValue1', 'Less Morale gained', '心态获得减少', [10]), neg('FloatValue3', 'Less Life gained', '生命获得减少', [10])],
+        line: '-{0}%',
+        desc: ['Gain {0}% less Satiety, {1}% less Morale and {2}% less Life.', '饱腹获得-{0}%，心态获得-{1}%，生命获得-{2}%'] });
+      fx({ cat: 'status', script: 'Child_Obesity', en: 'Walk slower, get hungry faster (Overweight)', zh: '移动变慢，更易饿（肥胖）',
+        what: ['The Overweight status: you walk slower and Satiety drops faster, but eating also gives Morale.', '「肥胖」状态：移动变慢，饱腹下降加快，但进食时额外获得心态。'],
+        params: [neg('FloatValue0', 'Walk slower', '移动减慢', [50]), pct('FloatValue1', 'Morale from eating', '进食心态', [20]), pct('FloatValue2', 'Satiety drops faster', '饱腹下降加快', [50])],
+        line: '-{0}%',
+        desc: ['Walk {0}% slower. Eating gives Morale equal to {1}% of the Satiety it gives. Satiety drops {2}% faster.', '移动速度-{0}%；进食时额外获得相当于饱腹{1}%的心态；饱腹下降速度+{2}%'] });
+      fx({ cat: 'status', script: 'Child_Subhealth', en: 'Lower max Life and Stamina (Weakened)', zh: '上限降低（亚健康）',
+        what: ['The Weakened status: max Life and max Stamina are lower.', '「亚健康」状态：生命上限和精力上限降低。'],
+        params: [num('IntValue0', 'Max Life lost', '生命上限降低', ['', '点'], [10], { scale: -1 }), num('IntValue1', 'Max Stamina lost', '精力上限降低', ['', '点'], [10], { scale: -1 })],
+        line: '-{0}',
+        desc: ['Max Life {0} lower and max Stamina {1} lower.', '生命上限-{0}，精力上限-{1}'] });
+      fx({ cat: 'status', script: 'Energetic', en: 'More Morale gained', zh: '心态获得增加',
+        what: ['You gain more Morale.', '心态获得增加。'],
+        params: [pct('FloatValue0', 'More Morale', '心态获得增加', [50])],
+        line: '+{0}%',
+        desc: ['Gain {0}% more Morale.', '心态获得+{0}%'] });
+      fx({ cat: 'status', script: 'Excited', en: 'Higher Morale target (Excited)', zh: '心态目标提高（兴奋）',
+        what: ['The Excited status. It adds this number to a Morale target the game keeps. What that target changes is not known yet.', '「兴奋」状态。为游戏中的心态目标值增加该数值，具体影响尚不清楚。'],
+        params: [num('IntValue0', 'Morale target', '心态目标', ['', '点'], [30])],
+        line: '+{0}',
+        desc: ['Morale target +{0}.', '心态目标+{0}'] });
+      fx({ cat: 'status', script: 'ExpiredFood', en: 'A food poisoning symptom', zh: '变质食物症状',
+        what: ['The Food Poisoning status: you get one symptom at random, such as Diarrhea, Stomachache, Vomiting, Fever or Poisoned. The numbers stay as the game set them.', '「过期食品影响」状态：随机获得一种症状，如腹泻、胃痛、呕吐、发热或中毒。数值沿用游戏设定。'],
+        params: [],
+        line: ['1 symptom', '1种症状'],
+        desc: ['Get one food poisoning symptom at random.', '随机获得一种变质食物症状'] });
+      fx({ cat: 'status', script: 'FullStomach', en: 'Less Satiety from some food', zh: '部分食物饱腹减少',
+        what: ['One kind of food gives less Satiety. Which kind is not known yet.', '某一类食物提供的饱腹减少，具体是哪一类尚不清楚。'],
+        params: [neg('FloatValue0', 'Less Satiety', '饱腹减少', [50])],
+        line: '-{0}%',
+        desc: ['That food gives {0}% less Satiety.', '该类食物的饱腹获得减少{0}%'] });
+      fx({ cat: 'status', script: 'FurnitureDurabilityMax', en: 'Tougher furniture (Durable)', zh: '家具更耐用（耐久强化）',
+        what: ['The Durable status: furniture has more max durability.', '「耐久强化」状态：家具耐久上限提高。'],
+        params: [num('IntValue0', 'Extra durability', '耐久上限提高', ['', ''], [50, 100, 200], { step: 10 })],
+        line: '+{0}',
+        desc: ['Furniture max durability +{0}.', '家具耐久上限+{0}'] });
+      fx({ cat: 'status', script: 'IvyShield', en: 'Vine shield (Vine Transplant)', zh: '藤蔓护盾（藤蔓移植）',
+        what: ['The Vine Transplant status: thorny vines form a shield, and zombies that bite it take damage. Its other two numbers stay as the game set them.', '「藤蔓移植」状态：带刺的藤蔓形成护盾，啃咬它的丧尸会受到反伤。另外两个数值沿用游戏设定。'],
+        params: [num('IntValue0', 'Shield', '护盾', ['', '点'], [300], { step: 50 })],
+        line: '{0}',
+        desc: ['A {0} point vine shield.', '{0}点藤蔓护盾'] });
+      fx({ cat: 'status', script: 'Life_Movement', en: 'Max Life and more gains (Athlete)', zh: '生命上限与获得提高（生命在于运动）',
+        what: ['The Athlete status: higher max Life, and you gain more Health and Stamina.', '「生命在于运动」状态：生命上限提高，健康和精力获得增加。'],
+        params: [num('IntValue0', 'Max Life', '生命上限', ['', '点'], [10]), pct('FloatValue0', 'More Health', '健康获得增加', [100], { step: 25 }), pct('FloatValue1', 'More Stamina', '精力获得增加', [50], { step: 25 })],
+        line: '+{0}',
+        desc: ['Max Life +{0}. Gain {1}% more Health and {2}% more Stamina.', '生命上限+{0}；健康获得+{1}%，精力获得+{2}%'] });
+      fx({ cat: 'status', script: 'PoorAppetite', en: 'Appetite Loss', zh: '厌食',
+        what: ['The Appetite Loss status, as the game sets it. No numbers.', '「厌食」状态，效果按游戏设定。没有数值。'],
+        params: [],
+        line: ['Appetite Loss', '厌食'],
+        desc: ['You get Appetite Loss.', '获得「厌食」状态'] });
+      fx({ cat: 'status', script: 'Sweets', en: 'Health lost when you sleep (Sweets)', zh: '睡觉时失去健康（甜食）',
+        what: ['The Sweets status: if you sleep while you have it, you lose Health.', '「甜食」状态：带着它睡觉会失去健康。'],
+        params: [num('FloatValue0', 'Health lost', '失去健康', ['', '点'], [3], { scale: -1 })],
+        line: '-{0}',
+        desc: ['Lose {0} Health when you sleep.', '睡觉时失去{0}点健康'] });
+      fx({ cat: 'status', script: 'RiotTrampling', en: 'Lose Morale and Stamina at once', zh: '立即失去心态和精力',
+        what: ['You lose Morale and Stamina right away. The game has no text for it.', '立即失去心态和精力。游戏中没有它的说明。'],
+        params: [num('BuffMoraleStart', 'Morale lost', '失去心态', ['', '点'], [10], { scale: -1 }), num('BuffStaminaStart', 'Stamina lost', '失去精力', ['', '点'], [20], { scale: -1 })],
+        line: '-{0}',
+        desc: ['Lose {0} Morale and {1} Stamina right away.', '立即失去{0}点心态和{1}点精力'] });
+      fx({ cat: 'money', script: 'PostDisaster_AddSurvivalPointsByLayer', en: 'Survival Points each day', zh: '每日额外生存点',
+        what: ['You get extra Survival Points at the end of each day. The Wish Reward statuses give it.', '每日结算时额外获得生存点。「愿望奖励」状态使用它。'],
+        params: [num('IntValue0', 'Extra points', '额外生存点', ['', '点'], [1, 2, 3])],
+        line: '+{0}',
+        desc: ['Get {0|extra Survival Point} at the end of each day.', '每日结算时额外获得{0}点生存点'] });
+      fx({ cat: 'status', script: 'SymptomForcedAction', en: 'Lose Satiety and Stamina (Vomiting)', zh: '失去饱腹和精力（呕吐）',
+        what: ['The Vomiting status: you lose Satiety and Stamina every 3 hours and sometimes stop to throw up.', '「呕吐」状态：每3小时失去饱腹和精力，并会被打断去呕吐。'],
+        params: [hide('BuffInterval', 10800), num('BuffSatietyInterval', 'Satiety lost', '失去饱腹', ['', '点'], [3], { scale: -1 }), num('BuffStaminaInterval', 'Stamina lost', '失去精力', ['', '点'], [3], { scale: -1 })],
+        line: '-{0}',
+        desc: ['Lose {0} Satiety and {1} Stamina every 3 hours.', '每3小时饱腹-{0}，精力-{1}'] });
+      fx({ cat: 'status', script: 'SymptomForcedToiletAction', en: 'Lose Satiety (Diarrhea)', zh: '失去饱腹（腹泻）',
+        what: ['The Diarrhea status: you lose Satiety every 3 hours and sometimes have to run to the toilet.', '「腹泻」状态：每3小时失去饱腹，并会被打断去上厕所。'],
+        params: [hide('BuffInterval', 10800), num('BuffSatietyInterval', 'Satiety lost', '失去饱腹', ['', '点'], [3], { scale: -1 })],
+        line: '-{0}',
+        desc: ['Lose {0} Satiety every 3 hours.', '每3小时饱腹-{0}'] });
+
+      // The game's watchers for low stats: each adds a status when the stat falls to one level and takes it off once
+      // the stat is back up to another.
+      [['Passive_Hunger', 1001, 'Hungry', '饥饿', 'Satiety', 30], ['Passive_Dismay', 1003, 'Depressed', '沮丧', 'Morale', 30], ['Passive_Fatigue', 1004, 'Fatigued', '疲劳', 'Stamina', 10],
+        ['Passive_Subhealth', 1006, 'Weakened', '亚健康', 'Health', 30], ['Passive_Dying', 1007, 'Critical', '垂危', 'Vitality', 15]].forEach(w => {
+        const stat = STATS.find(s => s.v === w[4]);
+
+        fx({ cat: 'status', script: w[0], en: w[2] + ' at low ' + stat.en, zh: stat.zh + '低时' + w[3],
+          what: ['Adds the ' + w[2] + ' status when ' + stat.en + ' falls low, and takes it off once ' + stat.en + ' is back up.', stat.zh + '降低时添加「' + w[3] + '」状态，回升后移除。'],
+          params: [hide('IntValue0', w[1]), num('IntValue1', 'Starts at or below', '低于等于时添加', ['', ''], [w[5]], { stack: 'each' }), num('IntValue2', 'Ends at or above', '高于等于时移除', ['', ''], [w[5]], { stack: 'each' })],
+          line: ['{0} or less', '{0}及以下'],
+          desc: [w[2] + ' starts when ' + stat.en + ' is {0} or lower and ends when it is back to {1} or higher.', stat.zh + '低于等于{0}时出现「' + w[3] + '」，回到{1}及以上时移除'] });
+      });
+      [['Passive_ExtremeHunger', 1002, 'Starving', '极度饥饿', 'Satiety'], ['Passive_ExtremeFatigue', 1005, 'Exhausted', '极度疲劳', 'Stamina']].forEach(w => {
+        const stat = STATS.find(s => s.v === w[4]);
+
+        fx({ cat: 'status', script: w[0], en: w[2] + ' at 0 ' + stat.en, zh: stat.zh + '为0时' + w[3],
+          what: ['Adds the ' + w[2] + ' status when ' + stat.en + ' hits 0, and takes it off once it is above 0. The numbers stay as the game set them.', stat.zh + '降到0时添加「' + w[3] + '」状态，高于0后移除。数值沿用游戏设定。'],
+          params: [hide('IntValue0', w[1])],
+          line: ['at 0', '为0时'],
+          desc: [w[2] + ' starts when ' + stat.en + ' hits 0 and ends once it is above 0.', stat.zh + '降到0时出现「' + w[3] + '」，高于0后移除'] });
+      });
+      fx({ cat: 'status', script: 'Passive_Obesity', en: 'Overweight at high Satiety', zh: '饱腹高时肥胖',
+        what: ['Adds the Overweight status while Satiety stays high, and takes it off once Satiety stays lower.', '饱腹持续偏高时添加「肥胖」状态，持续偏低后移除。'],
+        params: [hide('IntValue0', 1008), num('IntValue1', 'Starts at or above', '高于等于时添加', ['', ''], [70], { stack: 'each' }), num('IntValue3', 'Ends below', '低于时移除', ['', ''], [70], { stack: 'each' })],
+        line: ['{0} or more', '{0}及以上'],
+        desc: ['Overweight starts when Satiety stays at {0} or higher and ends when it stays below {1}.', '饱腹持续高于等于{0}时出现「肥胖」，持续低于{1}时移除'] });
+      fx({ cat: 'status', script: 'Passive_Satiated', en: 'Well-Fed at high Satiety', zh: '饱腹高时饱足',
+        what: ['Adds the Well-Fed status when Satiety is high, and takes it off once Satiety drops.', '饱腹偏高时添加「饱足」状态，饱腹下降后移除。'],
+        params: [hide('IntValue0', 1300), num('IntValue1', 'Starts at or above', '高于等于时添加', ['', ''], [80], { stack: 'each' }), num('IntValue3', 'Ends below', '低于时移除', ['', ''], [60], { stack: 'each' })],
+        line: ['{0} or more', '{0}及以上'],
+        desc: ['Well-Fed starts when Satiety is {0} or higher and ends when it is below {1}.', '饱腹高于等于{0}时出现「饱足」，低于{1}时移除'] });
+      fx({ cat: 'status', script: 'Passive_ColdFever', en: 'Chance of High Temperature in the cold', zh: '受寒发烧概率',
+        what: ['Staying out in the cold during a cold wave can give you High Temperature.', '寒潮中持续受冻时，可能患上「发烧」。'],
+        params: [hide('IntValue0', 1110), pct('FloatValue0', 'Chance', '概率', [50])],
+        line: '{0}%',
+        desc: ['{0}% chance to get High Temperature from the cold.', '受冻时有{0}%的概率患上「发烧」'] });
+      fx({ cat: 'status', script: 'Passive_ColdSickness', en: 'Chance of Wind Chill in the cold', zh: '受寒风寒概率',
+        what: ['Going without heat during a cold wave can give you Wind Chill.', '寒潮中持续没有取暖时，可能患上「风寒」。'],
+        params: [hide('IntValue0', 1116), pct('FloatValue0', 'Chance', '概率', [60])],
+        line: '{0}%',
+        desc: ['{0}% chance to get Wind Chill from the cold.', '受冻时有{0}%的概率患上「风寒」'] });
+      fx({ cat: 'status', script: 'Passive_Warmth', en: 'Cold wave statuses from room heat', zh: '寒潮时按室温切换状态',
+        what: ['During a cold wave, sets your cold status from how warm your room is: Warm, Comfortable, Slight Chill or Freezing. Heating takes off Freezing and Wind Chill. The numbers stay as the game set them.', '寒潮期间，根据屋内温度切换状态：温暖、舒适、微寒或寒冷。取暖会移除寒冷和风寒。数值沿用游戏设定。'],
+        params: [],
+        line: ['Cold wave', '寒潮'],
+        desc: ['During a cold wave, your status follows how warm your room is.', '寒潮期间，状态随屋内温度变化'] });
       const FX_BY_ID = {};
 
       const picksOf = f => f.params.filter(p => p.type === 'pick');
@@ -533,47 +1529,102 @@
         return script.replace(/^(AE_|PostDisaster_|PreDisaster_|Buff_)/, '').replace(/_?\d{4,}_?/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2').replace(/_/g, ' ').trim() || script;
       }
 
-      function rawLabel(k) {
-        const m = /^(IntValue|FloatValue)(\d+)$/.exec(k);
+      // The boxes of an effect with no name are numbered from 1 in the order they show.
+      const rawLabel = i => ({ en: 'Number ' + (i + 1), zh: '数值 ' + (i + 1) });
 
-        if (!m) return { en: k, zh: k };
+      const RAW_NOTE = ['This effect has no name yet. Its boxes hold the numbers as the game stores them, and the game\'s card text says what they do.', '此效果尚未命名。数值框是游戏存储的原始数值，游戏卡片上的说明会告诉你它们的作用。'];
 
-        return m[1] === 'IntValue' ? { en: 'Whole number ' + m[2], zh: '整数 ' + m[2] } : { en: 'Number ' + m[2], zh: '数值 ' + m[2] };
+      const unitText = (p, zh) => p.unit ? p.unit[zh ? 1 : 0] : '';
+
+      // A reward level's card text and the reward's line of values per level, both languages, for the percent check.
+      const cardText = (t, l) => [normText(l.desc), normText(t.levelText)].map(x => x ? x.en + ' ' + x.zh : '').join(' ');
+
+      // A fraction is shown as a percent when every card that sets it writes it as one (0.3 where the card says 30%).
+      function readsAsPercent(k, uses) {
+        const set = uses.filter(u => isNum(u.l.values[k]) && u.l.values[k] !== 0);
+
+        if (INT_FIELD.test(k) || !set.length) return false;
+
+        return set.every(u => u.text.indexOf(fmt(Math.abs(u.l.values[k] * 100)) + '%') >= 0);
       }
 
-      // A game script with no friendly name: its numbers are the raw fields the game's rewards set.
+      // A game script with no friendly name: its numbers are the raw fields the game's rewards set, and its "what" is
+      // the first of those rewards' card text.
       function rawFx(script) {
         if (rawCache[script]) return rawCache[script];
 
         const users = T.st.game.filter(t => t.levels.some(l => l.script === script));
-        const levels = [].concat.apply([], users.map(t => t.levels.filter(l => l.script === script)));
+        const uses = [].concat.apply([], users.map(t => t.levels.filter(l => l.script === script).map(l => ({ l, text: cardText(t, l) }))));
         const seen = new Set();
 
-        levels.forEach(l => Object.keys(l.values).forEach(k => { if (isNum(l.values[k])) seen.add(k); }));
+        uses.forEach(u => Object.keys(u.l.values).forEach(k => { if (isNum(u.l.values[k])) seen.add(k); }));
 
         const keys = Array.from(seen).sort((a, b) => FIELD_RANK(a) - FIELD_RANK(b) || (a < b ? -1 : a > b ? 1 : 0)).slice(0, 4);
         const firstLevels = users.length ? users[0].levels.filter(l => l.script === script) : [];
-        const params = keys.map(k => {
-          const all = levels.map(l => l.values[k]).filter(isNum);
-          const label = rawLabel(k);
+        const params = keys.map((k, i) => {
+          const all = uses.map(u => u.l.values[k]).filter(isNum);
+          const label = rawLabel(i);
+          const def = firstLevels.length ? firstLevels.map(l => isNum(l.values[k]) ? l.values[k] : 0) : [0];
 
-          return num(k, label.en, label.zh, ['', ''], firstLevels.length ? firstLevels.map(l => isNum(l.values[k]) ? l.values[k] : 0) : [0], {
-            step: all.every(v => Math.floor(v) === v) ? 1 : 0.05,
-            min: -Infinity
-          });
+          if (readsAsPercent(k, uses)) return pct(k, label.en, label.zh, def.map(v => round2(v * 100)), { min: -Infinity });
+
+          return num(k, label.en, label.zh, ['', ''], def, { step: all.every(v => Math.floor(v) === v) ? 1 : 0.05, min: -Infinity });
         });
+        const card = uses.length ? normText(uses[0].l.desc) : null;
         const name = prettyScript(script);
         const made = {
           id: 'raw:' + script, src: 'game', cat: 'raw', script, scripts: [script], raw: true, pickable: true, modes: 'both',
-          usedBy: [], finishes: [], en: name, zh: name, what: ['The game\'s script, with its raw numbers.', '游戏脚本，使用原始数值。'],
+          usedBy: [], finishes: [], en: name, zh: name,
+          what: card ? [card.en || card.zh, card.zh || card.en] : ['A game effect with no name yet. No reward in the game uses it.', '尚未命名的游戏效果，游戏中没有奖励使用它。'],
           params,
-          line: v => keys.map(k => fmt(v[k])).join(', '),
-          desc: (v, zh) => params.map(p => (zh ? p.zh : p.en) + ' ' + fmt(v[p.key])).join(zh ? '，' : ', ')
+          line: (v, zh) => params.map(p => fmt(v[p.key]) + unitText(p, zh)).join(', '),
+          desc: (v, zh) => params.map(p => (zh ? p.zh + '：' : p.en + ': ') + fmt(v[p.key]) + unitText(p, zh)).join(zh ? '，' : ', ')
         };
 
         rawCache[script] = made;
 
         return made;
+      }
+
+      // Up to three game rewards that run this effect, as their cards word it: the text at the first level that runs
+      // it, then the reward's values per level, or the last level's text when the reward has no such line.
+      function gameCards(f) {
+        const ids = Array.from(new Set(f.finishes.concat(f.usedBy))).filter(id => T.st.byId[id]).slice(0, 3);
+
+        return ids.map(id => {
+          const t = T.st.byId[id];
+          const runs = t.levels.filter(l => f.scripts.indexOf(l.script) >= 0);
+          const firstLevel = runs[0] || t.levels[0] || {};
+          const lastLevel = runs.length > 1 ? runs[runs.length - 1] : null;
+          const desc = normText(firstLevel.desc);
+          const last = lastLevel ? normText(lastLevel.desc) : null;
+
+          return {
+            name: normText(t.name),
+            desc,
+            byLevel: normText(t.levelText),
+            last: last && desc && last.en !== desc.en ? last : null,
+            lastAt: lastLevel ? t.levels.indexOf(lastLevel) + 1 : 0
+          };
+        }).filter(c => c.desc);
+      }
+
+      function gameCardsHtml(f) {
+        const lang = T.st.lang;
+        const cards = gameCards(f);
+        const extra = c => {
+          if (c.byLevel) return L('By level: ', '各级：') + textIn(c.byLevel, lang);
+
+          if (c.last) return (lang === 'zh' ? '第' + c.lastAt + '级：' : 'Level ' + c.lastAt + ': ') + textIn(c.last, lang);
+
+          return '';
+        };
+
+        if (!cards.length) return '';
+
+        return '<h4>' + L('WHAT THE GAME SAYS', '游戏内说明') + '</h4>' + cards.map(c => '<div class="fxd-gc">' +
+          '<div class="n">' + esc(textIn(c.name, lang)) + '</div><div class="d">' + esc(textIn(c.desc, lang)) + '</div>' +
+          (extra(c) ? '<div class="m">' + esc(extra(c)) + '</div>' : '') + '</div>').join('');
       }
 
       const cat = { list: [], icons: [], defaultIcon: { icon: '', unityIcon: '' } };
@@ -1752,6 +2803,10 @@
       'P .fxd .ub span{display:inline-flex;gap:6px;align-items:center;padding:2px 8px 2px 2px;border:1px solid var(--bd2);font-size:.8rem;color:var(--td)}',
       'P .fxd .ub img{width:22px;height:22px;object-fit:contain}',
       'P .fxd .fn{margin-top:6px;font-size:.84rem;color:var(--td);line-height:1.5}',
+      'P .fxd-gc{padding:8px 12px;margin-bottom:6px;border:1px solid var(--bd2);background:rgba(0,0,0,0.2)}',
+      'P .fxd-gc .n{color:var(--hl);font-size:.86rem;font-weight:700}',
+      'P .fxd-gc .d{margin-top:4px;font-size:.9rem;line-height:1.5}',
+      'P .fxd-gc .m{margin-top:4px;font:.8rem var(--mono);color:var(--tm)}',
       'P .fxd .gbtn{display:inline-block;margin-top:18px}',
       'P .fxp-ft{display:flex;align-items:center;gap:14px;padding:12px 20px;border-top:1px solid var(--bl);color:var(--tmeta);font-size:.84rem}',
       'I &{' + VARS + 'position:absolute;z-index:60;width:720px;max-width:calc(100% - 20px);box-sizing:border-box;padding:10px;background:#1a1611;border:1px solid rgba(255,200,58,0.4);box-shadow:0 20px 60px rgba(0,0,0,0.85)}',
@@ -1773,6 +2828,6 @@
       return CSS_BASE.slice(0, at).concat(extra, CSS_BASE.slice(at + 1)).map(line => line.split('{c}').join(cls));
     }
 
-    return { MAX_LEVELS, MAX_GIVES, GAME_PREFIX, REWARD_ICONS, ICON_GROUPS, TOAST_MS, INT_FIELD, STAT_MAX, NO_SCRIPT, VARS, scopedCss, injectStyle, isObj, isArr, isNum, clone, round2, fmt, range, L, ESCAPES, esc, isEmptyVal, zeroOf, allKeys, sameVal, h, normText, textIn, shown, CATS, GROUP_TALENTS, SKILL_TALENTS, XP_SKILLS, WORK, STATS, ROBOTS, robotScript, robotName, named, nameOptions, num, pct, pick, hide, optionsOf, isOptionOn, availableOptions, groupUnknown, opt, itemCount, plural, numericBuffKeys, FX, fx, FX_BY_ID, picksOf, numsOf, hidesOf, fieldName, display, toRaw, defaultAt, match, rawCache, FIELD_RANK, prettyScript, rawLabel, rawFx, cat, talentIcons, fxIcon, fxName, fromRoot, scriptOfGive, fixedFrom, roundTrips, isEditable, isAutoOn, showsAuto, valsOf, autoLine, autoLevelText, autoDesc, plainDesc, addsUp, totalVals, totalText, totalNoteHtml, baseText, nameOf, descOf, hasLevelDescs, entryOf, entryOrGhost, levelCount, markChanged, givesChanged, adopt, resetOrDelete, nextStep, setGive, setPick, writeText, saved, discard, send, numText, unitOf, tag, isGhost, listIds, searchWords, searchText, matchesSearch, searchHtml, noMatchHtml, refreshList, clearSearch, focusSearch, showSelectedRow, fitHeight, watchHeight, renderAfterChange, watchPresses, onSearchKey, refreshSaved, pvBarHtml, editorHtml, hasNoScript, ghostHtml, ghostLevelsHtml, pickHtml, stepper, descTarget, refreshPreview, talentName, winEl, haystack, matchesQuery, pickerLists, isOnOtherGive, closePicker, renderPicker, railHtml, cardMeta, listHtml, paramRow, readsHtml, readsLine, chooseButton, choose, onPickerDouble, onPickerKey, iconsHtml, iconGroupName, showIconGroup, closeIcons, onDocDown, closeOverlays, closeToast, clampLevel, select, setText, viewIds, keepSelectionInView, afterRemove, onInput, hideTab, escapeTab, editorCss };
+    return { MAX_LEVELS, MAX_GIVES, GAME_PREFIX, REWARD_ICONS, ICON_GROUPS, TOAST_MS, INT_FIELD, STAT_MAX, NO_SCRIPT, VARS, scopedCss, injectStyle, isObj, isArr, isNum, clone, round2, fmt, range, L, ESCAPES, esc, isEmptyVal, zeroOf, allKeys, sameVal, h, normText, textIn, shown, CATS, GROUP_TALENTS, SKILL_TALENTS, XP_SKILLS, WORK, STATS, ROBOTS, robotScript, robotName, named, nameOptions, num, pct, neg, hours, pick, hide, fromTemplate, fill, optionsOf, isOptionOn, availableOptions, groupUnknown, opt, itemCount, plural, numericBuffKeys, FX, fx, FX_BY_ID, picksOf, numsOf, hidesOf, fieldName, display, toRaw, defaultAt, match, rawCache, FIELD_RANK, prettyScript, rawLabel, RAW_NOTE, unitText, cardText, readsAsPercent, rawFx, gameCards, gameCardsHtml, cat, talentIcons, fxIcon, fxName, fromRoot, scriptOfGive, fixedFrom, roundTrips, isEditable, isAutoOn, showsAuto, valsOf, autoLine, autoLevelText, autoDesc, plainDesc, addsUp, totalVals, totalText, totalNoteHtml, baseText, nameOf, descOf, hasLevelDescs, entryOf, entryOrGhost, levelCount, markChanged, givesChanged, adopt, resetOrDelete, nextStep, setGive, setPick, writeText, saved, discard, send, numText, unitOf, tag, isGhost, listIds, searchWords, searchText, matchesSearch, searchHtml, noMatchHtml, refreshList, clearSearch, focusSearch, showSelectedRow, fitHeight, watchHeight, renderAfterChange, watchPresses, onSearchKey, refreshSaved, pvBarHtml, editorHtml, hasNoScript, ghostHtml, ghostLevelsHtml, pickHtml, stepper, descTarget, refreshPreview, talentName, winEl, haystack, matchesQuery, pickerLists, isOnOtherGive, closePicker, renderPicker, railHtml, cardMeta, listHtml, paramRow, readsHtml, readsLine, chooseButton, choose, onPickerDouble, onPickerKey, iconsHtml, iconGroupName, showIconGroup, closeIcons, onDocDown, closeOverlays, closeToast, clampLevel, select, setText, viewIds, keepSelectionInView, afterRemove, onInput, hideTab, escapeTab, editorCss };
   }
 })();
