@@ -581,6 +581,38 @@ public class EditorTests
         Assert.Equal("Use 30% less Stamina for 5 days.", Str("raw.what[0]"));
     }
 
+    // 0.05 on a card that says "15% faster" is not a percent: 5% only counts when it stands on its own.
+    [Fact]
+    public void A_number_inside_a_bigger_percent_does_not_count_as_a_percent()
+    {
+        Load();
+
+        _engine.Execute("""
+            var game = [{ id: 9002, name: { en: 'Fast', zh: '快' }, levels: [
+              { script: 'OtherScript', desc: { en: 'Work 15% faster.', zh: '工作速度提高15%' }, values: { FloatValue0: 0.05 } }] }];
+            var t = window.ExiledEditor.make({ isAvailable: () => true, st: { lang: 'en', game: game, byId: { 9002: game[0] } } });
+            var raw = t.match('OtherScript', game[0].levels[0].values);
+            """);
+
+        Assert.Equal("Number 1: 0.05", Str("raw.desc({ FloatValue0: 0.05 }, false)"));
+    }
+
+    // The last level's line shows when only its Chinese text differs from the first level's.
+    [Fact]
+    public void The_last_level_shows_when_only_its_chinese_text_differs()
+    {
+        Load();
+
+        _engine.Execute("""
+            var game = [{ id: 5, name: { en: 'Same', zh: '同' }, levels: [
+              { script: 'S', desc: { en: 'Work faster.', zh: '速度提高10%' }, values: {} },
+              { script: 'S', desc: { en: 'Work faster.', zh: '速度提高20%' }, values: {} }] }];
+            var T = { st: { lang: 'zh', game: game, byId: { 5: game[0] } } }, t = window.ExiledEditor.make(T);
+            """);
+
+        Assert.Contains("第2级：速度提高20%", Str("t.gameCardsHtml({ scripts: ['S'], usedBy: [5], finishes: [] })"));
+    }
+
     // The game's card text for up to three rewards that run an effect: the first level that runs it, then the
     // values per level, or the last level's text when the reward has no such line.
     [Fact]

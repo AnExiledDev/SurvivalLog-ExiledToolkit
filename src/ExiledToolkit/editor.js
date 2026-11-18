@@ -833,7 +833,7 @@
         desc: ['Max power capacity +{0}%.', '储电量上限+{0}%'] });
       fx({ cat: 'home', script: 'AE_PowerCostByGroup', en: 'Some devices use more power', zh: '部分设备耗电增加',
         what: ['One kind of device uses more power. The game uses this for the Power Hog and Costly Cold statuses.', '某类设备耗电增加。游戏用于「耗电大户」和「冷藏昂贵」状态。'],
-        params: [pick('IntValue0', 'Devices', '设备', () => POWER_GROUPS, 2), neg('FloatValue0', 'More power', '耗电增加', [60])],
+        params: [pick('IntValue0', 'Devices', '设备', () => POWER_GROUPS, 2), neg('FloatValue0', 'More power use', '耗电增加', [60])],
         line: '+{1}%',
         desc: ['{0} use {1}% more power.', '{0}耗电增加{1}%'] });
       fx({ cat: 'home', script: 'AE_HomePackageMax', en: 'More furniture packages at the entryway', zh: '玄关包裹上限',
@@ -1548,7 +1548,8 @@
 
         if (INT_FIELD.test(k) || !set.length) return false;
 
-        return set.every(u => u.text.indexOf(fmt(Math.abs(u.l.values[k] * 100)) + '%') >= 0);
+        // The number has to stand alone, so 5% never matches inside "15%".
+        return set.every(u => new RegExp('(^|[^0-9.])' + fmt(Math.abs(u.l.values[k] * 100)).replace(/\./g, '\\.') + '%').test(u.text));
       }
 
       // A game script with no friendly name: its numbers are the raw fields the game's rewards set, and its "what" is
@@ -1606,7 +1607,7 @@
             name: normText(t.name),
             desc,
             byLevel: normText(t.levelText),
-            last: last && desc && last.en !== desc.en ? last : null,
+            last: last && desc && (last.en !== desc.en || last.zh !== desc.zh) ? last : null,
             lastAt: lastLevel ? t.levels.indexOf(lastLevel) + 1 : 0
           };
         }).filter(c => c.desc);

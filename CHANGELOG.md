@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.30.2
+
+- Reward editor: an effect with no name no longer shows 0.05 as 5% when the card says something like "15% faster".
+- Reward editor: the game's card text shows the last level in Chinese when only the Chinese text changes between levels.
+- Reward editor: "Some devices use more power" calls its box "More power use", so it no longer reads like the solar and diesel effects.
+- Made for Survival Log 1.1.21271.
+
 ## 0.30.1
 
 - Reward editor: in More Rewards, an airdrop says what it drops, such as "2 random Snacks", and you can pick what it drops from the list. Before, it read "Group 201" and the list was empty.
