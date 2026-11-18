@@ -791,8 +791,11 @@
       // the way they are drawn.
       const byNumber = (a, b) => a - b;
 
+      // The rewards the view holds before the search: every reward, or only the file's.
+      const viewIds = () => T.st.view === 'all' ? T.allIds() : T.st.entries.filter(e => !e.removed).map(e => e.id);
+
       function listIds() {
-        const ids = T.st.view === 'all' ? T.allIds() : T.st.entries.filter(e => !e.removed).map(e => e.id);
+        const ids = viewIds();
         const words = searchWords();
         const found = words.length ? ids.filter(id => matchesSearch(id, words)) : ids;
 
@@ -1063,10 +1066,28 @@
         const names = e.gives.map(g => esc(fxName(g.fx, T.st.lang === 'zh'))).join(', ');
 
         return (names ? '<div class="nnote">' + L('It gives', '效果') + ': <b>' + names + '</b></div>' : '') +
+          ghostLevelsHtml(e) +
           '<div class="ed-acts">' +
           '<span class="gbtn" data-a="edit">' + L('CHANGE THIS REWARD', '修改此奖励') + '</span>' +
           '<span class="gbtn dim" data-a="copy">' + L('COPY INTO A NEW REWARD', '复制为新奖励') + '</span>' +
           '</div>';
+      }
+
+      // Each level's cost and text, so a reward you have not changed still shows what every level does. A click on a
+      // row puts that level on the card above.
+      function ghostLevelsHtml(e) {
+        if (e.levels.length < 2) return '';
+
+        const total = e.levels.reduce((sum, l) => sum + l.cost, 0);
+        const rows = e.levels.map((l, i) => '<tr data-a="lv" data-v="' + i + '"' + (i === T.st.lv ? ' class="is-on"' : '') + '>' +
+          '<td class="l">Lv.' + (i + 1) + '</td>' +
+          '<td class="c">' + numText(l.cost) + '</td>' +
+          '<td>' + esc(descOf(e, i, T.st.lang)) + '</td>' +
+          '</tr>').join('');
+
+        return '<div class="lvs is-ghost"><b>' + L('LEVELS', '等级') + '</b>' +
+          '<span class="total">' + L('To max level', '升满共需') + ' <b>' + numText(total) + '</b> ' + L('points', '点') + '</span></div>' +
+          '<table class="lt glv"><tr><th>' + L('LEVEL', '等级') + '</th><th>' + L('COST', '消耗') + '</th><th>' + L('WHAT IT DOES', '效果') + '</th></tr>' + rows + '</table>';
       }
 
       function pickHtml(e, g, gi, p) {
@@ -1362,13 +1383,17 @@
         return normText(o);
       }
 
+      // The editor shows a reward only while the view holds it. One the search hides stays open, so typing never
+      // swaps what you are editing. One the view does not hold is swapped for the first row, or for nothing when the
+      // list is empty.
+      function keepSelectionInView() {
+        if (T.st.sel && entryOrGhost(T.st.sel) && viewIds().indexOf(T.st.sel) >= 0) return;
+
+        select(listIds()[0] || 0);
+      }
+
       function afterRemove() {
-        if (!entryOrGhost(T.st.sel)) {
-          const first = listIds()[0];
-
-          select(first || 0);
-        }
-
+        keepSelectionInView();
         clampLevel();
       }
 
@@ -1551,6 +1576,11 @@
       'N .lt tr.is-on td{background:rgba(255,200,58,0.06)}',
       'N .lt td.l{font-family:var(--mono);color:var(--hl);width:54px;cursor:pointer}',
       'N .lt td.x{width:30px;color:var(--tmeta);cursor:pointer}',
+      'N .lvs.is-ghost>b{font-size:.74rem;letter-spacing:2px;color:var(--tmeta);font-weight:400}',
+      'N .glv tr[data-a]{cursor:pointer}',
+      'N .glv tr[data-a]:hover td{background:rgba(255,200,58,0.04)}',
+      'N .glv td{color:var(--tm);line-height:1.45;padding:7px 8px}',
+      'N .glv td.c{width:54px;font-family:var(--mono);color:#fff}',
       'N .lt td.x:hover{color:#FF5252}',
       'N .stp{display:inline-flex;align-items:center;border:1px solid var(--bl);background:rgba(0,0,0,0.35)}',
       'N .stp b{width:30px;text-align:center;color:var(--hl);cursor:pointer;font-size:1.1rem;user-select:none;line-height:32px}',
@@ -1649,6 +1679,6 @@
       return CSS_BASE.slice(0, at).concat(extra, CSS_BASE.slice(at + 1)).map(line => line.split('{c}').join(cls));
     }
 
-    return { MAX_LEVELS, MAX_GIVES, GAME_PREFIX, REWARD_ICONS, ICON_GROUPS, TOAST_MS, INT_FIELD, STAT_MAX, NO_SCRIPT, VARS, scopedCss, injectStyle, isObj, isArr, isNum, clone, round2, fmt, range, L, ESCAPES, esc, isEmptyVal, zeroOf, allKeys, sameVal, h, normText, textIn, shown, CATS, GROUP_TALENTS, SKILL_TALENTS, XP_SKILLS, WORK, STATS, ROBOTS, robotScript, robotName, named, nameOptions, num, pct, pick, hide, optionsOf, isOptionOn, availableOptions, groupUnknown, opt, itemCount, plural, numericBuffKeys, FX, fx, FX_BY_ID, picksOf, numsOf, hidesOf, fieldName, display, toRaw, defaultAt, match, rawCache, FIELD_RANK, prettyScript, rawLabel, rawFx, cat, talentIcons, fxIcon, fxName, fromRoot, scriptOfGive, fixedFrom, roundTrips, isEditable, isAutoOn, showsAuto, valsOf, autoLine, autoLevelText, autoDesc, baseText, nameOf, descOf, hasLevelDescs, entryOf, entryOrGhost, levelCount, markChanged, givesChanged, adopt, resetOrDelete, nextStep, setGive, setPick, writeText, saved, discard, send, numText, unitOf, tag, isGhost, listIds, searchWords, searchText, matchesSearch, searchHtml, noMatchHtml, refreshList, clearSearch, focusSearch, showSelectedRow, fitHeight, watchHeight, renderAfterChange, watchPresses, onSearchKey, refreshSaved, pvBarHtml, editorHtml, hasNoScript, ghostHtml, pickHtml, stepper, descTarget, refreshPreview, talentName, winEl, haystack, matchesQuery, pickerLists, isOnOtherGive, closePicker, renderPicker, railHtml, cardMeta, listHtml, paramRow, readsHtml, chooseButton, choose, onPickerDouble, onPickerKey, iconsHtml, iconGroupName, showIconGroup, closeIcons, onDocDown, closeOverlays, closeToast, clampLevel, select, setText, afterRemove, onInput, hideTab, escapeTab, editorCss };
+    return { MAX_LEVELS, MAX_GIVES, GAME_PREFIX, REWARD_ICONS, ICON_GROUPS, TOAST_MS, INT_FIELD, STAT_MAX, NO_SCRIPT, VARS, scopedCss, injectStyle, isObj, isArr, isNum, clone, round2, fmt, range, L, ESCAPES, esc, isEmptyVal, zeroOf, allKeys, sameVal, h, normText, textIn, shown, CATS, GROUP_TALENTS, SKILL_TALENTS, XP_SKILLS, WORK, STATS, ROBOTS, robotScript, robotName, named, nameOptions, num, pct, pick, hide, optionsOf, isOptionOn, availableOptions, groupUnknown, opt, itemCount, plural, numericBuffKeys, FX, fx, FX_BY_ID, picksOf, numsOf, hidesOf, fieldName, display, toRaw, defaultAt, match, rawCache, FIELD_RANK, prettyScript, rawLabel, rawFx, cat, talentIcons, fxIcon, fxName, fromRoot, scriptOfGive, fixedFrom, roundTrips, isEditable, isAutoOn, showsAuto, valsOf, autoLine, autoLevelText, autoDesc, baseText, nameOf, descOf, hasLevelDescs, entryOf, entryOrGhost, levelCount, markChanged, givesChanged, adopt, resetOrDelete, nextStep, setGive, setPick, writeText, saved, discard, send, numText, unitOf, tag, isGhost, listIds, searchWords, searchText, matchesSearch, searchHtml, noMatchHtml, refreshList, clearSearch, focusSearch, showSelectedRow, fitHeight, watchHeight, renderAfterChange, watchPresses, onSearchKey, refreshSaved, pvBarHtml, editorHtml, hasNoScript, ghostHtml, ghostLevelsHtml, pickHtml, stepper, descTarget, refreshPreview, talentName, winEl, haystack, matchesQuery, pickerLists, isOnOtherGive, closePicker, renderPicker, railHtml, cardMeta, listHtml, paramRow, readsHtml, chooseButton, choose, onPickerDouble, onPickerKey, iconsHtml, iconGroupName, showIconGroup, closeIcons, onDocDown, closeOverlays, closeToast, clampLevel, select, setText, viewIds, keepSelectionInView, afterRemove, onInput, hideTab, escapeTab, editorCss };
   }
 })();

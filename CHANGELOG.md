@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.27.0
+
+- Reward editor: a reward you have not changed shows each of its levels, with what it costs and what it does. Click a level to see its card.
+- Fixed: in the reward editor, an empty list still had a reward open next to it. With nothing changed yet, the list of your changes showed the first of all rewards.
+- Fixed: in the reward editor, a game reward you reset in the list of your changes stayed open after it left the list.
+- For mod makers: `keepSelectionInView` keeps the open reward in the current view. Call it after you change the view or reload the list.
+- Made for Survival Log 1.1.21271.
+
 ## 0.26.0
 
 - Reward editor (New Loop Plus' Talents tab and More Rewards' Rewards tab): a search box finds rewards by name, description or number, in English or Chinese. Enter opens the first one found, Up and Down move through the list and Esc clears the search.

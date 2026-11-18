@@ -75,6 +75,70 @@ public class EditorTests
     }
 
     [Fact]
+    public void A_view_with_no_rewards_leaves_the_editor_empty()
+    {
+        Load();
+        MakeTabWithTwoRewards();
+        _engine.Execute("T.st.sel = 102; T.st.view = 'file'; tab.keepSelectionInView();");
+
+        Assert.Equal(0, Number("T.st.sel"));
+    }
+
+    [Fact]
+    public void A_view_without_the_open_reward_opens_its_first_row_at_level_one()
+    {
+        Load();
+        MakeTabWithTwoRewards();
+        _engine.Execute("""
+            T.st.entries = [{ id: 105, levels: [{}], gives: [] }, { id: 103, levels: [{}], gives: [] }];
+            T.st.sel = 102; T.st.lv = 1; T.st.view = 'file'; tab.keepSelectionInView();
+            """);
+
+        Assert.Equal(103, Number("T.st.sel"));
+        Assert.Equal(0, Number("T.st.lv"));
+    }
+
+    [Fact]
+    public void A_search_that_hides_the_open_reward_keeps_it_open()
+    {
+        Load();
+        MakeTabWithTwoRewards();
+        _engine.Execute("T.st.sel = 101; T.st.lv = 0; T.st.q = 'loot'; tab.keepSelectionInView();");
+
+        Assert.Equal(101, Number("T.st.sel"));
+    }
+
+    [Fact]
+    public void Removing_a_change_to_a_game_reward_closes_it_in_the_changed_view()
+    {
+        Load();
+        MakeTabWithTwoRewards();
+        _engine.Execute("T.st.sel = 102; T.st.lv = 0; T.st.view = 'file'; tab.afterRemove();");
+
+        Assert.Equal(0, Number("T.st.sel"));
+    }
+
+    [Fact]
+    public void A_game_reward_with_levels_shows_what_each_level_costs_and_does()
+    {
+        Load();
+        MakeTabWithTwoRewards();
+        _engine.Execute("""
+            var wind = { id: 107, levels: [
+              { cost: 10, gameDesc: { en: 'Wind turbines make 15% more power.' } },
+              { cost: 16, gameDesc: { en: 'Wind turbines make 30% more power.' } },
+              { cost: 24, gameDesc: { en: 'Wind turbines make 50% more power.' } }], gives: [] };
+            T.st.lang = 'en'; T.st.lv = 0;
+            var html = tab.ghostHtml(wind);
+            """);
+
+        Assert.True(Bool("html.indexOf('30% more power.') > 0 && html.indexOf('50% more power.') > 0"));
+        Assert.True(Bool("html.indexOf('>24<') > 0 && html.indexOf('>50<') > 0"));
+        Assert.True(Bool("html.indexOf('data-a=\"lv\" data-v=\"2\"') > 0"));
+        Assert.False(Bool("tab.ghostHtml(ghosts[101]).indexOf('data-a=\"lv\"') >= 0"));
+    }
+
+    [Fact]
     public void Enter_and_Down_in_the_search_box_follow_the_order_the_tab_draws()
     {
         Load();
