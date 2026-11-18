@@ -2,8 +2,8 @@
 // root web document. It is sent with each tab's own script, ahead of it. A tab calls ExiledEditor.make(T) once and
 // gets its own copy of the effect list, the effect and icon pickers, the level and text editors and the helpers they
 // use. T is the tab's side: its state (st), its styles, names and messages, and the parts each tab draws its own way.
-// The tab fills T before anything is drawn. A newer copy of this script replaces an older one; an older one never
-// replaces a newer one.
+// The tab fills T before anything is drawn, and sets T.levelsAddUp before it calls make, since a few effects are
+// worded differently there. A newer copy of this script replaces an older one; an older one never replaces a newer one.
 (function () {
   if (window.ExiledEditor && window.ExiledEditor.version >= 1) return;
 
@@ -197,8 +197,11 @@
       }
 
       // A number that can change per level. scale and add turn the file's raw value into what the player reads (0.1 -> 10%).
+      // stack is how the levels of a tab whose levels add up (More Rewards) combine: 'sum' adds the raw values, 'times'
+      // multiplies them (what is left to pay after a discount), 'max' keeps the highest (a level a skill is raised to),
+      // and 'each' is a limit every level checks on its own, so it has no total.
       function num(key, en, zh, unit, def, o) {
-        return Object.assign({ type: 'num', key, en, zh, unit, def, step: 1, scale: 1, add: 0, min: 0 }, o);
+        return Object.assign({ type: 'num', key, en, zh, unit, def, step: 1, scale: 1, add: 0, min: 0, stack: 'sum' }, o);
       }
 
       const pct = (key, en, zh, def, o) => num(key, en, zh, ['%', '%'], def, Object.assign({ step: 5, scale: 100 }, o));
@@ -235,8 +238,12 @@
 
       const FX = [];
 
+      // An effect whose number is a result (a limit of 800, 2x as long) has a sum version for a tab whose levels add
+      // up, where each level gives its own raise.
       function fx(o) {
-        FX.push(Object.assign({ usedBy: [], finishes: [], params: [], modes: 'both', pickable: true, raw: false }, o, { scripts: o.scripts || [o.script] }));
+        const own = T.levelsAddUp && o.sum ? Object.assign({}, o, o.sum) : o;
+
+        FX.push(Object.assign({ usedBy: [], finishes: [], params: [], modes: 'both', pickable: true, raw: false }, own, { scripts: o.scripts || [o.script] }));
       }
 
       fx({ id: 'game:countdown', src: 'game', cat: 'prep', script: 'PreDisaster_AddCountDownTime',
@@ -256,12 +263,12 @@
         desc: (v, zh) => zh ? '提升购物负重' + fmt(v.IntValue0) + 'KG' : 'Carry ' + fmt(v.IntValue0) + 'kg more weight.' });
       fx({ id: 'game:short-life-discount', src: 'game', cat: 'prep', script: 'PreDisaster_AddDiscount',
         en: 'Discount on short-life supplies', zh: '临期物资折扣', what: ['Cheaper supplies that spoil soon.', '购买即将过期的物资时打折。'],
-        params: [pct('FloatValue1', 'Discount', '折扣', [10, 15, 20, 25, 30], { scale: -100, add: 100 }), num('FloatValue0', 'Shelf life under', '保质期小于', ['days', '天'], [5, 5, 5, 5, 5])],
+        params: [pct('FloatValue1', 'Discount', '折扣', [10, 15, 20, 25, 30], { scale: -100, add: 100, stack: 'times' }), num('FloatValue0', 'Shelf life under', '保质期小于', ['days', '天'], [5, 5, 5, 5, 5], { stack: 'each' })],
         line: v => '-' + fmt(v.FloatValue1) + '%',
         desc: (v, zh) => zh ? '购买保质期小于' + fmt(v.FloatValue0) + '天的物资时，获得' + fmt(v.FloatValue1) + '%折扣' : 'Get a ' + fmt(v.FloatValue1) + '% discount when purchasing supplies with a shelf life of less than ' + plural(v.FloatValue0, 'day') + '.' });
       fx({ id: 'game:bulk-discount', src: 'game', cat: 'prep', script: 'BigVolume_Discount',
         en: 'Discount on big items', zh: '大件折扣', what: ['Cheaper supplies that take a lot of space.', '购买大体积物资时打折。'],
-        params: [pct('FloatValue1', 'Discount', '折扣', [5, 10, 15, 20, 25], { scale: -100, add: 100 }), num('FloatValue0', 'Size at least', '体积至少', ['', ''], [6, 6, 6, 6, 6])],
+        params: [pct('FloatValue1', 'Discount', '折扣', [5, 10, 15, 20, 25], { scale: -100, add: 100, stack: 'times' }), num('FloatValue0', 'Size at least', '体积至少', ['', ''], [6, 6, 6, 6, 6], { stack: 'each' })],
         line: v => '-' + fmt(v.FloatValue1) + '%',
         desc: (v, zh) => zh ? '在购买大于等于' + fmt(v.FloatValue0) + '体积物资时，获得' + fmt(v.FloatValue1) + '%的价格折扣' : 'Get a ' + fmt(v.FloatValue1) + '% discount on supplies of size ' + fmt(v.FloatValue0) + ' or more.' });
       fx({ id: 'game:drive', src: 'game', cat: 'prep', script: 'VehicleTimeReduce',
@@ -278,7 +285,12 @@
         en: 'Higher loan limit', zh: '借款上限', what: ['Borrow more before the disaster (the base limit is 500).', '提高灾前可借款上限（原500）。'],
         params: [num('IntValue0', 'Loan limit', '借款上限', ['', ''], [800, 1200, 1800], { step: 100, add: 500 })],
         line: v => fmt(v.IntValue0),
-        desc: (v, zh) => zh ? '可借款上限提高至' + fmt(v.IntValue0) + '（原500）' : 'Loan limit increased to ' + fmt(v.IntValue0) + ' (from 500).' });
+        desc: (v, zh) => zh ? '可借款上限提高至' + fmt(v.IntValue0) + '（原500）' : 'Loan limit increased to ' + fmt(v.IntValue0) + ' (from 500).',
+        sum: {
+          params: [num('IntValue0', 'Loan limit raise', '借款上限提高', ['', ''], [300], { step: 100 })],
+          line: v => '+' + fmt(v.IntValue0),
+          desc: (v, zh) => zh ? '可借款上限提高' + fmt(v.IntValue0) + '（原500）' : 'Raises the loan limit by ' + fmt(v.IntValue0) + ' (from 500).'
+        } });
       fx({ id: 'game:furniture', src: 'game', cat: 'home', script: 'AE_FurnitureDiscount',
         en: 'Furniture discount', zh: '家具折扣', what: ['Cheaper furniture.', '购买家具打折。'],
         params: [pct('FloatValue0', 'Discount', '折扣', [5, 10, 15])],
@@ -350,7 +362,7 @@
         desc: (v, zh) => zh ? '立即获得' + fmt(v.IntValue1) + '件随机物品，之后数天每天再获得' + fmt(v.IntValue1) + '件' : 'Get ' + fmt(v.IntValue1) + ' random items at once, then ' + fmt(v.IntValue1) + ' more each day for a few days.' });
       fx({ id: 'game:skill-start', src: 'game', cat: 'skills', script: 'EndlessProficiencyGrant', modes: 'endless',
         en: 'Start with a skill level', zh: '开局熟练度', what: ['A skill starts higher. Endless mode only.', '开局时某项熟练度提升。仅无尽模式。'],
-        params: [pick('StrValue0', 'Skill', '熟练度', () => named.skills, 'Production'), num('IntValue0', 'Levels', '等级', ['Lv', '级'], [1, 2])],
+        params: [pick('StrValue0', 'Skill', '熟练度', () => named.skills, 'Production'), num('IntValue0', 'Levels', '等级', ['Lv', '级'], [1, 2], { stack: 'max' })],
         line: (v, zh) => '+' + fmt(v.IntValue0) + (zh ? ' 级' : ' Lv'),
         desc: (v, zh, p) => zh ? '开局时' + opt(p[0], v.StrValue0, true) + '熟练度提升 ' + fmt(v.IntValue0) + ' 级' : opt(p[0], v.StrValue0) + ' skill starts ' + plural(v.IntValue0, 'level') + ' higher.' });
       fx({ id: 'game:skill-xp', src: 'game', cat: 'skills', script: 'AE_CookExpMultiplier', scripts: XP_SKILLS.map(s => 'AE_' + s[0] + 'ExpMultiplier'),
@@ -450,7 +462,12 @@
         en: 'Backpack keeps food longer', zh: '背包保鲜', what: ['Items in your backpack spoil slower.', '随身背包里的物品保质期延长。'],
         params: [num('FloatValue0', 'Shelf life', '保质期', ['x', '倍'], [2, 3, 4], { add: 1, min: 1, step: 0.5 })],
         line: (v, zh) => fmt(v.FloatValue0) + (zh ? '倍' : 'x'),
-        desc: (v, zh) => zh ? '随身背包里的物品保质期延长至' + fmt(v.FloatValue0) + '倍' : 'Items in your backpack keep ' + fmt(v.FloatValue0) + 'x as long.' });
+        desc: (v, zh) => zh ? '随身背包里的物品保质期延长至' + fmt(v.FloatValue0) + '倍' : 'Items in your backpack keep ' + fmt(v.FloatValue0) + 'x as long.',
+        sum: {
+          params: [pct('FloatValue0', 'Longer shelf life', '保质期延长', [100], { step: 25 })],
+          line: v => '+' + fmt(v.FloatValue0) + '%',
+          desc: (v, zh) => zh ? '随身背包里的物品保质期延长' + fmt(v.FloatValue0) + '%' : 'Items in your backpack keep ' + fmt(v.FloatValue0) + '% longer.'
+        } });
       fx({ id: 'game:quick-rest', src: 'game', cat: 'body', script: 'QuickRest',
         en: 'Rest restores Stamina faster', zh: '休息恢复加快', what: ['Resting brings Stamina back faster.', '通过休息恢复精力更快。'],
         params: [pct('FloatValue0', 'Faster by', '加快', [10, 20, 30])],
@@ -490,9 +507,10 @@
         return INT_FIELD.test(field) ? Math.round(raw) : Math.round(raw * 1e6) / 1e6;
       }
 
-      // A level past the effect's own defaults keeps climbing by the last step.
+      // A level past the effect's own defaults keeps climbing by the last step. Where levels add up, every level starts
+      // at the first value, since the levels below it already count; only a number the highest level sets climbs.
       function defaultAt(p, i) {
-        const def = p.def;
+        const def = T.levelsAddUp && p.stack !== 'max' ? p.def.slice(0, 1) : p.def;
         const last = def[def.length - 1];
         const step = def.length > 1 ? last - def[def.length - 2] : 0;
         const v = i < def.length ? def[i] : last + step * (i - def.length + 1);
@@ -651,26 +669,45 @@
         return range(e.levels.length).map(i => e.gives.map(g => autoLine(g, i, zh)).join(zh ? '，' : ', ')).join(' / ');
       }
 
+      // Where levels add up, a level's card also says what the player has in total, after each effect's own sentence.
       function autoDesc(e, i, zh) {
-        return e.gives.map(g => g.fx.desc(valsOf(g, i), zh, g.fx.params)).join(zh ? '；' : ' ');
+        const withTotals = i > 0 && addsUp(e);
+
+        return e.gives.map(g => g.fx.desc(valsOf(g, i), zh, g.fx.params) + (withTotals ? totalAfter(g, i, zh) : '')).join(zh ? '；' : ' ');
+      }
+
+      // The card text a tab wrote before cards named their totals, so a tab can still tell it made that text itself.
+      const plainDesc = (e, i, zh) => e.gives.map(g => g.fx.desc(valsOf(g, i), zh, g.fx.params)).join(zh ? '；' : ' ');
+
+      function totalAfter(g, i, zh) {
+        const total = g.fx.line(totalVals(g, i), zh);
+
+        if (total === autoLine(g, i, zh)) return '';
+
+        return zh ? '（累计' + total + '）' : ' In total: ' + total + '.';
       }
 
       // A tab sets T.levelsAddUp when each level is a reward of its own that adds to the ones below it (More Rewards).
-      // Then a level's total is the sum of its numbers and every level's before it. A number with an offset (a
-      // discount, a multiplier) does not add that way, so a reward with one shows no totals.
+      // Then a level's total is that level and every level before it, combined the way each number stacks.
       function addsUp(e) {
         if (!T.levelsAddUp || e.givesLocked || !e.gives.length) return false;
 
-        return e.gives.every(g => !g.fx.raw && numsOf(g.fx).every(p => !p.add)) && e.gives.some(g => numsOf(g.fx).length > 0);
+        return e.gives.every(g => !g.fx.raw) && e.gives.some(g => numsOf(g.fx).length > 0);
       }
 
+      // The game combines the raw values in the file, so the total is worked out on those and shown like the levels.
       function totalVals(g, i) {
         const v = Object.assign({}, g.pick);
 
         numsOf(g.fx).forEach(p => {
           const per = g.per[p.key];
+          const shownAt = range(i + 1).map(j => per[Math.min(j, per.length - 1)]);
+          const raws = shownAt.map(x => (x - p.add) / p.scale);
 
-          v[p.key] = round2(range(i + 1).reduce((sum, j) => sum + per[Math.min(j, per.length - 1)], 0));
+          if (p.stack === 'each') v[p.key] = shownAt[i];
+          else if (p.stack === 'max') v[p.key] = shownAt.reduce((a, b) => Math.max(a, b));
+          else if (p.stack === 'times') v[p.key] = round2(display(p, raws.reduce((a, b) => a * b, 1)));
+          else v[p.key] = round2(display(p, raws.reduce((a, b) => a + b, 0)));
         });
 
         return v;
@@ -1115,10 +1152,21 @@
 
         return '<div class="lvs is-ghost"><b>' + L('LEVELS', '等级') + '</b>' +
           '<span class="total">' + L('To max level', '升满共需') + ' <b>' + numText(total) + '</b> ' + L('points', '点') + '</span></div>' +
-          '<table class="lt glv">' + head + rows + '</table>' + (sums ? totalNoteHtml() : '');
+          '<table class="lt glv">' + head + rows + '</table>' + (sums ? totalNoteHtml(e) : '');
       }
 
-      const totalNoteHtml = () => '<div class="nnote">' + L('Each level adds to the ones below it. IN TOTAL is what the player gets from that level and every level before it.', '每一级都会叠加前面等级的效果。「累计」是该级加上前面所有等级的总效果。') + '</div>';
+      // The note under a levels table whose levels add up, with a line for each number on the reward that combines
+      // another way.
+      function totalNoteHtml(e) {
+        const stacks = e ? e.gives.reduce((all, g) => all.concat(numsOf(g.fx).map(p => p.stack)), []) : [];
+        const lines = [L('Each level adds to the ones below it. IN TOTAL is what the player has from that level and every level before it.', '每一级都会叠加前面等级的效果。「累计」是该级加上前面所有等级的总效果。')];
+
+        if (stacks.indexOf('times') >= 0) lines.push(L('Discounts multiply: two levels of 10% off make 19% off.', '折扣相乘：两级各10%的折扣，合计19%。'));
+
+        if (stacks.indexOf('max') >= 0) lines.push(L('Skill levels at the start do not add up: the highest level counts.', '开局熟练度不叠加，以最高一级为准。'));
+
+        return '<div class="nnote">' + lines.join(' ') + '</div>';
+      }
 
       function pickHtml(e, g, gi, p) {
         if (!T.canEditGives(e)) return '<span class="gv-w">' + esc(opt(p, g.pick[p.key], T.st.lang === 'zh')) + '</span>';
@@ -1280,20 +1328,35 @@
           return '<tr><td>' + esc(L(p.en, p.zh)) + ' (' + L('one of', '可选') + ')</td><td>' + esc(availableOptions(p).map(o => L(o.en, o.zh)).join(', ')) + '</td></tr>';
         }
 
-        return '<tr><td>' + esc(L(p.en, p.zh)) + '</td><td>' + esc(range(count).map(i => fmt(defaultAt(p, i))).join(' / ') + ' ' + unitOf(p)) + '</td></tr>';
+        const values = range(count).map(i => fmt(defaultAt(p, i)));
+        const isSameEachLevel = T.levelsAddUp && count > 1 && values.every(v => v === values[0]);
+        const text = isSameEachLevel ? values[0] + ' ' + unitOf(p) + ' ' + L('each level', '每级') : values.join(' / ') + ' ' + unitOf(p);
+
+        return '<tr><td>' + esc(L(p.en, p.zh)) + '</td><td>' + esc(text) + '</td></tr>';
       }
 
       function readsHtml(e, f, count) {
         try {
           const g = T.makeGive(f, '', e.id, null, count);
           const zh = T.st.lang === 'zh';
-          const line = range(count).map(i => autoLine(g, i, zh)).join(' / ');
           const desc = g.fx.desc(valsOf(g, 0), zh, f.params);
 
-          return '<div class="fxd-rd"><div class="l">' + esc(line) + '</div><div class="d">' + esc(desc) + '</div></div>';
+          return '<div class="fxd-rd"><div class="l">' + esc(readsLine(g, count, zh)) + '</div><div class="d">' + esc(desc) + '</div></div>';
         } catch (err) {
           return '';
         }
+      }
+
+      // What a new effect gives at each level. Where levels add up, it also gives the totals.
+      function readsLine(g, count, zh) {
+        const perLevel = range(count).map(i => autoLine(g, i, zh));
+        const totals = range(count).map(i => g.fx.line(totalVals(g, i), zh));
+
+        if (!T.levelsAddUp || g.fx.raw || totals.join() === perLevel.join()) return perLevel.join(' / ');
+
+        const each = perLevel.every(x => x === perLevel[0]) ? L('Each level: ', '每级：') + perLevel[0] : L('Levels: ', '各级：') + perLevel.join(' / ');
+
+        return each + L('. In total: ', '。累计：') + totals.join(' / ');
       }
 
       function chooseButton(e, f) {
@@ -1710,6 +1773,6 @@
       return CSS_BASE.slice(0, at).concat(extra, CSS_BASE.slice(at + 1)).map(line => line.split('{c}').join(cls));
     }
 
-    return { MAX_LEVELS, MAX_GIVES, GAME_PREFIX, REWARD_ICONS, ICON_GROUPS, TOAST_MS, INT_FIELD, STAT_MAX, NO_SCRIPT, VARS, scopedCss, injectStyle, isObj, isArr, isNum, clone, round2, fmt, range, L, ESCAPES, esc, isEmptyVal, zeroOf, allKeys, sameVal, h, normText, textIn, shown, CATS, GROUP_TALENTS, SKILL_TALENTS, XP_SKILLS, WORK, STATS, ROBOTS, robotScript, robotName, named, nameOptions, num, pct, pick, hide, optionsOf, isOptionOn, availableOptions, groupUnknown, opt, itemCount, plural, numericBuffKeys, FX, fx, FX_BY_ID, picksOf, numsOf, hidesOf, fieldName, display, toRaw, defaultAt, match, rawCache, FIELD_RANK, prettyScript, rawLabel, rawFx, cat, talentIcons, fxIcon, fxName, fromRoot, scriptOfGive, fixedFrom, roundTrips, isEditable, isAutoOn, showsAuto, valsOf, autoLine, autoLevelText, autoDesc, addsUp, totalVals, totalText, totalNoteHtml, baseText, nameOf, descOf, hasLevelDescs, entryOf, entryOrGhost, levelCount, markChanged, givesChanged, adopt, resetOrDelete, nextStep, setGive, setPick, writeText, saved, discard, send, numText, unitOf, tag, isGhost, listIds, searchWords, searchText, matchesSearch, searchHtml, noMatchHtml, refreshList, clearSearch, focusSearch, showSelectedRow, fitHeight, watchHeight, renderAfterChange, watchPresses, onSearchKey, refreshSaved, pvBarHtml, editorHtml, hasNoScript, ghostHtml, ghostLevelsHtml, pickHtml, stepper, descTarget, refreshPreview, talentName, winEl, haystack, matchesQuery, pickerLists, isOnOtherGive, closePicker, renderPicker, railHtml, cardMeta, listHtml, paramRow, readsHtml, chooseButton, choose, onPickerDouble, onPickerKey, iconsHtml, iconGroupName, showIconGroup, closeIcons, onDocDown, closeOverlays, closeToast, clampLevel, select, setText, viewIds, keepSelectionInView, afterRemove, onInput, hideTab, escapeTab, editorCss };
+    return { MAX_LEVELS, MAX_GIVES, GAME_PREFIX, REWARD_ICONS, ICON_GROUPS, TOAST_MS, INT_FIELD, STAT_MAX, NO_SCRIPT, VARS, scopedCss, injectStyle, isObj, isArr, isNum, clone, round2, fmt, range, L, ESCAPES, esc, isEmptyVal, zeroOf, allKeys, sameVal, h, normText, textIn, shown, CATS, GROUP_TALENTS, SKILL_TALENTS, XP_SKILLS, WORK, STATS, ROBOTS, robotScript, robotName, named, nameOptions, num, pct, pick, hide, optionsOf, isOptionOn, availableOptions, groupUnknown, opt, itemCount, plural, numericBuffKeys, FX, fx, FX_BY_ID, picksOf, numsOf, hidesOf, fieldName, display, toRaw, defaultAt, match, rawCache, FIELD_RANK, prettyScript, rawLabel, rawFx, cat, talentIcons, fxIcon, fxName, fromRoot, scriptOfGive, fixedFrom, roundTrips, isEditable, isAutoOn, showsAuto, valsOf, autoLine, autoLevelText, autoDesc, plainDesc, addsUp, totalVals, totalText, totalNoteHtml, baseText, nameOf, descOf, hasLevelDescs, entryOf, entryOrGhost, levelCount, markChanged, givesChanged, adopt, resetOrDelete, nextStep, setGive, setPick, writeText, saved, discard, send, numText, unitOf, tag, isGhost, listIds, searchWords, searchText, matchesSearch, searchHtml, noMatchHtml, refreshList, clearSearch, focusSearch, showSelectedRow, fitHeight, watchHeight, renderAfterChange, watchPresses, onSearchKey, refreshSaved, pvBarHtml, editorHtml, hasNoScript, ghostHtml, ghostLevelsHtml, pickHtml, stepper, descTarget, refreshPreview, talentName, winEl, haystack, matchesQuery, pickerLists, isOnOtherGive, closePicker, renderPicker, railHtml, cardMeta, listHtml, paramRow, readsHtml, readsLine, chooseButton, choose, onPickerDouble, onPickerKey, iconsHtml, iconGroupName, showIconGroup, closeIcons, onDocDown, closeOverlays, closeToast, clampLevel, select, setText, viewIds, keepSelectionInView, afterRemove, onInput, hideTab, escapeTab, editorCss };
   }
 })();

@@ -153,8 +153,7 @@ public class EditorTests
     public void Levels_that_add_up_show_the_total_at_each_level()
     {
         Load();
-        MakeTabWithTwoRewards();
-        _engine.Execute("T.levelsAddUp = true;");
+        MakeTabWithTwoRewards(levelsAddUp: true);
         MakeSunlightReward("[15, 15, 15]");
 
         _engine.Execute("var html = tab.ghostHtml(sunlight);");
@@ -168,8 +167,7 @@ public class EditorTests
     public void A_level_past_the_last_value_keeps_adding_the_last_value()
     {
         Load();
-        MakeTabWithTwoRewards();
-        _engine.Execute("T.levelsAddUp = true;");
+        MakeTabWithTwoRewards(levelsAddUp: true);
         MakeSunlightReward("[10, 5]");
 
         Assert.Equal("+20%", _engine.Evaluate("tab.totalText(sunlight, 2, false)").AsString());
@@ -190,22 +188,155 @@ public class EditorTests
     }
 
     [Fact]
-    public void A_discount_or_locked_give_shows_no_total()
+    public void A_locked_give_shows_no_total()
+    {
+        Load();
+        MakeTabWithTwoRewards(levelsAddUp: true);
+        MakeSunlightReward("[15, 15, 15]");
+
+        _engine.Execute("sunlight.givesLocked = true;");
+
+        Assert.False(Bool("tab.addsUp(sunlight)"));
+    }
+
+    // The game multiplies the price by what each level leaves to pay (0.9 for 10% off), so two 10% levels make 19%.
+    [Fact]
+    public void Discount_levels_multiply()
+    {
+        Load();
+        MakeTabWithTwoRewards(levelsAddUp: true);
+        MakeSunlightReward("[15, 15, 15]");
+        _engine.Execute("""
+            var discount = { id: 500, levels: sunlight.levels, gives: [{ fx: tab.FX.find(f => f.id === 'game:short-life-discount'), per: { FloatValue1: [10, 10, 10], FloatValue0: [5, 5, 5] }, pick: {} }] };
+            """);
+
+        Assert.Equal("-19%", _engine.Evaluate("tab.totalText(discount, 1, false)").AsString());
+        Assert.Equal("-27.1%", _engine.Evaluate("tab.totalText(discount, 2, false)").AsString());
+        Assert.Contains("less than 5 days", _engine.Evaluate("tab.autoDesc(discount, 2, false)").AsString());
+        Assert.Contains("Discounts multiply", _engine.Evaluate("tab.ghostHtml(discount)").AsString());
+        Assert.DoesNotContain("Discounts multiply", _engine.Evaluate("tab.ghostHtml(sunlight)").AsString());
+    }
+
+    // Each level of Start with a skill level raises the skill to its own number, so level II at 2 gives 2, not 1 + 2.
+    [Fact]
+    public void Skill_start_levels_count_only_the_highest()
+    {
+        Load();
+        MakeTabWithTwoRewards(levelsAddUp: true);
+        _engine.Execute("""
+            var skill = { id: 501, levels: [{ cost: 10, gameDesc: { en: 'Production starts higher.' } }, { cost: 16, gameDesc: { en: 'Production starts higher.' } }], gives: [{ fx: tab.FX.find(f => f.id === 'game:skill-start'), per: { IntValue0: [1, 2] }, pick: { StrValue0: 'Production' } }] };
+            var levels = tab.FX.find(f => f.id === 'game:skill-start').params.find(p => p.key === 'IntValue0');
+            """);
+
+        Assert.Equal("+2 Lv", _engine.Evaluate("tab.totalText(skill, 1, false)").AsString());
+        Assert.Equal(2, Number("tab.defaultAt(levels, 1)"));
+        Assert.Contains("the highest level counts", _engine.Evaluate("tab.ghostHtml(skill)").AsString());
+    }
+
+    // A loan limit of 800 is 500 plus a raise of 300 in the file, and the game adds the raises of every level.
+    [Fact]
+    public void Loan_levels_each_raise_the_limit_and_add_up()
+    {
+        Load();
+        MakeTabWithTwoRewards(levelsAddUp: true);
+        _engine.Execute("""
+            var loanFx = tab.FX.find(f => f.id === 'game:loan');
+            var loan = { id: 502, levels: [{ cost: 10 }, { cost: 16 }], gives: [{ fx: loanFx, per: { IntValue0: [300, 300] }, pick: {} }] };
+            """);
+
+        Assert.Equal("+600", _engine.Evaluate("tab.totalText(loan, 1, false)").AsString());
+        Assert.Equal("Raises the loan limit by 300 (from 500). In total: +600.", _engine.Evaluate("tab.autoDesc(loan, 1, false)").AsString());
+        Assert.Equal(300, Number("tab.display(loanFx.params[0], 300)"));
+    }
+
+    [Fact]
+    public void A_loan_reads_as_the_new_limit_where_levels_replace_each_other()
+    {
+        Load();
+        MakeTabWithTwoRewards();
+
+        _engine.Execute("var loanFx = tab.FX.find(f => f.id === 'game:loan');");
+
+        Assert.Equal("Loan limit increased to 800 (from 500).", _engine.Evaluate("loanFx.desc({ IntValue0: 800 }, false)").AsString());
+        Assert.Equal(800, Number("tab.display(loanFx.params[0], 300)"));
+    }
+
+    // A tab that turns levelsAddUp on after make still gets the right total from a number with a base, 500 + 300 + 300.
+    [Fact]
+    public void A_total_of_numbers_with_a_base_counts_the_base_once()
     {
         Load();
         MakeTabWithTwoRewards();
         _engine.Execute("T.levelsAddUp = true;");
+        _engine.Execute("var loan = { id: 502, levels: [{ cost: 10 }, { cost: 16 }], gives: [{ fx: tab.FX.find(f => f.id === 'game:loan'), per: { IntValue0: [800, 800] }, pick: {} }] };");
+
+        Assert.Equal("1100", _engine.Evaluate("tab.totalText(loan, 1, false)").AsString());
+    }
+
+    // The game spoils backpack food at 1 / (1 + the sum of every level), so each level of 1 is 100% longer.
+    [Fact]
+    public void Backpack_levels_each_add_to_the_shelf_life()
+    {
+        Load();
+        MakeTabWithTwoRewards(levelsAddUp: true);
+        _engine.Execute("var pack = { id: 503, levels: [{ cost: 10 }, { cost: 16 }], gives: [{ fx: tab.FX.find(f => f.id === 'game:backpack-life'), per: { FloatValue0: [100, 100] }, pick: {} }] };");
+
+        Assert.Equal("+200%", _engine.Evaluate("tab.totalText(pack, 1, false)").AsString());
+        Assert.Equal("Items in your backpack keep 100% longer. In total: +200%.", _engine.Evaluate("tab.autoDesc(pack, 1, false)").AsString());
+    }
+
+    // Solar starts at 20, 30, 40 where levels replace each other. Where they add up, that would make level III 90%.
+    [Fact]
+    public void A_new_effect_starts_at_the_same_number_on_every_level_where_levels_add_up()
+    {
+        Load();
+        MakeTabWithTwoRewards(levelsAddUp: true);
+        _engine.Execute("var solar = tab.FX.find(f => f.id === 'game:solar'), more = solar.params[0];");
+
+        Assert.Equal(20, Number("tab.defaultAt(more, 2)"));
+        Assert.Equal("20 % each level", _engine.Evaluate("tab.paramRow(more, 3).replace(/<[^>]+>/g, '|').split('|').filter(Boolean)[1]").AsString());
+
+        _engine.Execute("var g = { fx: solar, per: { FloatValue0: [20, 20, 20] }, pick: {} };");
+
+        Assert.Equal("Each level: +20%. In total: +20% / +40% / +60%", _engine.Evaluate("tab.readsLine(g, 3, false)").AsString());
+    }
+
+    [Fact]
+    public void A_new_effect_keeps_climbing_defaults_where_levels_replace_each_other()
+    {
+        Load();
+        MakeTabWithTwoRewards();
+        _engine.Execute("var solar = tab.FX.find(f => f.id === 'game:solar'), more = solar.params[0];");
+
+        Assert.Equal(40, Number("tab.defaultAt(more, 2)"));
+
+        _engine.Execute("var g = { fx: solar, per: { FloatValue0: [20, 30, 40] }, pick: {} };");
+
+        Assert.Equal("+20% / +30% / +40%", _engine.Evaluate("tab.readsLine(g, 3, false)").AsString());
+    }
+
+    // A level's card says what that level gives, then what the player has in total with the levels before it.
+    [Fact]
+    public void A_level_card_names_its_total_from_the_second_level_on()
+    {
+        Load();
+        MakeTabWithTwoRewards(levelsAddUp: true);
         MakeSunlightReward("[15, 15, 15]");
 
-        // A discount is stored as what is left to pay (0.9 for 10% off), so adding up the shown numbers would be wrong.
-        _engine.Execute("""
-            var discount = { id: 500, levels: sunlight.levels, gives: [{ fx: tab.FX.find(f => f.id === 'game:short-life-discount'), per: { FloatValue1: [10, 10, 10], FloatValue0: [5, 5, 5] }, pick: {} }] };
-            """);
-        Assert.False(Bool("tab.addsUp(discount)"));
-        Assert.False(Bool("tab.ghostHtml(discount).indexOf('IN TOTAL') >= 0"));
+        Assert.DoesNotContain("In total", _engine.Evaluate("tab.autoDesc(sunlight, 0, false)").AsString());
+        Assert.EndsWith(" In total: +30%.", _engine.Evaluate("tab.autoDesc(sunlight, 1, false)").AsString());
+        Assert.EndsWith("（累计+45%）", _engine.Evaluate("tab.autoDesc(sunlight, 2, true)").AsString());
+        Assert.DoesNotContain("In total", _engine.Evaluate("tab.plainDesc(sunlight, 1, false)").AsString());
+    }
 
-        _engine.Execute("sunlight.givesLocked = true;");
-        Assert.False(Bool("tab.addsUp(sunlight)"));
+    [Fact]
+    public void A_level_card_names_no_total_where_levels_replace_each_other()
+    {
+        Load();
+        MakeTabWithTwoRewards();
+        MakeSunlightReward("[15, 30, 45]");
+
+        Assert.DoesNotContain("In total", _engine.Evaluate("tab.autoDesc(sunlight, 2, false)").AsString());
     }
 
     [Fact]
@@ -331,13 +462,14 @@ public class EditorTests
         Assert.Contains("less than 5 days.", _engine.Evaluate("shelf.desc({ FloatValue0: 5, FloatValue1: 10 }, false)").AsString());
     }
 
-    // Two of the game's rewards: 101 talks about solar power, and only 102's second level mentions loot.
-    private void MakeTabWithTwoRewards() => _engine.Execute("""
+    // Two of the game's rewards: 101 talks about solar power, and only 102's second level mentions loot. A tab whose
+    // levels add up says so before it makes the editor, as More Rewards does.
+    private void MakeTabWithTwoRewards(bool levelsAddUp = false) => _engine.Execute("var levelsAddUp = " + (levelsAddUp ? "true" : "false") + ";" + """
         var ghosts = {
           101: { id: 101, name: { en: 'Solar Boost', zh: '太阳能增益' }, levels: [{ gameDesc: { en: 'More solar power.', zh: '太阳能板产电效率提升' } }], gives: [] },
           102: { id: 102, name: { en: 'Lucky Find', zh: '幸运发现' }, levels: [{ gameDesc: { en: 'Find more food.' } }, { gameDesc: { en: 'Find more loot.' } }], gives: [] }
         };
-        var T = { st: { q: '', view: 'all', entries: [] }, allIds: function () { return [102, 101]; }, ghostOf: function (id) { return ghosts[id] || null; } };
+        var T = { levelsAddUp: levelsAddUp, st: { q: '', view: 'all', entries: [] }, allIds: function () { return [102, 101]; }, ghostOf: function (id) { return ghosts[id] || null; } };
         var tab = window.ExiledEditor.make(T);
         """);
 

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.29.0
+
+- Reward editor: in More Rewards, the totals follow how the game counts each effect. Most effects add up. Discounts multiply, so two levels of 10% off make 19% off. Start with a skill level counts only the highest level, so levels of 1 and 2 give 2, where 0.28.1 showed 3.
+- Reward editor: in More Rewards, a new effect starts at the same number on every level, since the levels below already count. Better solar panels starts at 20% each level, so level III gives 60% in total.
+- Reward editor: in More Rewards, the card text from level II on says what the player has in total, such as "In total: +30%." The effect list shows each level's number and the totals too.
+- Reward editor: in More Rewards, Higher loan limit and Backpack keeps food longer give a raise per level: +300 to the loan limit, or 100% longer shelf life. Before, they read as the result of one level alone (800, 2x), which was wrong from level II on.
+- For mod makers: set `T.levelsAddUp` before you call `ExiledEditor.make(T)`. `plainDesc` gives the card text without totals, so you can still tell text the editor wrote before 0.29.0.
+- Made for Survival Log 1.1.21271.
+
 ## 0.28.1
 
 - Reward editor: in More Rewards, the levels table shows what each level gives in total. Each level adds to the ones before it, and many of the game's cards only say what that one level adds. Sunlight Collection read 15% on every level, when all three together give 45%.
