@@ -180,6 +180,25 @@ kit.Value = ItemValues.FormatCounts(new[] { new ItemCount(1203, 10) });
 - Parsing never throws. An entry that is not a whole number of 0 or more, or an amount under 1, is skipped, so a .cfg edited by hand cannot break your mod.
 - `FormatList` and `FormatCounts` write the plain form the Mod Manager saves, leaving out negative ids, amounts under 1 and repeats.
 
+### Reporting changes
+
+Toolkit 0.25.0 and newer. Harmony keeps a list of every mod's patches, so the Mod Manager can tell when two mods patch the same game method. It can't see the rest of what a mod changes. Report those changes through `Claims` and the Mod Manager can find two mods changing the same thing:
+
+```csharp
+using ExiledToolkit;
+
+Claims.AddedRows(Guid, "Config_Item", new[] { 910001, 910002 });        // new rows, by id
+Claims.Wrote(Guid, "Config_Item", 1203, "StackLimit", 40);              // a value written into a row
+Claims.Hooked(Guid, typeof(PowerManager), "CalcSolarOutput");           // a native hook Harmony doesn't know about
+Claims.ChangedBytes(Guid, typeof(SurvivalResultsManager), "SettleDailySurvivalPoints", 0x2a, 3);   // 3 bytes of machine code, 0x2a from the method's start
+```
+
+- The table is the row class's name (`Config_Item`). A row id can be a number or text; both are written as text, so `910001` and `"910001"` are the same row. A field is the property's name.
+- Report a change when you make it, and take it back when you undo it (a feature turned off): `RemovedRows`, `PutBack`, `Unhooked`, `RestoredBytes`. A second `Wrote` to the same field replaces your first.
+- Reporting changes nothing in the game. The Toolkit only keeps the list. `Claims.All()` gives a copy. Of two mods that wrote one field, the one whose `FieldClaim.Order` is higher wrote last, so its value is the one in the table.
+- Safe from any thread. A blank name throws, and so do bytes with a negative offset or a length of 0. Both are mistakes in the mod.
+- A method is named by its type's short name and its own (`PowerManager.CalcSolarOutput`), the way the Mod Manager names Harmony patches. That lets the Mod Manager tell when one mod hooks a method that another mod patches with Harmony. `Claims.MethodName(type, method)` gives that name.
+
 ### Shared helpers (C#)
 
 Toolkit 0.19.0 and newer. The plumbing most mods used to carry their own copy of, in three namespaces: `ExiledToolkit.Web` (the game's web view), `ExiledToolkit.Game` (game reads, hooks, keys and clicks) and `ExiledToolkit.Kit` (plain helpers). They sit outside `ExiledToolkit` so a mod that still has its own copy of a helper keeps compiling until it deletes it. Everything here is for the game's main thread unless it says otherwise.
@@ -320,6 +339,19 @@ var frame = UnityFrame.Count();                            // Time.frameCount wi
 - `GameLanguage.Key()` is the game's language key, empty when unknown, for caches of names read from its tables.
 - `GameNames.ItemName(config, item)` and `ItemName(config, configId)` give an item's name as the game shows it: the text for its name key, else its local name, else the key, or null when it has none. By id it reads the table itself, since the game's getter logs an error for every id it lacks. `Translate(config, key)` is the game's text for any key in the language it shows, and `Translate(config, key, language)` in the one you pick. Both are null when the table has no text for it. `NonEmpty(text)` is null for blank text. None of them throws.
 - `RawDictionary` (a game `Dictionary<long, reference>`) and `RawList` (a game `List<reference>`) read a big collection straight from its memory for a hot walk: `Learn(class)` once, then `TryOpen(object, ...)` every walk, and fall back to the interop path when it returns false. The pointers are good only within that frame.
+
+#### Game keys
+
+```csharp
+using ExiledToolkit.Game;
+
+var key = GameKeys.KeyFor(HotKeyAction.Backpack);   // KeyCode.None when it has none or the game hasn't made its settings yet
+foreach (var game in GameKeys.All()) Log(game.Label + ": " + game.Key);
+```
+
+- Toolkit 0.25.0 and newer. The keys the player bound in the game's key settings. Each one is read once and kept until the game saves its settings, so asking every frame costs nothing. Nothing is read before the game makes its settings.
+- `All()` lists every action that has a key, with its name as the game's settings show it (`Label`, in the game's language) and whether it is a mouse button.
+- The game checks its keys without looking at Ctrl, Shift or Alt, so a mod's Ctrl+F also presses the game's F.
 
 #### Web icons
 

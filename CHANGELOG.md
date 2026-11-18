@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.25.0
+
+- For mod makers: a mod can now report what it changes in the game that Harmony doesn't keep track of: rows it adds to the game's tables, values it writes into them, native hooks and changed code. Mod Manager uses this to find two mods that change the same thing. Reporting doesn't change anything in the game.
+- For mod makers: mods can now read the keys the player set in the game's settings, so a mod can tell when one of its keys is also a game key.
+- Made for Survival Log 1.1.21271.
+
 ## 0.24.0
 
 - For mod makers: the reward editor that New Loop Plus' Talents tab and More Rewards' Rewards tab both use is now part of the Toolkit, so a fix to it reaches both tabs. A mod sends it with its own page script through `WebPage.ToolkitScripts`.
