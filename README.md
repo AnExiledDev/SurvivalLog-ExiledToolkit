@@ -2,7 +2,7 @@
 
 A shared library for my Survival Log mods. Install it when another mod says it needs it. On its own it only changes the look and size of the phone and bag buttons on the HUD.
 
-Right now the Toolkit gives mods eight things:
+Right now the Toolkit gives mods ten things:
 
 - Toasts. A toast is a short notice that shows up next to the tool buttons on the left of the HUD, stays a few seconds, and goes away by itself. Mods that use the Toolkit show their messages this way instead of each drawing their own.
 - Live settings. When you change a setting in the Mod Manager, mods can apply it while you play, without restarting the game.
@@ -12,6 +12,8 @@ Right now the Toolkit gives mods eight things:
 - One UI size setting that makes the windows and panels of every mod that supports it bigger or smaller.
 - Typing that stays in the text box. While you type in a mod's text box, the keys don't open panels or move the camera.
 - Buttons in the pause menu and title screen. Mods add them through the Toolkit, and the menu shrinks its buttons and text just enough to keep every one on the screen.
+- The reward editor that New Loop Plus' Talents tab and More Rewards' Rewards tab share, with search and a table of each reward's levels.
+- Change reports. Mods can tell the Mod Manager what they change in the game, so it can show when two mods change the same thing.
 
 ## Features
 

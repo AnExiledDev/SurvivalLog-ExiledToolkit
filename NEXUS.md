@@ -4,7 +4,7 @@ Summary: The shared library my Survival Log mods use. It lets you make mod windo
 Description (BBCode):
 [center][img]https://sldb.core-directive.com/media/save/1-save-safe.png[/img][/center]
 
-Exiled's Toolkit is the shared part of my Survival Log mods. Install it when another mod says it needs it. On its own it only changes the look and size of the phone and bag buttons on the HUD. Right now it gives mods eight things:
+Exiled's Toolkit is the shared part of my Survival Log mods. Install it when another mod says it needs it. On its own it only changes the look and size of the phone and bag buttons on the HUD. Right now it gives mods ten things:
 [list]
 [*]Toasts. A toast is a short notice that shows up next to the tool buttons on the left of the HUD, stays a few seconds, and goes away by itself. Mods that use the Toolkit show their messages this way instead of each drawing their own.[/*]
 [*]Live settings. When you change a setting in the Mod Manager, mods can apply it while you play, without restarting the game.[/*]
@@ -14,6 +14,8 @@ Exiled's Toolkit is the shared part of my Survival Log mods. Install it when ano
 [*]One UI size setting that makes the windows and panels of every mod that supports it bigger or smaller.[/*]
 [*]Typing that stays in the text box, so the keys you type don't trigger the game's hotkeys.[/*]
 [*]Buttons in the pause menu and title screen that always fit on the screen.[/*]
+[*]The reward editor that New Loop Plus' Talents tab and More Rewards' Rewards tab share, with search and a table of each reward's levels.[/*]
+[*]Change reports. Mods can tell the Mod Manager what they change in the game, so it can show when two mods change the same thing.[/*]
 [/list]
 Mod authors: see [url=https://github.com/AnExiledDev/SurvivalLog-ExiledToolkit#for-mod-authors]For mod authors[/url] in the README.
 
@@ -81,7 +83,7 @@ Open source under MIT: [url=https://github.com/AnExiledDev/SurvivalLog-ExiledToo
 [line]
 [size=5]简体中文[/size]
 
-Exiled's Toolkit 是我的 Survival Log 模组共用的部分。其他模组说需要它时再安装。单独安装时，它只会改变 HUD 上手机和背包按钮的外观和大小。目前它为模组提供八样东西：
+Exiled's Toolkit 是我的 Survival Log 模组共用的部分。其他模组说需要它时再安装。单独安装时，它只会改变 HUD 上手机和背包按钮的外观和大小。目前它为模组提供十样东西：
 [list]
 [*]通知。通知是一条简短的提示，出现在 HUD 左侧工具按钮的旁边，停留几秒后自动消失。使用 Toolkit 的模组都用这种方式显示消息，不用各自绘制。[/*]
 [*]即时设置。在 Mod Manager 里改了设置后，模组可以在游戏进行中直接应用，无需重启游戏。[/*]
@@ -91,6 +93,8 @@ Exiled's Toolkit 是我的 Survival Log 模组共用的部分。其他模组说�
 [*]一项界面大小设置，能把所有支持它的模组的窗口和面板放大或缩小。[/*]
 [*]打字只进文本框，不会触发游戏的快捷键。[/*]
 [*]暂停菜单和标题画面里的模组按钮，总能在屏幕上放下。[/*]
+[*]New Loop Plus 的天赋页和 More Rewards 的奖励页共用的奖励编辑器，可以搜索，还有每个奖励各等级的表格。[/*]
+[*]改动报告。模组可以告诉 Mod Manager 它们改了游戏里的什么，这样它能提示两个模组改了同一样东西。[/*]
 [/list]
 模组作者请看 README 中的 [url=https://github.com/AnExiledDev/SurvivalLog-ExiledToolkit#for-mod-authors]For mod authors[/url] 一节（英文）。
 
