@@ -22,8 +22,23 @@ public sealed record HookClaim(string Guid, string Method);
 /// <summary>Bytes a mod changed in a game method's machine code: Length bytes from Offset, counted from the method's start.</summary>
 public sealed record BytesClaim(string Guid, string Method, int Offset, int Length);
 
-/// <summary>Everything every mod had reported at one moment. Fields come in the order they were written; the rest are sorted.</summary>
-public sealed record ClaimSet(IReadOnlyList<RowClaim> Rows, IReadOnlyList<FieldClaim> Fields, IReadOnlyList<HookClaim> Hooks, IReadOnlyList<BytesClaim> Bytes);
+/// <summary>
+/// Entries a mod added to a list or text field that other mods may add to as well, such as a shop's stock or a line in
+/// a description. Two mods that each add their own entries don't clash. Order counts up with the field writes, so a
+/// <see cref="FieldClaim"/> on the same field with a higher Order was written after the entries went in, and may have
+/// dropped them.
+/// </summary>
+public sealed record EntryClaim(string Guid, string Table, string Row, string Field, IReadOnlyList<string> Entries, long Order);
+
+/// <summary>Everything every mod had reported at one moment. Fields and entries come in the order they were written; the rest are sorted.</summary>
+public sealed record ClaimSet(IReadOnlyList<RowClaim> Rows, IReadOnlyList<FieldClaim> Fields, IReadOnlyList<HookClaim> Hooks, IReadOnlyList<BytesClaim> Bytes, IReadOnlyList<EntryClaim> Entries)
+{
+    /// <summary>The set without entries, as Toolkit 0.27.0 and older made it.</summary>
+    public ClaimSet(IReadOnlyList<RowClaim> rows, IReadOnlyList<FieldClaim> fields, IReadOnlyList<HookClaim> hooks, IReadOnlyList<BytesClaim> bytes)
+        : this(rows, fields, hooks, bytes, Array.Empty<EntryClaim>())
+    {
+    }
+}
 
 /// <summary>What every mod reported through <see cref="Claims"/>, kept until it takes it back. Any thread.</summary>
 internal sealed class ClaimBook
@@ -33,6 +48,7 @@ internal sealed class ClaimBook
     private readonly Dictionary<(string Guid, string Table, string Row, string Field), FieldClaim> _fields = new();
     private readonly HashSet<HookClaim> _hooks = new();
     private readonly Dictionary<(string Guid, string Method, int Offset), BytesClaim> _bytes = new();
+    private readonly Dictionary<(string Guid, string Table, string Row, string Field), EntryClaim> _entries = new();
     private long _order;
 
     public void AddRows(string guid, string table, IReadOnlyList<string> rows)
@@ -60,6 +76,24 @@ internal sealed class ClaimBook
     public void PutBack(string guid, string table, string row, string field)
     {
         lock (_gate) _fields.Remove((guid, table, row, field));
+    }
+
+    /// <summary>
+    /// A second report by the same mod for the same field replaces its first, and counts as its latest. No entries at
+    /// all is the same as taking them out, since the mod added nothing.
+    /// </summary>
+    public void AddTo(string guid, string table, string row, string field, IReadOnlyList<string> entries)
+    {
+        lock (_gate)
+        {
+            if (entries.Count == 0) _entries.Remove((guid, table, row, field));
+            else _entries[(guid, table, row, field)] = new EntryClaim(guid, table, row, field, entries, ++_order);
+        }
+    }
+
+    public void TakeOut(string guid, string table, string row, string field)
+    {
+        lock (_gate) _entries.Remove((guid, table, row, field));
     }
 
     public void Hook(string guid, string method)
@@ -91,14 +125,15 @@ internal sealed class ClaimBook
                 _rows.OrderBy(claim => claim.Guid, StringComparer.Ordinal).ThenBy(claim => claim.Table, StringComparer.Ordinal).ThenBy(claim => claim.Row, StringComparer.Ordinal).ToList(),
                 _fields.Values.OrderBy(claim => claim.Order).ToList(),
                 _hooks.OrderBy(claim => claim.Method, StringComparer.Ordinal).ThenBy(claim => claim.Guid, StringComparer.Ordinal).ToList(),
-                _bytes.Values.OrderBy(claim => claim.Method, StringComparer.Ordinal).ThenBy(claim => claim.Offset).ThenBy(claim => claim.Guid, StringComparer.Ordinal).ToList());
+                _bytes.Values.OrderBy(claim => claim.Method, StringComparer.Ordinal).ThenBy(claim => claim.Offset).ThenBy(claim => claim.Guid, StringComparer.Ordinal).ToList(),
+                _entries.Values.OrderBy(claim => claim.Order).ToList());
         }
     }
 }
 
 /// <summary>
 /// What a mod changes in the game that Harmony does not record: rows it adds to the game's tables, values it writes
-/// into them, native hooks and changed code bytes. A mod reports each change as it makes it, and takes it back when it
+/// into them, entries it adds to their lists, native hooks and changed code bytes. A mod reports each change as it makes it, and takes it back when it
 /// undoes it (a feature turned off). The Toolkit only keeps the list, and reporting changes nothing in the game. The
 /// Mod Manager reads it to find two mods that change the same thing, and to say which mod changed what. Any thread.
 /// Toolkit 0.25.0 and newer.
@@ -120,6 +155,20 @@ public static class Claims
     /// <summary>The mod put the field back to what it held before the mod wrote it.</summary>
     public static void PutBack(string guid, string table, object row, string field) =>
         Book.PutBack(Named(guid), Named(table), Text(row ?? throw new ArgumentNullException(nameof(row))), Named(field));
+
+    /// <summary>
+    /// The mod added <paramref name="entries"/> to <paramref name="field"/> of a row, a list or text that other mods may
+    /// add to as well, like a shop's stock or a line in a description. Use this instead of
+    /// <see cref="Wrote"/> when the mod keeps what was there and adds its own, so two mods that each add theirs don't
+    /// show as a clash. Entries are written as invariant text, in the order given; reporting the field again replaces
+    /// the last report. Toolkit 0.28.0 and newer.
+    /// </summary>
+    public static void AddedTo<T>(string guid, string table, object row, string field, IEnumerable<T> entries) =>
+        Book.AddTo(Named(guid), Named(table), Text(row ?? throw new ArgumentNullException(nameof(row))), Named(field), Entries(entries));
+
+    /// <summary>The mod took the entries it added to the field out again. Toolkit 0.28.0 and newer.</summary>
+    public static void TookOut(string guid, string table, object row, string field) =>
+        Book.TakeOut(Named(guid), Named(table), Text(row ?? throw new ArgumentNullException(nameof(row))), Named(field));
 
     /// <summary>The mod placed a native hook on <paramref name="type"/>.<paramref name="method"/>, the interop type and method name.</summary>
     public static void Hooked(string guid, Type type, string method) => Book.Hook(Named(guid), MethodName(type, method));
@@ -149,6 +198,8 @@ public static class Claims
     private static string Named(string text) => string.IsNullOrWhiteSpace(text) ? throw new ArgumentException("needs a name, not blank text") : text;
 
     private static IReadOnlyList<string> Texts<T>(IEnumerable<T> rows) => (rows ?? throw new ArgumentNullException(nameof(rows))).Select(row => Text(row ?? throw new ArgumentException("a row id is null"))).Distinct(StringComparer.Ordinal).ToList();
+
+    private static IReadOnlyList<string> Entries<T>(IEnumerable<T> entries) => (entries ?? throw new ArgumentNullException(nameof(entries))).Select(entry => Text(entry)).ToList();
 
     private static string Text(object? value) => value is null ? "null" : Convert.ToString(value, CultureInfo.InvariantCulture) ?? "";
 }

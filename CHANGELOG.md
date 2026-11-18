@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.28.0
+
+- For mod makers: `Claims.AddedTo` reports the entries a mod adds to a list or text that other mods add to as well, such as a shop's stock. Mod Manager doesn't count two mods that each add their own entries as a clash. `Claims.TookOut` takes the report back.
+- Made for Survival Log 1.1.21271.
+
 ## 0.27.0
 
 - Reward editor: a reward you have not changed shows each of its levels, with what it costs and what it does. Click a level to see its card.

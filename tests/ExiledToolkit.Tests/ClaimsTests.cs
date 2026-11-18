@@ -62,6 +62,71 @@ public class ClaimsTests
     }
 
     [Fact]
+    public void Entries_two_mods_add_to_one_list_are_both_kept()
+    {
+        var book = new ClaimBook();
+
+        book.AddTo("com.wind", "Config_ShopFurniture", "1", "ItemIdList", new[] { "910001" });
+        book.AddTo("com.hydro", "Config_ShopFurniture", "1", "ItemIdList", new[] { "920001", "920002" });
+
+        Assert.Equal(new[] { ("com.wind", "910001"), ("com.hydro", "920001,920002") }, book.All().Entries.Select(claim => (claim.Guid, string.Join(",", claim.Entries))));
+    }
+
+    [Fact]
+    public void A_value_written_after_entries_were_added_has_the_higher_order()
+    {
+        var book = new ClaimBook();
+
+        book.AddTo("com.wind", "Config_ShopFurniture", "1", "ItemIdList", new[] { "910001" });
+        book.Write("com.shops", "Config_ShopFurniture", "1", "ItemIdList", "[1001, 1002]");
+
+        Assert.True(book.All().Fields.Single().Order > book.All().Entries.Single().Order);
+    }
+
+    [Fact]
+    public void Entries_reported_again_replace_the_first_report_and_count_as_the_latest()
+    {
+        var book = new ClaimBook();
+
+        book.AddTo("com.wind", "Config_ShopFurniture", "1", "ItemIdList", new[] { "910001" });
+        book.Write("com.shops", "Config_ShopFurniture", "1", "ItemIdList", "[1001]");
+        book.AddTo("com.wind", "Config_ShopFurniture", "1", "ItemIdList", new[] { "910001", "910002" });
+
+        var entries = book.All().Entries.Single();
+
+        Assert.Equal(new[] { "910001", "910002" }, entries.Entries);
+        Assert.True(entries.Order > book.All().Fields.Single().Order);
+    }
+
+    [Fact]
+    public void Entries_taken_out_or_reported_empty_are_dropped_for_that_mod_only()
+    {
+        var book = new ClaimBook();
+
+        book.AddTo("com.wind", "Config_ShopFurniture", "1", "ItemIdList", new[] { "910001" });
+        book.AddTo("com.wind", "Config_ShopFurniture", "14", "ItemIdList", new[] { "910001" });
+        book.AddTo("com.hydro", "Config_ShopFurniture", "1", "ItemIdList", new[] { "920001" });
+        book.TakeOut("com.wind", "Config_ShopFurniture", "1", "ItemIdList");
+        book.AddTo("com.wind", "Config_ShopFurniture", "14", "ItemIdList", Array.Empty<string>());
+
+        Assert.Equal("com.hydro", book.All().Entries.Single().Guid);
+    }
+
+    [Fact]
+    public void Entries_are_kept_as_given_so_repeated_counts_stay()
+    {
+        var guid = "com.claims.test." + Guid.NewGuid();
+
+        Claims.AddedTo(guid, "Config_ShopFurniture", 1, "ItemCountList", new[] { 1, 1, 2 });
+        Claims.AddedTo(guid, "Config_RewardSet", 6237L, "ShowProductionList", new[] { 0.5f });
+
+        var mine = Claims.All().Entries.Where(claim => claim.Guid == guid).ToList();
+
+        Assert.Equal(new[] { "1", "1", "2" }, mine[0].Entries);
+        Assert.Equal(("6237", "0.5"), (mine[1].Row, mine[1].Entries.Single()));
+    }
+
+    [Fact]
     public void A_hook_reported_twice_is_one_hook_and_goes_when_taken_off()
     {
         var book = new ClaimBook();
@@ -134,6 +199,7 @@ public class ClaimsTests
     {
         Assert.Throws<ArgumentException>(() => Claims.Wrote("", "Config_Item", 1, "Price", 2));
         Assert.Throws<ArgumentException>(() => Claims.AddedRows("com.a", " ", new[] { 1 }));
+        Assert.Throws<ArgumentException>(() => Claims.AddedTo("com.a", "Config_ShopFurniture", 1, "", new[] { 1 }));
         Assert.Throws<ArgumentOutOfRangeException>(() => Claims.ChangedBytes("com.a", typeof(ClaimBook), "Write", 0, 0));
         Assert.Throws<ArgumentOutOfRangeException>(() => Claims.ChangedBytes("com.a", typeof(ClaimBook), "Write", -1, 2));
     }

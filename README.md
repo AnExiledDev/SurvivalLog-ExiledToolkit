@@ -189,12 +189,14 @@ using ExiledToolkit;
 
 Claims.AddedRows(Guid, "Config_Item", new[] { 910001, 910002 });        // new rows, by id
 Claims.Wrote(Guid, "Config_Item", 1203, "StackLimit", 40);              // a value written into a row
+Claims.AddedTo(Guid, "Config_ShopFurniture", 1, "ItemIdList", new[] { 910001 });   // your own entries added to a list other mods add to too
 Claims.Hooked(Guid, typeof(PowerManager), "CalcSolarOutput");           // a native hook Harmony doesn't know about
 Claims.ChangedBytes(Guid, typeof(SurvivalResultsManager), "SettleDailySurvivalPoints", 0x2a, 3);   // 3 bytes of machine code, 0x2a from the method's start
 ```
 
 - The table is the row class's name (`Config_Item`). A row id can be a number or text; both are written as text, so `910001` and `"910001"` are the same row. A field is the property's name.
-- Report a change when you make it, and take it back when you undo it (a feature turned off): `RemovedRows`, `PutBack`, `Unhooked`, `RestoredBytes`. A second `Wrote` to the same field replaces your first.
+- Report a change when you make it, and take it back when you undo it (a feature turned off): `RemovedRows`, `PutBack`, `TookOut`, `Unhooked`, `RestoredBytes`. A second `Wrote` or `AddedTo` on the same field replaces your first.
+- Use `AddedTo` instead of `Wrote` when you keep what a list or text held and add your own entries to it, like a shop's stock or a line added to a description. Two mods that each add their own entries don't clash, so the Mod Manager doesn't flag them, but it does flag a mod that writes the whole field after you added yours, since that can drop them. Pass the entries you added, not the whole list. Toolkit 0.28.0 and newer.
 - Reporting changes nothing in the game. The Toolkit only keeps the list. `Claims.All()` gives a copy. Of two mods that wrote one field, the one whose `FieldClaim.Order` is higher wrote last, so its value is the one in the table.
 - Safe from any thread. A blank name throws, and so do bytes with a negative offset or a length of 0. Both are mistakes in the mod.
 - A method is named by its type's short name and its own (`PowerManager.CalcSolarOutput`), the way the Mod Manager names Harmony patches. That lets the Mod Manager tell when one mod hooks a method that another mod patches with Harmony. `Claims.MethodName(type, method)` gives that name.
