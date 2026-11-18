@@ -618,6 +618,27 @@ public class EditorTests
         Assert.Contains("第3级：Walk very quietly. zh", Str("t.gameCardsHtml(f)"));
     }
 
+    // An airdrop names its kind of items from the game's airdrop rewards. New Loop Plus finds the snacks airdrop at
+    // 3066 and More Rewards at its first level, 30661. Either way the card says Snacks, never a group number.
+    [Theory]
+    [InlineData(3066)]
+    [InlineData(30661)]
+    public void An_airdrop_names_what_it_drops_in_either_tab(int snacksId)
+    {
+        Load();
+
+        _engine.Execute("var snacksId = " + snacksId + ";" + """
+            var byId = {};
+            byId[snacksId] = { id: snacksId, name: { en: 'Airdrop - Snacks', zh: '空投补给·零食' }, levels: [] };
+            var t = window.ExiledEditor.make({ st: { lang: 'en', game: [], byId: byId } });
+            t.nameOptions();
+            var drop = t.FX.find(f => f.id === 'game:airdrop'), v = { IntValue0: 201, IntValue1: 2 };
+            """);
+
+        Assert.Equal("A radio call brings 2 random Snacks the next day.", Str("drop.desc(v, false, drop.params)"));
+        Assert.Contains("随机零食", Str("drop.desc(v, true, drop.params)"));
+    }
+
     // Two of the game's rewards: 101 talks about solar power, and only 102's second level mentions loot. A tab whose
     // levels add up says so before it makes the editor, as More Rewards does.
     private void MakeTabWithTwoRewards(bool levelsAddUp = false) => _engine.Execute("var levelsAddUp = " + (levelsAddUp ? "true" : "false") + ";" + """

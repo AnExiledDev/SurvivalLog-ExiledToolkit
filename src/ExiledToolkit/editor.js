@@ -221,9 +221,12 @@
         return out;
       }
 
+      // New Loop Plus keys a reward by its talent id (3066), More Rewards by its first level's row (30661).
+      const rewardOf = tid => T.st.byId[tid] || T.st.byId[tid * 10 + 1];
+
       function nameOptions() {
-        named.groups = Object.keys(GROUP_TALENTS).map(Number).filter(g => T.st.byId[GROUP_TALENTS[g]]).map(g => {
-          const t = T.st.byId[GROUP_TALENTS[g]];
+        named.groups = Object.keys(GROUP_TALENTS).map(Number).filter(g => rewardOf(GROUP_TALENTS[g])).map(g => {
+          const t = rewardOf(GROUP_TALENTS[g]);
 
           return { v: g, en: t.name.en.replace(/^Airdrop - /, ''), zh: t.name.zh.split('\u00b7').pop() };
         });

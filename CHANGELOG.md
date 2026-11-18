@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.30.1
+
+- Reward editor: in More Rewards, an airdrop says what it drops, such as "2 random Snacks", and you can pick what it drops from the list. Before, it read "Group 201" and the list was empty.
+- Made for Survival Log 1.1.21271.
+
 ## 0.30.0
 
 - Reward editor: every effect the game's rewards use now has a name, in English and Chinese, with boxes that say what each number does. Before, 173 of them showed as an unnamed game script with raw numbers.
