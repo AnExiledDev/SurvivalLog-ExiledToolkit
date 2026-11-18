@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.28.1
+
+- Reward editor: in More Rewards, the levels table shows what each level gives in total. Each level adds to the ones before it, and many of the game's cards only say what that one level adds. Sunlight Collection read 15% on every level, when all three together give 45%.
+- For mod makers: set `T.levelsAddUp` when your levels add up. `addsUp` and `totalText` give the totals for your own tables.
+- Made for Survival Log 1.1.21271.
+
 ## 0.28.0
 
 - For mod makers: `Claims.AddedTo` reports the entries a mod adds to a list or text that other mods add to as well, such as a shop's stock. Mod Manager doesn't count two mods that each add their own entries as a clash. `Claims.TookOut` takes the report back.

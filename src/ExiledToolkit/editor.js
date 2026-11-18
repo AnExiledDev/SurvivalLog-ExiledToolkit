@@ -655,6 +655,29 @@
         return e.gives.map(g => g.fx.desc(valsOf(g, i), zh, g.fx.params)).join(zh ? '；' : ' ');
       }
 
+      // A tab sets T.levelsAddUp when each level is a reward of its own that adds to the ones below it (More Rewards).
+      // Then a level's total is the sum of its numbers and every level's before it. A number with an offset (a
+      // discount, a multiplier) does not add that way, so a reward with one shows no totals.
+      function addsUp(e) {
+        if (!T.levelsAddUp || e.givesLocked || !e.gives.length) return false;
+
+        return e.gives.every(g => !g.fx.raw && numsOf(g.fx).every(p => !p.add)) && e.gives.some(g => numsOf(g.fx).length > 0);
+      }
+
+      function totalVals(g, i) {
+        const v = Object.assign({}, g.pick);
+
+        numsOf(g.fx).forEach(p => {
+          const per = g.per[p.key];
+
+          v[p.key] = round2(range(i + 1).reduce((sum, j) => sum + per[Math.min(j, per.length - 1)], 0));
+        });
+
+        return v;
+      }
+
+      const totalText = (e, i, zh) => e.gives.map(g => g.fx.line(totalVals(g, i), zh)).join(zh ? '，' : ', ');
+
       const baseText = (e, key) => e.base ? e.base[key] : null;
 
       const nameOf = (e, lang) => shown(e.name, baseText(e, 'name'), lang) || ('#' + e.id);
@@ -1079,16 +1102,23 @@
         if (e.levels.length < 2) return '';
 
         const total = e.levels.reduce((sum, l) => sum + l.cost, 0);
+        const sums = addsUp(e);
+        const zh = T.st.lang === 'zh';
         const rows = e.levels.map((l, i) => '<tr data-a="lv" data-v="' + i + '"' + (i === T.st.lv ? ' class="is-on"' : '') + '>' +
           '<td class="l">Lv.' + (i + 1) + '</td>' +
           '<td class="c">' + numText(l.cost) + '</td>' +
+          (sums ? '<td class="t">' + esc(totalText(e, i, zh)) + '</td>' : '') +
           '<td>' + esc(descOf(e, i, T.st.lang)) + '</td>' +
           '</tr>').join('');
+        const head = '<tr><th>' + L('LEVEL', '等级') + '</th><th>' + L('COST', '消耗') + '</th>' +
+          (sums ? '<th>' + L('IN TOTAL', '累计') + '</th><th>' + L('CARD TEXT', '卡面描述') + '</th>' : '<th>' + L('WHAT IT DOES', '效果') + '</th>') + '</tr>';
 
         return '<div class="lvs is-ghost"><b>' + L('LEVELS', '等级') + '</b>' +
           '<span class="total">' + L('To max level', '升满共需') + ' <b>' + numText(total) + '</b> ' + L('points', '点') + '</span></div>' +
-          '<table class="lt glv"><tr><th>' + L('LEVEL', '等级') + '</th><th>' + L('COST', '消耗') + '</th><th>' + L('WHAT IT DOES', '效果') + '</th></tr>' + rows + '</table>';
+          '<table class="lt glv">' + head + rows + '</table>' + (sums ? totalNoteHtml() : '');
       }
+
+      const totalNoteHtml = () => '<div class="nnote">' + L('Each level adds to the ones below it. IN TOTAL is what the player gets from that level and every level before it.', '每一级都会叠加前面等级的效果。「累计」是该级加上前面所有等级的总效果。') + '</div>';
 
       function pickHtml(e, g, gi, p) {
         if (!T.canEditGives(e)) return '<span class="gv-w">' + esc(opt(p, g.pick[p.key], T.st.lang === 'zh')) + '</span>';
@@ -1581,6 +1611,7 @@
       'N .glv tr[data-a]:hover td{background:rgba(255,200,58,0.04)}',
       'N .glv td{color:var(--tm);line-height:1.45;padding:7px 8px}',
       'N .glv td.c{width:54px;font-family:var(--mono);color:#fff}',
+      'N .lt td.t{white-space:nowrap;font-family:var(--mono);color:var(--hl)}',
       'N .lt td.x:hover{color:#FF5252}',
       'N .stp{display:inline-flex;align-items:center;border:1px solid var(--bl);background:rgba(0,0,0,0.35)}',
       'N .stp b{width:30px;text-align:center;color:var(--hl);cursor:pointer;font-size:1.1rem;user-select:none;line-height:32px}',
@@ -1679,6 +1710,6 @@
       return CSS_BASE.slice(0, at).concat(extra, CSS_BASE.slice(at + 1)).map(line => line.split('{c}').join(cls));
     }
 
-    return { MAX_LEVELS, MAX_GIVES, GAME_PREFIX, REWARD_ICONS, ICON_GROUPS, TOAST_MS, INT_FIELD, STAT_MAX, NO_SCRIPT, VARS, scopedCss, injectStyle, isObj, isArr, isNum, clone, round2, fmt, range, L, ESCAPES, esc, isEmptyVal, zeroOf, allKeys, sameVal, h, normText, textIn, shown, CATS, GROUP_TALENTS, SKILL_TALENTS, XP_SKILLS, WORK, STATS, ROBOTS, robotScript, robotName, named, nameOptions, num, pct, pick, hide, optionsOf, isOptionOn, availableOptions, groupUnknown, opt, itemCount, plural, numericBuffKeys, FX, fx, FX_BY_ID, picksOf, numsOf, hidesOf, fieldName, display, toRaw, defaultAt, match, rawCache, FIELD_RANK, prettyScript, rawLabel, rawFx, cat, talentIcons, fxIcon, fxName, fromRoot, scriptOfGive, fixedFrom, roundTrips, isEditable, isAutoOn, showsAuto, valsOf, autoLine, autoLevelText, autoDesc, baseText, nameOf, descOf, hasLevelDescs, entryOf, entryOrGhost, levelCount, markChanged, givesChanged, adopt, resetOrDelete, nextStep, setGive, setPick, writeText, saved, discard, send, numText, unitOf, tag, isGhost, listIds, searchWords, searchText, matchesSearch, searchHtml, noMatchHtml, refreshList, clearSearch, focusSearch, showSelectedRow, fitHeight, watchHeight, renderAfterChange, watchPresses, onSearchKey, refreshSaved, pvBarHtml, editorHtml, hasNoScript, ghostHtml, ghostLevelsHtml, pickHtml, stepper, descTarget, refreshPreview, talentName, winEl, haystack, matchesQuery, pickerLists, isOnOtherGive, closePicker, renderPicker, railHtml, cardMeta, listHtml, paramRow, readsHtml, chooseButton, choose, onPickerDouble, onPickerKey, iconsHtml, iconGroupName, showIconGroup, closeIcons, onDocDown, closeOverlays, closeToast, clampLevel, select, setText, viewIds, keepSelectionInView, afterRemove, onInput, hideTab, escapeTab, editorCss };
+    return { MAX_LEVELS, MAX_GIVES, GAME_PREFIX, REWARD_ICONS, ICON_GROUPS, TOAST_MS, INT_FIELD, STAT_MAX, NO_SCRIPT, VARS, scopedCss, injectStyle, isObj, isArr, isNum, clone, round2, fmt, range, L, ESCAPES, esc, isEmptyVal, zeroOf, allKeys, sameVal, h, normText, textIn, shown, CATS, GROUP_TALENTS, SKILL_TALENTS, XP_SKILLS, WORK, STATS, ROBOTS, robotScript, robotName, named, nameOptions, num, pct, pick, hide, optionsOf, isOptionOn, availableOptions, groupUnknown, opt, itemCount, plural, numericBuffKeys, FX, fx, FX_BY_ID, picksOf, numsOf, hidesOf, fieldName, display, toRaw, defaultAt, match, rawCache, FIELD_RANK, prettyScript, rawLabel, rawFx, cat, talentIcons, fxIcon, fxName, fromRoot, scriptOfGive, fixedFrom, roundTrips, isEditable, isAutoOn, showsAuto, valsOf, autoLine, autoLevelText, autoDesc, addsUp, totalVals, totalText, totalNoteHtml, baseText, nameOf, descOf, hasLevelDescs, entryOf, entryOrGhost, levelCount, markChanged, givesChanged, adopt, resetOrDelete, nextStep, setGive, setPick, writeText, saved, discard, send, numText, unitOf, tag, isGhost, listIds, searchWords, searchText, matchesSearch, searchHtml, noMatchHtml, refreshList, clearSearch, focusSearch, showSelectedRow, fitHeight, watchHeight, renderAfterChange, watchPresses, onSearchKey, refreshSaved, pvBarHtml, editorHtml, hasNoScript, ghostHtml, ghostLevelsHtml, pickHtml, stepper, descTarget, refreshPreview, talentName, winEl, haystack, matchesQuery, pickerLists, isOnOtherGive, closePicker, renderPicker, railHtml, cardMeta, listHtml, paramRow, readsHtml, chooseButton, choose, onPickerDouble, onPickerKey, iconsHtml, iconGroupName, showIconGroup, closeIcons, onDocDown, closeOverlays, closeToast, clampLevel, select, setText, viewIds, keepSelectionInView, afterRemove, onInput, hideTab, escapeTab, editorCss };
   }
 })();

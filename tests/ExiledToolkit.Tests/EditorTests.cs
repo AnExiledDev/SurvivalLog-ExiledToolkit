@@ -138,6 +138,76 @@ public class EditorTests
         Assert.False(Bool("tab.ghostHtml(ghosts[101]).indexOf('data-a=\"lv\"') >= 0"));
     }
 
+    // Sunlight Collection I, II and III each add 15% more solar power, and the cards all say 15%. The player with all
+    // three gets 45%, so the levels table has to say so when the tab's levels add up.
+    private void MakeSunlightReward(string per) => _engine.Execute($$"""
+        var sunlight = { id: 31271, levels: [
+          { cost: 10, gameDesc: { en: 'Solar panel output increased by 15%.' } },
+          { cost: 16, gameDesc: { en: 'Solar panel output increased by 15%.' } },
+          { cost: 24, gameDesc: { en: 'Solar panel output increased by 15%.' } }],
+          gives: [{ fx: tab.FX.find(f => f.id === 'game:solar'), per: { FloatValue0: {{per}} }, pick: {} }] };
+        T.st.lang = 'en'; T.st.lv = 0;
+        """);
+
+    [Fact]
+    public void Levels_that_add_up_show_the_total_at_each_level()
+    {
+        Load();
+        MakeTabWithTwoRewards();
+        _engine.Execute("T.levelsAddUp = true;");
+        MakeSunlightReward("[15, 15, 15]");
+
+        _engine.Execute("var html = tab.ghostHtml(sunlight);");
+
+        Assert.True(Bool("html.indexOf('IN TOTAL') > 0"));
+        Assert.True(Bool("html.indexOf('>+15%<') > 0 && html.indexOf('>+30%<') > 0 && html.indexOf('>+45%<') > 0"));
+        Assert.Equal("+45%", _engine.Evaluate("tab.totalText(sunlight, 2, false)").AsString());
+    }
+
+    [Fact]
+    public void A_level_past_the_last_value_keeps_adding_the_last_value()
+    {
+        Load();
+        MakeTabWithTwoRewards();
+        _engine.Execute("T.levelsAddUp = true;");
+        MakeSunlightReward("[10, 5]");
+
+        Assert.Equal("+20%", _engine.Evaluate("tab.totalText(sunlight, 2, false)").AsString());
+    }
+
+    [Fact]
+    public void Levels_that_replace_each_other_show_no_total()
+    {
+        Load();
+        MakeTabWithTwoRewards();
+        MakeSunlightReward("[15, 30, 45]");
+
+        _engine.Execute("var html = tab.ghostHtml(sunlight);");
+
+        Assert.False(Bool("html.indexOf('IN TOTAL') >= 0"));
+        Assert.False(Bool("html.indexOf('+90%') >= 0"));
+        Assert.True(Bool("html.indexOf('WHAT IT DOES') > 0"));
+    }
+
+    [Fact]
+    public void A_discount_or_locked_give_shows_no_total()
+    {
+        Load();
+        MakeTabWithTwoRewards();
+        _engine.Execute("T.levelsAddUp = true;");
+        MakeSunlightReward("[15, 15, 15]");
+
+        // A discount is stored as what is left to pay (0.9 for 10% off), so adding up the shown numbers would be wrong.
+        _engine.Execute("""
+            var discount = { id: 500, levels: sunlight.levels, gives: [{ fx: tab.FX.find(f => f.id === 'game:short-life-discount'), per: { FloatValue1: [10, 10, 10], FloatValue0: [5, 5, 5] }, pick: {} }] };
+            """);
+        Assert.False(Bool("tab.addsUp(discount)"));
+        Assert.False(Bool("tab.ghostHtml(discount).indexOf('IN TOTAL') >= 0"));
+
+        _engine.Execute("sunlight.givesLocked = true;");
+        Assert.False(Bool("tab.addsUp(sunlight)"));
+    }
+
     [Fact]
     public void Enter_and_Down_in_the_search_box_follow_the_order_the_tab_draws()
     {
