@@ -118,27 +118,145 @@ public sealed class TaggedStorage
     }
 
     /// <summary>
+    /// Every home storage Move and Add can pick, named the way they report it, with its tags and how full it is. Empty
+    /// when the game isn't ready.
+    /// </summary>
+    public IReadOnlyList<TaggedPut.Storage> Storages()
+    {
+        try
+        {
+            var game = Ready();
+
+            if (game == null) return Array.Empty<TaggedPut.Storage>();
+
+            return HomeStorages(game).Select(home => StorageOf(home.Furniture, home.Name)).ToList();
+        }
+        catch (Exception ex)
+        {
+            Report("list storages", ex);
+
+            return Array.Empty<TaggedPut.Storage>();
+        }
+    }
+
+    /// <summary>
+    /// The stacks in the two shopping bags by the front door, each with the storage tags that would take it and whether
+    /// a home storage is tagged for it now. Empty when the game isn't ready.
+    /// </summary>
+    public IReadOnlyList<TaggedPut.BagStack> ShoppingBagStacks()
+    {
+        try
+        {
+            var game = Ready();
+
+            if (game == null) return Array.Empty<TaggedPut.BagStack>();
+
+            var homes = HomeStorages(game);
+            var tagIds = TagOptions();
+            var nowHours = RobotSortingManager.GetNowHours(game.World);
+            var stacks = new List<TaggedPut.BagStack>();
+
+            for (var box = 0; box < ShoppingBagCount; box++) AddBagStacks(game, VehicleConfig.GetBoxOwnerId(box), homes, tagIds, nowHours, stacks);
+
+            return stacks;
+        }
+        catch (Exception ex)
+        {
+            Report("read the shopping bags", ex);
+
+            return Array.Empty<TaggedPut.BagStack>();
+        }
+    }
+
+    /// <summary>
+    /// A storage tag's name in the game's language, as its tag picker shows it. "" for an unknown tag, and while the
+    /// game's tables aren't loaded.
+    /// </summary>
+    public string TagName(int tagId)
+    {
+        try
+        {
+            return GameNames.NonEmpty(FurnitureTagRules.GetOptionName(tagId)) ?? "";
+        }
+        catch (Exception ex)
+        {
+            Report("read a tag name", ex);
+
+            return "";
+        }
+    }
+
+    /// <summary>
     /// Every home storage with its rank for the item, null where its tags don't want it. Names are numbered over all of
     /// them, so "Wooden Box 2" is the same box whatever is put away.
     /// </summary>
-    private List<TaggedPut.Place> Candidates(Scene game, Config_Item row, float daysLeft)
+    private static List<TaggedPut.Place> Candidates(Scene game, Config_Item row, float daysLeft) =>
+        HomeStorages(game).Select(home => new TaggedPut.Place(home.Furniture.InstanceId, home.Name, RankOf(game.Config, home.Furniture, row, daysLeft))).ToList();
+
+    /// <summary>The home storages Move and Add can use, in the game's order, with their numbered names.</summary>
+    private static List<(Furniture Furniture, string Name)> HomeStorages(Scene game)
     {
         var found = game.Agents.GetFurnituresWithBag(game.Agents.GetHomeMapId(), true, true);
         var basketId = NeighborRules.GetBasketFurnitureId();
-        var storages = new List<(Furniture Furniture, TaggedPut.Rank? Rank)>();
+        var storages = new List<Furniture>();
 
         for (var i = 0; found != null && i < found.Count; i++)
         {
             var furniture = found[i];
 
-            if (furniture == null || !IsPlayerStorage(furniture, basketId)) continue;
-
-            storages.Add((furniture, RankOf(game.Config, furniture, row, daysLeft)));
+            if (furniture != null && IsPlayerStorage(furniture, basketId)) storages.Add(furniture);
         }
 
-        var names = TaggedPut.Numbered(storages.Select(storage => FurnitureName(game.Config, storage.Furniture.AgentConfigId)).ToList());
+        var names = TaggedPut.Numbered(storages.Select(furniture => FurnitureName(game.Config, furniture.AgentConfigId)).ToList());
 
-        return storages.Select((storage, i) => new TaggedPut.Place(storage.Furniture.InstanceId, names[i], storage.Rank)).ToList();
+        return storages.Select((furniture, i) => (furniture, names[i])).ToList();
+    }
+
+    /// <summary>The storage's tag list and how full it is, the same count the game's label over the storage shows (Furniture.CountBagCells).</summary>
+    private static TaggedPut.Storage StorageOf(Furniture furniture, string name)
+    {
+        var rule = furniture.GetAgentComponent<FurnitureTagComponent>()?.TagIds;
+        var tags = new List<int>();
+
+        for (var i = 0; rule != null && i < rule.Count; i++) tags.Add(rule[i]);
+
+        furniture.CountBagCells(out var used, out var total);
+
+        return new TaggedPut.Storage(furniture.InstanceId, furniture.AgentConfigId, name, tags, used, total);
+    }
+
+    /// <summary>One shopping bag's stacks. A recycled stack can sit in a list it left, so its owner is checked.</summary>
+    private static void AddBagStacks(Scene game, long bagOwnerId, List<(Furniture Furniture, string Name)> homes, IReadOnlyList<int> tagIds, float nowHours, List<TaggedPut.BagStack> into)
+    {
+        var held = game.Items.GetItemDataList(bagOwnerId);
+
+        for (var i = 0; held != null && i < held.Count; i++)
+        {
+            var item = held[i];
+            var row = item == null || item.OwnerId != bagOwnerId ? null : ItemRow(game.Config, item.ItemConfigId);
+
+            if (item == null || row == null || item.ItemCount <= 0) continue;
+
+            var daysLeft = ItemManager.GetRemainingShelfDays(row, item, nowHours);
+            var tags = tagIds.Where(tagId => FurnitureTagRules.OptionMatches(tagId, row, daysLeft)).ToList();
+            var hasStorage = homes.Any(home => RankOf(game.Config, home.Furniture, row, daysLeft) != null);
+
+            into.Add(new TaggedPut.BagStack(bagOwnerId, item.InstanceId, item.ItemConfigId, item.ItemCount, tags, hasStorage));
+        }
+    }
+
+    /// <summary>The tags a player can pick in the game's tag picker, in its order. Empty when its tables aren't loaded.</summary>
+    private static IReadOnlyList<int> TagOptions()
+    {
+        var options = FurnitureTagRules.GetVisibleOptions()?.TryCast<Il2CppSystem.Collections.Generic.List<Config_FurnitureTag>>();
+        var ids = new List<int>();
+
+        for (var i = 0; options != null && i < options.Count; i++)
+        {
+            if (options[i] != null) ids.Add(options[i].ID);
+        }
+
+        return ids;
     }
 
     /// <summary>

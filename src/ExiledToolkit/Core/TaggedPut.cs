@@ -49,6 +49,19 @@ public static class TaggedPut
     /// <summary>A storage or shopping bag an item can go into. Rank is null when the storage's tags don't want the item.</summary>
     public sealed record Place(long OwnerId, string Name, Rank? Rank = null);
 
+    /// <summary>
+    /// A home storage that Move and Add can pick, named the way they report it. Tags is the storage's tag list, empty
+    /// when it has none and for a material rack, which ranks by its slots. UsedCells of TotalCells is how full the game
+    /// shows it over the storage (rows for a rack).
+    /// </summary>
+    public sealed record Storage(long OwnerId, int FurnitureConfigId, string Name, IReadOnlyList<int> Tags, int UsedCells, int TotalCells);
+
+    /// <summary>
+    /// A stack in one of the shopping bags by the front door. Tags are the storage tags that would take it, in the
+    /// order the game's tag picker lists them. HasStorage is whether some home storage is tagged for it right now.
+    /// </summary>
+    public sealed record BagStack(long BagOwnerId, long ItemInstanceId, int ItemConfigId, int Count, IReadOnlyList<int> Tags, bool HasStorage);
+
     /// <summary>Some of the item and where it ended up. A Waiting part's owner is where it still is, 0 when it was never made.</summary>
     public sealed record Part(Where Where, int Count, long OwnerId, string Name);
 
