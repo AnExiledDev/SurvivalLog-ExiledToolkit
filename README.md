@@ -45,7 +45,7 @@ The Toolkit adds nothing to your save and does not edit game files.
 
 ## Requirements
 
-- Survival Log 1.1.21271. Built and tested on this version. A game update can break it until the mod is updated.
+- Survival Log 1.1.21671. Built and tested on this version. A game update can break it until the mod is updated.
 - The [BepInEx Pack for Survival Log](https://www.nexusmods.com/survivallog/mods/12), the BepInEx 6 (IL2CPP) build for the game.
 - Using Mod Manager? Update it to 0.14.1 or newer together with this Toolkit. Older Mod Manager versions lose their Mods screen with Toolkit 0.19.0 and newer.
 - Optional: [Mod Manager](https://www.nexusmods.com/survivallog/mods/73). With it, you can change every setting in game on its Mods screen and see what each one does, without opening the config file.
@@ -67,7 +67,7 @@ Settings live in `BepInEx\config\com.dev.survivallog.exiledtoolkit.cfg`, created
 
 ## Troubleshooting
 
-Tested on Survival Log 1.1.21271 with BepInEx `6.0.0-be.788`.
+Tested on Survival Log 1.1.21671 with BepInEx `6.0.0-be.788`.
 
 Check `BepInEx\LogOutput.log` for `===== Exiled's Toolkit 0.23.1 started`. A few lines below it, `toasts shown ...` tells you whether toasts are shown, where they appear, how long they stay and how many show at once. That line is written again whenever one of those settings changes. `mod windows drawn at ...%` gives the UI size and `HUD buttons drawn at ...%` gives the button size. Both are written again on every change. A mod with its own UI size writes `<mod> windows drawn at ...%` when it sets it. Once the game's interface is up, `toast script sent to the web UI` means toasts can appear. The same lines are in `BepInEx\exiled-toolkit.log`, which survives restarts.
 
@@ -343,6 +343,31 @@ var frame = UnityFrame.Count();                            // Time.frameCount wi
 - `GameLanguage.Key()` is the game's language key, empty when unknown, for caches of names read from its tables.
 - `GameNames.ItemName(config, item)` and `ItemName(config, configId)` give an item's name as the game shows it: the text for its name key, else its local name, else the key, or null when it has none. By id it reads the table itself, since the game's getter logs an error for every id it lacks. `Translate(config, key)` is the game's text for any key in the language it shows, and `Translate(config, key, language)` in the one you pick. Both are null when the table has no text for it. `NonEmpty(text)` is null for blank text. None of them throws.
 - `RawDictionary` (a game `Dictionary<long, reference>`) and `RawList` (a game `List<reference>`) read a big collection straight from its memory for a hot walk: `Learn(class)` once, then `TryOpen(object, ...)` every walk, and fall back to the interop path when it returns false. The pointers are good only within that frame.
+
+#### Tagged storage
+
+0.31.0 and newer. `TaggedStorage` puts items away the way the player's robots would: only into home storage whose tags (or material rack slots) ask for the item, best match first. A storage with no tags, or tags for other things, is never used, so a mod never fills a box the player keeps for something else. What doesn't fit goes into the shopping bags by the front door, or stays where it is, as you ask. Call it on the main thread.
+
+```csharp
+using ExiledToolkit;
+using ExiledToolkit.Game;
+
+var storage = new TaggedStorage(log.Write);
+
+var result = storage.Move(itemId, fromOwnerId, TaggedPut.NoRoom.ShoppingBag);   // a stack that exists
+var made = storage.Add(1203, 4, TaggedPut.NoRoom.WaitForRoom);                  // new items, made in storage
+var where = storage.Rank(1203);                                                 // tagged storages, best first
+
+foreach (var part in result.Parts) log.Write($"{part.Count} to {part.Name}");   // Stored, ShoppingBag or Waiting
+if (result.Reason == TaggedPut.Reason.NoTaggedStorage) { /* no storage is tagged for it */ }
+```
+
+- `Move` moves the whole stack and keeps its freshness and uses. A `Waiting` part is still at `fromOwnerId`.
+- `Add` makes the items fresh, the way the game makes a new item. A `Waiting` part from `Add` was never made, so put something you must not lose in a bag first and `Move` it from there.
+- `Rank` doesn't check room. The game can only check room for an item that already exists, so `Move` and `Add` find out by trying.
+- The shopping bags are only offered at home, and the game makes a bag when something first goes into it. The neighbor's basket, the drone bay and storage the game leaves out when it counts your items are never used.
+- Repeated names are numbered ("Wooden Box", "Wooden Box 2"), the same way for every item.
+- Nothing throws. A failed game call is logged once and counts as nothing moved. `Reason.NotReady` means no save was loaded or the item wasn't where you said.
 
 #### Game keys
 

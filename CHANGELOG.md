@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.31.0
+
+- For mod makers: `TaggedStorage` puts items into the home storage the player tagged for them, best match first, the way their robots do. It never uses a storage with no tags or tags for other things. What doesn't fit goes into the shopping bags by the front door, or stays where it is.
+- Made for Survival Log 1.1.21671.
+
 ## 0.30.2
 
 - Reward editor: an effect with no name no longer shows 0.05 as 5% when the card says something like "15% faster".
