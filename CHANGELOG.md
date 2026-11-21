@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.32.0
+
+- For mod makers: `fitWidth: true` in `ExiledUi.size` draws a screen that fills the window smaller than 100% when the window is too narrow for it, like the game does with its pages on a small screen. Neighbor Basket's station uses it, so its list keeps room for item names on a smaller screen.
+- Made for Survival Log 1.1.21671.
+
 ## 0.31.0
 
 - For mod makers: `TaggedStorage` puts items into the home storage the player tagged for them, best match first, the way their robots do. It never uses a storage with no tags or tags for other things. What doesn't fit goes into the shopping bags by the front door, or stays where it is.

@@ -2,15 +2,17 @@
 // every page. The player sets it as Interface > UiScale and the C# side sends it through ExiledUi.set. A mod hands
 // each panel it draws to ExiledUi.size once, when it makes the panel, and the panel is zoomed to that size at once and
 // again after every change. A panel that would then be bigger than its window is shrunk until it fits, but never below
-// its own size. A panel taken out of its page is dropped, so a mod that puts one back hands it again. A mod whose
-// script ran before this one leaves its panels in window.__exiledUiWait as [element, options], taken here. A mod's own
-// UI size setting, sent through ExiledUi.mod, overrides the player's size for the panels that mod hands over with its
-// name.
+// its own size, unless it is a screen too wide for its window that asked to be. A panel taken out of its page is
+// dropped, so a mod that puts one back hands it again. A mod whose script ran before this one leaves its panels in
+// window.__exiledUiWait as [element, options], taken here. A mod's own UI size setting, sent through ExiledUi.mod,
+// overrides the player's size for the panels that mod hands over with its name.
 (function () {
   if (window.ExiledUi) return;
 
   // A shrunk panel keeps this share of its window, so its edges stay clear of the screen's.
   var MARGIN = 0.96;
+  // A screen too wide for its window is drawn no smaller than this.
+  var SMALLEST = 0.5;
   // A zoom this close to the one already set is not written again.
   var STEP = 0.005;
   // Passes in a row that change one panel's zoom before it is left as it is until the size or the window changes. A
@@ -18,8 +20,8 @@
   // lay the page out every frame.
   var MAX_TRIES = 8;
 
-  // { el, fit: the element measured or null, onZoom, pageFits, mod: the mod's name or '', zoom: as last written, tries,
-  // room: the zoom it was last shrunk to, or 0 }
+  // { el, fit: the element measured or null, onZoom, pageFits, fitWidth, mod: the mod's name or '', zoom: as last
+  // written, tries, room: the zoom it was last shrunk to, or 0 }
   var items = [];
   var scale = 1;
   // The size each mod with its own setting draws at, by the name it hands its panels over with.
@@ -39,24 +41,29 @@
   // to its window again. options.mod: the mod's name, so the panel takes that mod's own size when it has one.
   // options.pageFits: true for a panel inside a game page that zooms its own body down when its
   // panels are too big for its window: the fit element is measured at the page's own size, so the panel grows only as
-  // far as the page still shows at full size and the game's panels keep theirs.
+  // far as the page still shows at full size and the game's panels keep theirs. options.fitWidth: true for a screen
+  // that fills its window and needs a certain width: when the fit element is wider than the window, the screen is drawn
+  // smaller than its own size until it fits, as the game draws its pages on a small screen. Height never takes it
+  // below its own size, since a screen that tall can scroll.
   function size(el, options) {
     if (!el || !el.style) return;
 
     var fit = options && options.fit === false ? null : isElement(options && options.fit) ? options.fit : el;
     var onZoom = options && typeof options.onZoom === 'function' ? options.onZoom : null;
     var pageFits = !!(options && options.pageFits);
+    var fitWidth = !!(options && options.fitWidth);
     var mod = options && typeof options.mod === 'string' ? options.mod : '';
     var item = itemFor(el);
 
     if (item && item.fit === fit && item.mod === mod) {
       item.onZoom = onZoom;
       item.pageFits = pageFits;
+      item.fitWidth = fitWidth;
       return;
     }
 
     if (!item) {
-      item = { el: el, fit: null, onZoom: null, pageFits: false, mod: '', zoom: Number(el.style.zoom) || 1, tries: 0, room: 0 };
+      item = { el: el, fit: null, onZoom: null, pageFits: false, fitWidth: false, mod: '', zoom: Number(el.style.zoom) || 1, tries: 0, room: 0 };
       items.push(item);
     }
 
@@ -64,6 +71,7 @@
     item.fit = fit;
     item.onZoom = onZoom;
     item.pageFits = pageFits;
+    item.fitWidth = fitWidth;
     item.mod = mod;
     item.tries = 0;
     item.room = 0;
@@ -121,14 +129,14 @@
 
   // A bigger or smaller window can let a shrunk panel grow back, or make one too big.
   function windowResized() {
-    if (isAnyBig()) retryAll();
+    if (canNeedFit()) retryAll();
   }
 
   // A panel that changed size, say as it was shown or filled, is fitted again. The observer runs after layout and
   // before the frame is drawn, so fitting here, not on the next frame, keeps a panel that just opened from showing
   // one frame at the full size first.
   function resized(entries) {
-    if (!isAnyBig()) return;
+    if (!canNeedFit()) return;
 
     for (var i = 0; i < entries.length; i++) {
       if (itemMeasuring(entries[i].target)) {
@@ -164,8 +172,9 @@
       if (!isLive(item.el)) {
         unwatch(item.fit);
         items.splice(i, 1);
-      } else if (own <= 1 || !item.fit) {
-        // Smaller than the panel's own size always fits, and a panel never shrunk takes the size as it is.
+      } else if (!item.fit || (own <= 1 && !item.fitWidth)) {
+        // A panel never shrunk takes the size as it is, and smaller than a panel's own size always fits, except for a
+        // screen that may be too wide for its window.
         write(item, own);
       } else if (followFit(item) && item.tries < MAX_TRIES) {
         // A panel whose window was drawn again and not found keeps the zoom it has rather than taking the full size
@@ -207,15 +216,17 @@
   }
 
   // The zoom that shows the panel at its size (the player's or its mod's) or, when that would not fit its window, the
-  // biggest that does, worked out from its box at the zoom it has now.
+  // biggest that does, worked out from its box at the zoom it has now. Only a screen too wide for its window goes below
+  // its own size.
   function fitted(item, box, view, target) {
     var grow = target / item.zoom;
     var width = box.width * grow;
     var height = box.height * grow;
     var roomX = width > view.innerWidth ? view.innerWidth * MARGIN / width : 1;
     var roomY = height > view.innerHeight ? view.innerHeight * MARGIN / height : 1;
+    var zoom = Math.min(target, Math.max(1, target * Math.min(roomX, roomY)));
 
-    return Math.min(target, Math.max(1, target * Math.min(roomX, roomY)));
+    return item.fitWidth ? Math.min(zoom, Math.max(SMALLEST, target * roomX)) : zoom;
   }
 
   // True when the zoom changed.
@@ -259,15 +270,16 @@
     return Math.max(0.5, Math.min(3, rounded(Number(value) || 1)));
   }
 
-  // Whether any panel can be drawn above its own size, so a change of window or panel size can need a new fit.
-  function isAnyBig() {
+  // Whether a change of window or panel size can need a new fit: a panel can be drawn above its own size, or a screen
+  // may be too wide for its window.
+  function canNeedFit() {
     if (scale > 1) return true;
 
     for (var name in mods) {
       if (mods[name] > 1) return true;
     }
 
-    return false;
+    return items.some(function (item) { return item.fitWidth; });
   }
 
   function rounded(n) {

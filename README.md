@@ -69,7 +69,7 @@ Settings live in `BepInEx\config\com.dev.survivallog.exiledtoolkit.cfg`, created
 
 Tested on Survival Log 1.1.21671 with BepInEx `6.0.0-be.788`.
 
-Check `BepInEx\LogOutput.log` for `===== Exiled's Toolkit 0.23.1 started`. A few lines below it, `toasts shown ...` tells you whether toasts are shown, where they appear, how long they stay and how many show at once. That line is written again whenever one of those settings changes. `mod windows drawn at ...%` gives the UI size and `HUD buttons drawn at ...%` gives the button size. Both are written again on every change. A mod with its own UI size writes `<mod> windows drawn at ...%` when it sets it. Once the game's interface is up, `toast script sent to the web UI` means toasts can appear. The same lines are in `BepInEx\exiled-toolkit.log`, which survives restarts.
+Check `BepInEx\LogOutput.log` for `===== Exiled's Toolkit 0.32.0 started`. A few lines below it, `toasts shown ...` tells you whether toasts are shown, where they appear, how long they stay and how many show at once. That line is written again whenever one of those settings changes. `mod windows drawn at ...%` gives the UI size and `HUD buttons drawn at ...%` gives the button size. Both are written again on every change. A mod with its own UI size writes `<mod> windows drawn at ...%` when it sets it. Once the game's interface is up, `toast script sent to the web UI` means toasts can appear. The same lines are in `BepInEx\exiled-toolkit.log`, which survives restarts.
 
 If no toasts appear, check that `Enabled` is `true` in the config, then look in `BepInEx\exiled-toolkit.log` for a line starting with `could not`.
 
@@ -580,11 +580,13 @@ uiSize(backdrop, { fit: backdrop.firstChild });       // a full-screen backdrop:
 uiSize(tooltip, { fit: false });                      // never shrunk to fit
 uiSize(root, { onZoom: function (zoom) { refit(); } });
 uiSize(column, { fit: page, pageFits: true, onZoom: function () { applyViewportFit(); } });   // inside a page that fits itself
+uiSize(screen, { fit: screen.querySelector('.layout'), fitWidth: true });   // a screen that fills the window and needs its width
 ```
 
 - Above 100%, a panel whose box would run past its page's window is zoomed as far as still fits, and never below 100%. `fit` names the element whose box is measured. Leave it out to measure the panel itself.
 - `onZoom(zoom)` runs after each new zoom, say to place the panel again. One that throws is skipped and does not stop other panels.
 - `pageFits: true` is for a panel added inside a game page that zooms its own body down when its panels are too big for the window (the workbench and several machine screens do). `fit` is then measured at the page's own size, without that body zoom, so the panel grows only as far as the whole page still shows at full size and the game's panels keep their size. Have `onZoom` ask the page to fit itself again.
+- `fitWidth: true` is for a screen that fills its window and is laid out for a width it needs, say three columns side by side (Toolkit 0.32.0 and newer). When `fit` is wider than the window, the screen is drawn smaller than 100% until it fits, down to half size, the way the game draws its pages on a small screen. Its height never takes it below 100%, since a screen that tall can scroll. An older Toolkit ignores the option.
 - In a zoomed panel, `getBoundingClientRect` and mouse positions are screen pixels, while `left`, `top`, `width` and `offsetLeft` inside it are the panel's own pixels. Divide screen pixels by `el.currentCSSZoom` before writing them as positions.
 - A panel taken out of its page, or left in a page that reloaded, is let go. Hand it over again when you put it back. Handing the same element twice changes nothing but its options.
 - `ExiledUi.scale` is the size now as a factor (1.25 at 125%).

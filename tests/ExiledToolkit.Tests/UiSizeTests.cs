@@ -317,6 +317,76 @@ public class UiSizeTests
         Assert.Equal("600x1350", ui.Text("drawn(p)"));
     }
 
+    // ===== A screen that fills its window =====
+
+    /// <summary>
+    /// A full-screen mod screen laid out for a width it needs squeezes its parts together on a narrower window. Like
+    /// the game's pages, it is drawn smaller than its own size until it fits: 1920 x 0.96 / 2000 is 0.922.
+    /// </summary>
+    [Fact]
+    public void A_screen_too_wide_for_its_window_is_drawn_smaller_than_its_own_size_until_it_fits()
+    {
+        var ui = new UiScript();
+        ui.Run("var page = addPage(); var back = panel(0, 0, page); back.fills = true; var win = panel(2000, 700, page, back); uiSize(back, { fit: win, fitWidth: true })");
+
+        ui.Settle();
+
+        Assert.Equal("0.922", ui.Text("zoomOf(back)"));
+        Assert.Equal("1844x645", ui.Text("drawn(win)"));
+    }
+
+    /// <summary>A screen too tall scrolls, so its height alone never draws it below its own size.</summary>
+    [Fact]
+    public void A_screen_too_tall_for_its_window_keeps_its_own_size()
+    {
+        var ui = new UiScript();
+        ui.Run("var page = addPage(); var back = panel(0, 0, page); back.fills = true; var win = panel(1000, 1500, page, back); uiSize(back, { fit: win, fitWidth: true })");
+
+        ui.Settle();
+
+        Assert.Equal("1000x1500", ui.Text("drawn(win)"));
+    }
+
+    [Fact]
+    public void A_screen_at_a_smaller_size_that_is_still_too_wide_is_drawn_smaller_still()
+    {
+        var ui = new UiScript();
+        ui.Run("var page = addPage(); var back = panel(0, 0, page); back.fills = true; var win = panel(2600, 700, page, back); uiSize(back, { fit: win, fitWidth: true })");
+
+        ui.Set(80);
+
+        // 2600 at 80% is 2080, still past a 1920 px window.
+        Assert.InRange(ui.Number("win.getBoundingClientRect().width"), 1800, 1920);
+    }
+
+    [Fact]
+    public void A_screen_shrunk_for_a_narrow_window_grows_back_when_the_window_gets_wider()
+    {
+        var ui = new UiScript();
+        ui.Run("var page = addPage(); var back = panel(0, 0, page); back.fills = true; var win = panel(1600, 700, page, back); uiSize(back, { fit: win, fitWidth: true })");
+        ui.Settle();
+
+        ui.Run("resizeWindow(1280, 720)");
+        ui.Settle();
+        var narrow = ui.Number("win.getBoundingClientRect().width");
+        ui.Run("resizeWindow(1920, 1080)");
+        ui.Settle();
+
+        Assert.InRange(narrow, 1200, 1280);
+        Assert.Equal("1600x700", ui.Text("drawn(win)"));
+    }
+
+    [Fact]
+    public void A_screen_is_never_drawn_below_half_size()
+    {
+        var ui = new UiScript();
+        ui.Run("var page = addPage(); var back = panel(0, 0, page); back.fills = true; var win = panel(6000, 700, page, back); uiSize(back, { fit: win, fitWidth: true })");
+
+        ui.Settle();
+
+        Assert.Equal("0.5", ui.Text("zoomOf(back)"));
+    }
+
     /// <summary>A panel whose size jumps with its own zoom must not have the page laid out again every frame.</summary>
     [Fact]
     public void A_panel_that_never_settles_is_left_alone_after_a_few_tries()
