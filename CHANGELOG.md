@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.32.1
+
+- Fixed: in the shop, the Shopping Cart tab was squeezed onto two lines by the Mods button next to it. It stays on one line now.
+- Fixed: in the bag, the Mods button squeezed Load All, Discard All and Auto Organize onto two lines each on a narrow bag. Their labels stay on one line now.
+- Fixed: the bag's Mods button sometimes showed up in front of Load All. It always sits just before Auto Organize now.
+- Made for Survival Log 1.1.21671.
+
 ## 0.32.0
 
 - For mod makers: `fitWidth: true` in `ExiledUi.size` draws a screen that fills the window smaller than 100% when the window is too narrow for it, like the game does with its pages on a small screen. Neighbor Basket's station uses it, so its list keeps room for item names on a smaller screen.

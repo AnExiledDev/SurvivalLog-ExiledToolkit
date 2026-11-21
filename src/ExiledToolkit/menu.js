@@ -90,7 +90,13 @@
       '.slmm-st + .sortb{margin-left:8px}',
       '.bag-toolbar > .slmm-st{margin-right:8px}',
       '.cart-ft > .slmm-st{flex:1 1 0;margin-left:0}',
-      '.cart-ft > .slmm-st > .slmm-btn{width:100%}'
+      '.cart-ft > .slmm-st > .slmm-btn{width:100%}',
+      // The shop's two bag tabs share their row with the button there, which leaves "Shopping Cart" too little room to
+      // stay on one line.
+      '.left-panel > .bag-tabs > .bag-tab{white-space:nowrap}',
+      // The bag toolbar's buttons fill a 6-column bag almost exactly once the button joins them, and with Load All they
+      // overfill it, so their labels broke onto two lines. On one line, the panel widens the few pixels the row needs.
+      '.bag-slot .toolbar .action-btn{white-space:nowrap}'
     ].join('\n');
 
     function createHub(snapshot) {
@@ -154,14 +160,15 @@
           .sort(function (a, b) { return a.order - b.order || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0); });
       }
 
-      // The inventory page: its toolbar, on the bag's own item tab only, as the game's put-all buttons do.
+      // On the inventory page the button goes in the bag's toolbar, just before the sort button as on the station
+      // screens. Like the game's put-all buttons, it only shows on the bag's own item tab.
       function place(doc) {
         if (isRetired || !doc) return;
 
         var bar = doc.querySelector('.bag-slot .toolbar');
         var isShowable = !!bar && isItemTab(doc);
 
-        show(doc, null, bar, isShowable ? firstGameButton(bar) : null, isShowable);
+        show(doc, null, bar, isShowable ? sortButton(bar) : null, isShowable);
       }
 
       function placeStation(doc, station) {
@@ -177,14 +184,14 @@
         else show(doc, station, at.parentNode, at, true);
       }
 
-      // The button goes in bar in front of before (or at the end); a button already there is kept, so a poll never
-      // closes an open menu.
+      // Puts the button in bar just before "before", or at the end when there is none. A button already in that spot
+      // stays, so a poll never closes an open menu.
       function show(doc, station, bar, before, isShowable) {
         var rows = wantedEntries(station);
         var existing = doc.querySelector('.slmm-wrap');
         var isWanted = isShowable && !!bar && rows.length > 0;
         var isInPlace = !!existing && existing.parentNode === bar && existing.getAttribute('data-slmm-version') === String(VERSION) &&
-          (!station || (before ? existing.nextElementSibling === before : true));
+          (before ? existing.nextElementSibling === before : true);
 
         if (isWanted && isInPlace) {
           if (openMenu && openMenu.wrap === existing) showRows(rows);
@@ -261,12 +268,15 @@
       }
 
       // The game's sort button, so the menu sits between it and the discard button.
-      function firstGameButton(bar) {
+      // The game's sort button is the toolbar's last button; Load All and Discard All come before it when they show.
+      function sortButton(bar) {
+        var last = null;
+
         for (var node = bar.firstElementChild; node; node = node.nextElementSibling) {
-          if (node.classList.contains('action-btn') && !node.classList.contains('discard-btn')) return node;
+          if (node.classList.contains('action-btn')) last = node;
         }
 
-        return null;
+        return last;
       }
 
       function menuButton(doc, station, before) {

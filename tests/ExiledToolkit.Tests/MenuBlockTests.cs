@@ -115,6 +115,47 @@ public class MenuBlockTests
     }
 
     [Fact]
+    public void The_inventory_button_sits_just_before_sort_with_Load_All_there_and_keeps_the_labels_on_one_line()
+    {
+        LoadV2();
+        AddEntries();
+        Run("var inv = inventory(0, ['button#load.action-btn', 'button#discard.action-btn.discard-btn', 'button#sort.action-btn']); slmodMenu.placeAll();");
+
+        Assert.Equal("load,discard,,sort", Text("inv.querySelector('.toolbar').children.map(function (c) { return c.id; }).join(',')"));
+        Assert.True(Is("inv.querySelector('.toolbar').children[2].classList.contains('slmm-wrap')"));
+        // There is no layout in Jint, so this checks the rule is on the page; the bag screenshots check the look.
+        Assert.True(Is("inv.getElementById('slmm-style-v2').textContent.indexOf('.bag-slot .toolbar .action-btn{white-space:nowrap}') >= 0"));
+    }
+
+    [Fact]
+    public void The_inventory_button_moves_back_before_sort_when_the_game_adds_a_button_after_it()
+    {
+        LoadV2();
+        AddEntries();
+        Run("var inv = inventory(0, ['button#sort.action-btn']); var bar = inv.querySelector('.toolbar'); slmodMenu.placeAll();");
+        // The game adds Discard All just before sort once its bag info arrives, which lands it after the button.
+        Run("var discard = inv.createElement('button'); discard.id = 'discard'; discard.className = 'action-btn discard-btn'; bar.insertBefore(discard, inv.getElementById('sort'));");
+
+        Run("slmodMenu.placeAll();");
+
+        Assert.Equal("discard,,sort", Text("bar.children.map(function (c) { return c.id; }).join(',')"));
+    }
+
+    [Fact]
+    public void The_shop_gets_the_button_beside_its_bag_tabs_and_keeps_each_tab_name_on_one_line()
+    {
+        LoadV2();
+        AddEntries();
+        Run("var shop = page('ShopUI'); var tabs = el(el(shop, 'div.left-panel'), 'div.bag-tabs'); el(tabs, 'div.bag-tab'); el(tabs, 'div.bag-tab');");
+
+        Run("slmodMenu.placeAll();");
+
+        Assert.True(Is("tabs.children[tabs.children.length - 1].classList.contains('slmm-wrap')"));
+        // There is no layout in Jint, so this checks the rule is on the page; the shop's screenshot checks the look.
+        Assert.True(Is("shop.getElementById('slmm-style-v2').textContent.indexOf('.left-panel > .bag-tabs > .bag-tab{white-space:nowrap}') >= 0"));
+    }
+
+    [Fact]
     public void A_poll_keeps_an_open_menu_open()
     {
         LoadV2();

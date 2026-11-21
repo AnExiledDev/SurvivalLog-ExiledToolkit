@@ -233,15 +233,15 @@ function click(node) {
   }
 }
 
-// The inventory page's bag toolbar with the game's discard and sort buttons, on the given tab.
-function inventory(tab) {
+// The inventory page's bag toolbar on the given tab, with the game's discard and sort buttons unless buttons lists
+// others.
+function inventory(tab, buttons) {
   var doc = page('BackpackUI');
   var app = el(doc, 'div#app');
   var bar = el(el(app, 'div.bag-slot'), 'div.toolbar');
 
   app._vnode = { component: { setupState: { curATab: tab, isPrologue: false } } };
-  el(bar, 'button.action-btn.discard-btn');
-  el(bar, 'button#sort.action-btn');
+  (buttons || ['button.action-btn.discard-btn', 'button#sort.action-btn']).forEach(function (spec) { el(bar, spec); });
 
   return doc;
 }
