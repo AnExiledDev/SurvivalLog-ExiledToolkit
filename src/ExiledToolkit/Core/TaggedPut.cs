@@ -57,10 +57,10 @@ public static class TaggedPut
     public sealed record Storage(long OwnerId, int FurnitureConfigId, string Name, IReadOnlyList<int> Tags, int UsedCells, int TotalCells);
 
     /// <summary>
-    /// A stack in one of the shopping bags by the front door. Tags are the storage tags that would take it, in the
-    /// order the game's tag picker lists them. HasStorage is whether some home storage is tagged for it right now.
+    /// A stack in one of the shopping bags by the front door. Bag is 1 or 2. Tags are the storage tags that would take
+    /// it, in the order the game's tag picker lists them. HasStorage is whether some home storage is tagged for it now.
     /// </summary>
-    public sealed record BagStack(long BagOwnerId, long ItemInstanceId, int ItemConfigId, int Count, IReadOnlyList<int> Tags, bool HasStorage);
+    public sealed record BagStack(int Bag, long BagOwnerId, long ItemInstanceId, int ItemConfigId, int Count, IReadOnlyList<int> Tags, bool HasStorage);
 
     /// <summary>Some of the item and where it ended up. A Waiting part's owner is where it still is, 0 when it was never made.</summary>
     public sealed record Part(Where Where, int Count, long OwnerId, string Name);

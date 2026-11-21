@@ -156,7 +156,7 @@ public sealed class TaggedStorage
             var nowHours = RobotSortingManager.GetNowHours(game.World);
             var stacks = new List<TaggedPut.BagStack>();
 
-            for (var box = 0; box < ShoppingBagCount; box++) AddBagStacks(game, VehicleConfig.GetBoxOwnerId(box), homes, tagIds, nowHours, stacks);
+            for (var box = 0; box < ShoppingBagCount; box++) AddBagStacks(game, box, homes, tagIds, nowHours, stacks);
 
             return stacks;
         }
@@ -165,6 +165,27 @@ public sealed class TaggedStorage
             Report("read the shopping bags", ex);
 
             return Array.Empty<TaggedPut.BagStack>();
+        }
+    }
+
+    /// <summary>
+    /// The storage tags that would take a fresh one of an item, in the order the game's tag picker lists them. Needs
+    /// Cold goes by how many days a stack has left, so a fresh one only gets it when it keeps under 10 days. Empty for
+    /// an unknown item and while the game's tables aren't loaded.
+    /// </summary>
+    public IReadOnlyList<int> TagsOf(int itemConfigId)
+    {
+        try
+        {
+            if (GameSingleton.Existing<ConfigManager>() is not { } config || ItemRow(config, itemConfigId) is not { } row) return Array.Empty<int>();
+
+            return TagOptions().Where(tagId => FurnitureTagRules.OptionMatches(tagId, row, NewItemDaysLeft(row))).ToList();
+        }
+        catch (Exception ex)
+        {
+            Report("read an item's tags", ex);
+
+            return Array.Empty<int>();
         }
     }
 
@@ -226,8 +247,9 @@ public sealed class TaggedStorage
     }
 
     /// <summary>One shopping bag's stacks. A recycled stack can sit in a list it left, so its owner is checked.</summary>
-    private static void AddBagStacks(Scene game, long bagOwnerId, List<(Furniture Furniture, string Name)> homes, IReadOnlyList<int> tagIds, float nowHours, List<TaggedPut.BagStack> into)
+    private static void AddBagStacks(Scene game, int box, List<(Furniture Furniture, string Name)> homes, IReadOnlyList<int> tagIds, float nowHours, List<TaggedPut.BagStack> into)
     {
+        var bagOwnerId = VehicleConfig.GetBoxOwnerId(box);
         var held = game.Items.GetItemDataList(bagOwnerId);
 
         for (var i = 0; held != null && i < held.Count; i++)
@@ -241,7 +263,7 @@ public sealed class TaggedStorage
             var tags = tagIds.Where(tagId => FurnitureTagRules.OptionMatches(tagId, row, daysLeft)).ToList();
             var hasStorage = homes.Any(home => RankOf(game.Config, home.Furniture, row, daysLeft) != null);
 
-            into.Add(new TaggedPut.BagStack(bagOwnerId, item.InstanceId, item.ItemConfigId, item.ItemCount, tags, hasStorage));
+            into.Add(new TaggedPut.BagStack(box + 1, bagOwnerId, item.InstanceId, item.ItemConfigId, item.ItemCount, tags, hasStorage));
         }
     }
 

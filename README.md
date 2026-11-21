@@ -370,7 +370,7 @@ if (result.Reason == TaggedPut.Reason.NoTaggedStorage) { /* no storage is tagged
 - The shopping bags are only offered at home, and the game makes a bag when something first goes into it. The neighbor's basket, the drone bay and storage the game leaves out when it counts your items are never used.
 - Repeated names are numbered ("Wooden Box", "Wooden Box 2"), the same way for every item.
 - `Storages` lists every storage `Move` and `Add` can pick, with the same names they report. `UsedCells` of `TotalCells` is the fill the game shows over the storage. A material rack's `Tags` is empty, since it ranks by its slots.
-- Each stack from `ShoppingBagStacks` lists the tags the game's tag picker would file it under. `HasStorage` says whether a home storage is tagged for it right now. `TagName(tagId)` is a tag's name in the game's language.
+- Each stack from `ShoppingBagStacks` lists the tags the game's tag picker would file it under, and `Bag` says which of the two bags it's in. `HasStorage` says whether a home storage is tagged for it right now. `TagsOf(itemId)` gives the same tags for a new one of any item, and `TagName(tagId)` is a tag's name in the game's language.
 - Nothing throws. A failed game call is logged once and counts as nothing moved. `Reason.NotReady` means no save was loaded or the item wasn't where you said.
 
 #### Game keys

@@ -3,7 +3,7 @@
 ## 0.31.0
 
 - For mod makers: `TaggedStorage` puts items into the home storage the player tagged for them, best match first, the way their robots do. It never uses a storage with no tags or tags for other things. What doesn't fit goes into the shopping bags by the front door, or stays where it is.
-- For mod makers: `TaggedStorage.Storages` lists every home storage with its tags and how full it is, and `ShoppingBagStacks` lists what sits in the shopping bags with the tags that would take each stack.
+- For mod makers: `TaggedStorage.Storages` lists every home storage with its tags and how full it is, and `ShoppingBagStacks` lists what sits in the shopping bags with the tags that would take each stack. `TagsOf` gives those tags for any item.
 - Made for Survival Log 1.1.21671.
 
 ## 0.30.2
