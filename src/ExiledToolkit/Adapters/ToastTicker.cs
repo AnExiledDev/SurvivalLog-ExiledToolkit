@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using ExiledToolkit.Core;
 using ExiledToolkit.Game;
+using ExiledToolkit.Kit;
 using ExiledToolkit.Web;
 using UnityEngine;
 
@@ -39,6 +40,13 @@ public sealed class ToastTicker : MonoBehaviour
     internal static Action<string> Log = _ => { };
 
     private static readonly HashSet<string> ReportedFailures = new();
+    private static readonly double LoadedAt = Clock.Now;
+
+    /// <summary>
+    /// Real seconds since the Toolkit loaded, from the Toolkit clock. Counted from load so a float keeps its precision
+    /// however long the computer has been on.
+    /// </summary>
+    internal static float Now => (float)(Clock.Now - LoadedAt);
 
     /// <summary>Main thread only, like the raycasts that read what it hands to <see cref="ClickRouting"/>.</summary>
     private static readonly ClickArea Area = new();
@@ -83,7 +91,7 @@ public sealed class ToastTicker : MonoBehaviour
 
         try
         {
-            var now = Time.realtimeSinceStartup;
+            var now = Now;
 
             page.KeepInstalled(now);
 
@@ -131,7 +139,7 @@ public sealed class ToastTicker : MonoBehaviour
         // Each on its own, so a failing Mods menu never stops the pause and title screen buttons.
         try
         {
-            Menu?.Tick(Time.realtimeSinceStartup);
+            Menu?.Tick(Now);
         }
         catch (Exception ex)
         {
@@ -140,7 +148,7 @@ public sealed class ToastTicker : MonoBehaviour
 
         try
         {
-            GameMenu?.Tick(Time.realtimeSinceStartup);
+            GameMenu?.Tick(Now);
         }
         catch (Exception ex)
         {

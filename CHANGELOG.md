@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.32.3
+
+- Small speed up: the toasts and the Mods menu read the time in a cheaper way.
+- Made for Survival Log 1.1.21671.
+
 ## 0.32.2
 
 - Fixed: if the game's camera update ever failed while you were typing in a mod's text box, the WASD camera keys could stay dead until a restart. They come back now.
