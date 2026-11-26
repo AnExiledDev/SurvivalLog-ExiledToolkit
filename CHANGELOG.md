@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.32.2
+
+- Fixed: if the game's camera update ever failed while you were typing in a mod's text box, the WASD camera keys could stay dead until a restart. They come back now.
+- For mod makers: a tagged storage move no longer "moves" a stack from a shopping bag into that same bag.
+- Made for Survival Log 1.1.21671.
+
 ## 0.32.1
 
 - Fixed: in the shop, the Shopping Cart tab was squeezed onto two lines by the Mods button next to it. It stays on one line now.

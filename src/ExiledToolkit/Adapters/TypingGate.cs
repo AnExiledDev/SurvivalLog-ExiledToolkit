@@ -33,7 +33,7 @@ internal static class TypingGate
         {
             harmony.Patch(AccessTools.Method(typeof(CameraManager), "Update"),
                 prefix: new HarmonyMethod(typeof(TypingGate), nameof(BlockCameraKeys)),
-                postfix: new HarmonyMethod(typeof(TypingGate), nameof(RestoreCameraKeys)) { priority = Priority.Last });
+                finalizer: new HarmonyMethod(typeof(TypingGate), nameof(RestoreCameraKeys)) { priority = Priority.Last });
             log("camera keys stop while a text box has the keyboard");
         }
         catch (Exception ex)
@@ -88,6 +88,7 @@ internal static class TypingGate
         }
     }
 
+    // A finalizer, so the block is lifted even when the game's Update throws; a postfix would leave the camera keys dead.
     private static void RestoreCameraKeys(CameraManager __instance, bool __state)
     {
         if (!__state) return;

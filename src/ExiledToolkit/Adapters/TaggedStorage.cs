@@ -371,6 +371,8 @@ public sealed class TaggedStorage
     {
         try
         {
+            if (boxOwnerId == fromOwnerId) return 0;
+
             var item = game.Items.GetItemData(itemId);
             var before = CountAt(item, itemId, fromOwnerId);
             var count = Math.Min(asked, before);
