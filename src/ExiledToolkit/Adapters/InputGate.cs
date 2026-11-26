@@ -4,7 +4,9 @@ namespace ExiledToolkit.Game;
 /// The game's keys and clicks around a mod window, in one place: while a window is open its hotkeys are held back
 /// (<see cref="HotkeyGate"/>) and every click goes to the web UI (<see cref="ClickRouting"/>), since the game passes a
 /// click to the web UI only where one of its own pages reported a button. A menu or popup that only needs the keys
-/// held calls <see cref="HotkeyGate"/> under its own name. Main thread only. Toolkit 0.19.0 and newer.
+/// held calls <see cref="HotkeyGate"/> under its own name. Call <see cref="Closed"/> on every path that takes the window
+/// away, a reload of its page, a load and a quit to the title included: a window left open here keeps the game's
+/// hotkeys off and every click going to the web UI. Main thread only. Toolkit 0.19.0 and newer.
 /// </summary>
 public static class InputGate
 {

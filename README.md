@@ -312,6 +312,7 @@ keyboard.Release();                   // and that it let go
 ```
 
 - Each holder holds and lets go under its own name, so two mods never release each other's hold. Holding twice under one name is one hold. `HotkeyGate.IsHeld` and `ClickRouting.IsCapturing` say whether anyone holds now.
+- A hold stays until its holder lets go. Let go on every path that takes your window away: your own close, a reload of your page (your page script starts over and sends its ready message again), a load and a quit to the title. A hold that is never let go keeps the game's hotkeys off, and a capture keeps every click going to the web UI.
 - `WebKeyboard.Claim` sends the keyboard to the web UI and turns on the system's input method, so Chinese can be typed. `Release` gives the keyboard back as it was found and turns the input method off. `IsClaimed` is true in between. The Toolkit already keeps the game's keys off while any text box has the keyboard (see Typing).
 
 #### Hotkeys
@@ -606,6 +607,7 @@ if (Input.GetKeyDown(Key) && !(IsToolkitLoaded && IsTypingUnguarded())) Toggle()
 
 - A box counts while it has focus: a textarea, a contenteditable element, or an input of type text, search, number, email, password, url or tel that is not disabled or read-only. Checkboxes, sliders and buttons do not count.
 - A box that is removed or hidden stops counting within a quarter of a second. A click on the world (not on any UI) takes the keyboard from the box.
+- The game's text boxes count too, such as the item search and a storage's name, since they sit in the same pages. A mod needs no hook of its own on `HotKeyManager.Update` to skip its keys there.
 
 ### Page API
 

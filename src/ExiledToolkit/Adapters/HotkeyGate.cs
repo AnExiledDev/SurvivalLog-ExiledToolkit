@@ -7,8 +7,10 @@ namespace ExiledToolkit.Game;
 /// <summary>
 /// Stops the game's hotkeys while a mod window holds them, so typing "e" in a search box does not also open a menu,
 /// and the Esc that closes the window does not also close what is under it. Each window holds and releases under its
-/// own name. One hook on HotKeyManager.Update serves every mod. Static because a Harmony prefix has nowhere else to
-/// look; main thread only. Toolkit 0.19.0 and newer (Mod Manager used it before).
+/// own name. One hook on HotKeyManager.Update serves every mod. A hold stays until its holder lets go, so a window
+/// releases on every path that takes it away: its close, a reload of its page, a load and a quit to the title.
+/// Static because a Harmony prefix has nowhere else to look; main thread only. Toolkit 0.19.0 and newer (Mod Manager
+/// used it before).
 /// </summary>
 public static class HotkeyGate
 {
